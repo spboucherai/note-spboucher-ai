@@ -1,0 +1,17 @@
+{
+  "id": "english_writing",
+  "category": "English writing",
+  "grader": "writing",
+  "lang": "en",
+  "max_tokens": 3000,
+  "prompt": "Write one polished paragraph (150-220 words) in formal academic English for the introduction of a research report, explaining why municipal house price indices matter to policymakers. Use the expressions 'spatial heterogeneity', 'housing policy' and 'transaction-level data'. No title, no bullet list.",
+  "must_contain": [
+    "spatial heterogeneity",
+    "housing policy",
+    "transaction-level data"
+  ],
+  "words": [
+    150,
+    220
+  ]
+}

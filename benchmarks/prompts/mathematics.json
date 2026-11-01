@@ -1,0 +1,7 @@
+{
+  "id": "mathematics",
+  "category": "Mathematics",
+  "grader": "math",
+  "max_tokens": 6000,
+  "prompt": "Solve both problems. End with two lines exactly of the form 'A: <answer>' and 'B: <answer>'.\nA. Compute the sum of all positive integers below 1000 that are divisible by 3 or 5.\nB. Let f(x) = x^3 * e^(2x). Give f'(x) in simplified factored form."
+}

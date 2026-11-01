@@ -1,0 +1,12 @@
+{
+  "id": "simple_reasoning",
+  "category": "Simple reasoning",
+  "grader": "regex",
+  "max_tokens": 1500,
+  "prompt": "Answer the three questions. Give only the three final answers, numbered 1-3, one per line.\n1. A train leaves Montreal at 14:35 and the trip lasts 2 hours and 50 minutes. At what time (24h, HH:MM) does it arrive?\n2. I have 3 boxes with 12 apples each, I give away 7 apples and buy 5 more. How many apples do I have?\n3. Which is heavier: 1 kg of feathers or 900 g of steel? Answer 'feathers' or 'steel'.",
+  "expect": [
+    "17:25",
+    "\\b34\\b",
+    "feathers"
+  ]
+}

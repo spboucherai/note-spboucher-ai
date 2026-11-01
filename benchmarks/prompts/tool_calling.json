@@ -1,0 +1,95 @@
+{
+  "id": "tool_calling",
+  "category": "Tool calling",
+  "grader": "tool",
+  "max_tokens": 3000,
+  "tools": [
+    {
+      "name": "create_task",
+      "description": "Create a task in the workspace",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "due_date": {
+            "type": "string",
+            "description": "ISO date"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "project": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "due_date",
+          "priority",
+          "project"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "search_notes",
+      "description": "Full-text search in notes",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "send_email",
+      "description": "Send an email",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "to",
+          "subject",
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "prompt": "Please add a high-priority task 'Submit WP34 to SSRN' due on 2026-11-15 in the project 'Research'. Do not send any email.",
+  "expect_tool": {
+    "name": "create_task",
+    "args": {
+      "title": "submit wp34 to ssrn",
+      "due_date": "2026-11-15",
+      "priority": "^high$",
+      "project": "^research$"
+    },
+    "forbid": [
+      "send_email"
+    ]
+  }
+}

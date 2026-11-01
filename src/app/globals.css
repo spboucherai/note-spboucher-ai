@@ -1,0 +1,141 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 0.5rem;
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-sunk: var(--bg-sunk);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-ai: var(--ai);
+  --color-ai-soft: var(--ai-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+}
+
+:root {
+  --bg: oklch(99% 0.002 95);
+  --bg-elev: oklch(100% 0 0);
+  --bg-sunk: oklch(97% 0.004 95);
+  --fg: oklch(20% 0.01 260);
+  --fg-muted: oklch(48% 0.012 260);
+  --fg-faint: oklch(68% 0.01 260);
+  --line: oklch(91% 0.006 260);
+  --line-strong: oklch(84% 0.008 260);
+  --accent: oklch(52% 0.17 262);
+  --accent-fg: oklch(99% 0 0);
+  --accent-soft: oklch(95% 0.03 262);
+  --danger: oklch(56% 0.2 25);
+  --success: oklch(58% 0.15 150);
+  --warning: oklch(72% 0.16 75);
+  --ai: oklch(55% 0.17 300);
+  --ai-soft: oklch(95% 0.035 300);
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.04), 0 1px 1px oklch(0% 0 0 / 0.03);
+  --shadow-pop: 0 10px 30px -10px oklch(0% 0 0 / 0.25), 0 2px 6px oklch(0% 0 0 / 0.08);
+  color-scheme: light;
+}
+.dark {
+  --bg: oklch(17% 0.008 260);
+  --bg-elev: oklch(21% 0.009 260);
+  --bg-sunk: oklch(14% 0.008 260);
+  --fg: oklch(93% 0.006 95);
+  --fg-muted: oklch(68% 0.01 260);
+  --fg-faint: oklch(50% 0.01 260);
+  --line: oklch(27% 0.01 260);
+  --line-strong: oklch(34% 0.012 260);
+  --accent: oklch(72% 0.14 262);
+  --accent-fg: oklch(15% 0.02 262);
+  --accent-soft: oklch(28% 0.05 262);
+  --danger: oklch(68% 0.18 25);
+  --success: oklch(70% 0.14 150);
+  --warning: oklch(78% 0.15 75);
+  --ai: oklch(74% 0.14 300);
+  --ai-soft: oklch(28% 0.05 300);
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.4);
+  --shadow-pop: 0 12px 36px -12px oklch(0% 0 0 / 0.7), 0 2px 6px oklch(0% 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body { @apply bg-bg text-fg antialiased; font-feature-settings: "cv11", "ss01", "liga"; -webkit-tap-highlight-color: transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+::selection { background: var(--accent-soft); }
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ---------- Editor (ProseMirror) ---------- */
+.note-editor { @apply outline-none; }
+.note-editor .ProseMirror { @apply outline-none min-h-[40vh]; }
+.note-editor .ProseMirror > * + * { margin-top: 0.5rem; }
+.note-editor h1 { @apply text-3xl font-semibold tracking-tight mt-8 mb-2; }
+.note-editor h2 { @apply text-2xl font-semibold tracking-tight mt-7 mb-2; }
+.note-editor h3 { @apply text-xl font-semibold mt-5 mb-1; }
+.note-editor p { @apply leading-7 text-[15.5px]; }
+.note-editor a { @apply text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent; }
+.note-editor ul { @apply list-disc pl-6; } .note-editor ol { @apply list-decimal pl-6; }
+.note-editor li > p { margin: 0.15rem 0; }
+.note-editor ul[data-type="taskList"] { @apply list-none pl-1; }
+.note-editor ul[data-type="taskList"] li { @apply flex gap-2 items-start; }
+.note-editor ul[data-type="taskList"] li > label { @apply mt-1.5 shrink-0; }
+.note-editor ul[data-type="taskList"] li > label input { @apply accent-[var(--accent)] size-4; }
+.note-editor ul[data-type="taskList"] li[data-checked="true"] > div { @apply line-through text-fg-faint; }
+.note-editor blockquote { @apply border-l-2 border-line-strong pl-4 text-fg-muted italic; }
+.note-editor pre { @apply bg-bg-sunk border border-line rounded-lg p-4 text-[13px] font-mono overflow-x-auto; }
+.note-editor pre code { @apply bg-transparent p-0; }
+.note-editor code { @apply bg-bg-sunk border border-line rounded px-1 py-0.5 text-[0.9em] font-mono; }
+.note-editor hr { @apply border-line my-6; }
+.note-editor img { @apply rounded-lg max-w-full; }
+.note-editor table { @apply border-collapse w-full my-3 text-[14px]; }
+.note-editor th, .note-editor td { @apply border border-line px-3 py-1.5 align-top min-w-[6rem]; }
+.note-editor th { @apply bg-bg-sunk font-medium text-left; }
+.note-editor .selectedCell { @apply bg-accent-soft; }
+.note-editor .tableWrapper { @apply overflow-x-auto; }
+.note-editor details { @apply border border-line rounded-lg px-3 py-2 my-2; }
+.note-editor details summary { @apply cursor-pointer font-medium select-none; }
+.note-editor details > div[data-type="detailsContent"] { @apply mt-2; }
+.note-editor .callout { @apply flex gap-3 rounded-lg border border-line bg-bg-sunk px-4 py-3 my-2; }
+.note-editor .callout[data-kind="info"] { @apply bg-accent-soft border-accent/20; }
+.note-editor .callout[data-kind="warning"] { @apply bg-warning/10 border-warning/30; }
+.note-editor .callout[data-kind="danger"] { @apply bg-danger/10 border-danger/30; }
+.note-editor .callout[data-kind="ai"] { @apply bg-ai-soft border-ai/30; }
+.note-editor .callout-icon { @apply text-lg leading-7 select-none; }
+.note-editor .mention { @apply inline-flex items-center gap-1 rounded bg-accent-soft text-accent px-1.5 py-0.5 text-[0.95em] no-underline; }
+.note-editor .ai-block { @apply border border-ai/30 bg-ai-soft/40 rounded-lg p-3 my-2 relative; }
+.note-editor .ai-block::before { content: "AI"; @apply absolute -top-2 right-3 text-[10px] font-semibold tracking-wider text-ai bg-bg-elev px-1.5 rounded; }
+.note-editor .Tiptap-mathematics-editor { @apply bg-bg-sunk px-1 rounded font-mono text-[0.9em]; }
+.note-editor .Tiptap-mathematics-render { @apply cursor-pointer; }
+.note-editor .footnote-ref { @apply align-super text-[0.7em] text-accent; }
+.note-editor .is-editor-empty:first-child::before { content: attr(data-placeholder); @apply text-fg-faint float-left h-0 pointer-events-none; }
+.note-editor .file-block { @apply flex items-center gap-3 border border-line rounded-lg px-3 py-2 my-2 bg-bg-elev; }
+.drag-handle { @apply flex items-center justify-center size-6 rounded cursor-grab text-fg-faint hover:bg-bg-sunk hover:text-fg-muted; }
+
+.prose-md { @apply text-[15px] leading-7; }
+.prose-md h1,.prose-md h2,.prose-md h3 { @apply font-semibold mt-5 mb-1 tracking-tight; }
+.prose-md h1 { @apply text-xl; } .prose-md h2 { @apply text-lg; } .prose-md h3 { @apply text-base; }
+.prose-md p { @apply my-2; } .prose-md ul { @apply list-disc pl-5 my-2; } .prose-md ol { @apply list-decimal pl-5 my-2; }
+.prose-md pre { @apply bg-bg-sunk border border-line rounded-lg p-3 text-[13px] overflow-x-auto my-2; }
+.prose-md code { @apply font-mono text-[0.9em] bg-bg-sunk px-1 rounded; } .prose-md pre code { @apply bg-transparent p-0; }
+.prose-md table { @apply border-collapse w-full my-2 text-[13.5px]; } .prose-md th,.prose-md td { @apply border border-line px-2 py-1; }
+.prose-md blockquote { @apply border-l-2 border-line-strong pl-3 text-fg-muted; }
+.prose-md a { @apply text-accent underline; }
+.prose-md .source-ref { @apply inline-flex items-center rounded bg-accent-soft text-accent px-1 text-[11px] font-medium align-baseline cursor-pointer; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fade-up { animation: fade-up 180ms ease-out both; }
+@keyframes pulse-soft { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+.pulse-soft { animation: pulse-soft 1.4s ease-in-out infinite; }

@@ -1,0 +1,31 @@
+import { z } from "zod";
+import { handler, parseBody, uuid } from "@/lib/api";
+import { getPage, updatePage, softDeletePage, restorePage, purgePage, breadcrumb, backlinks, touchOpened, duplicatePage } from "@/lib/pages/service";
+import { audit } from "@/lib/audit";
+
+export const GET = handler(async ({ ws, params, req }) => {
+  const id = uuid.parse(params.id); const p = await getPage(ws.id, id, { includeDeleted: true });
+  if (new URL(req.url).searchParams.get("open") === "1") touchOpened(id).catch(() => {});
+  const [crumbs, back] = await Promise.all([breadcrumb(ws.id, id), backlinks(ws.id, id)]);
+  return Response.json({ ...p, breadcrumb: crumbs, backlinks: back });
+});
+export const PATCH = handler(async ({ req, ws, params, user }) => {
+  const id = uuid.parse(params.id);
+  const b = await parseBody(req, z.object({ title: z.string().max(500).optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional(), cover: z.string().max(2000).nullable().optional(), properties: z.record(z.string(), z.unknown()).optional(), parentId: z.string().uuid().nullable().optional(), section: z.string().optional(), position: z.number().optional(), pinned: z.boolean().optional(), archived: z.boolean().optional(), type: z.string().optional(), versionReason: z.string().max(100).optional() }));
+  const { versionReason, ...patch } = b;
+  const p = await updatePage(ws.id, id, patch, { versionReason });
+  if (patch.content === undefined) await audit(user.id, "page.update", { type: "page", id }, { keys: Object.keys(patch) });
+  return Response.json({ id: p.id, version: p.version, updatedAt: p.updatedAt, title: p.title, wordCount: p.wordCount });
+});
+export const DELETE = handler(async ({ ws, params, user, req }) => {
+  const id = uuid.parse(params.id); const purge = new URL(req.url).searchParams.get("purge") === "1";
+  if (purge) { await purgePage(ws.id, id); await audit(user.id, "page.purge", { type: "page", id }); return Response.json({ ok: true }); }
+  const n = await softDeletePage(ws.id, id); await audit(user.id, "page.trash", { type: "page", id }, { count: n });
+  return Response.json({ ok: true, trashed: n });
+});
+export const POST = handler(async ({ ws, params, user, req }) => {
+  const id = uuid.parse(params.id); const action = new URL(req.url).searchParams.get("action");
+  if (action === "restore") { await restorePage(ws.id, id); await audit(user.id, "page.restore", { type: "page", id }); return Response.json({ ok: true }); }
+  if (action === "duplicate") { const p = await duplicatePage(ws.id, id); await audit(user.id, "page.duplicate", { type: "page", id }, { to: p.id }); return Response.json(p); }
+  return Response.json({ error: "Unknown action" }, { status: 400 });
+});

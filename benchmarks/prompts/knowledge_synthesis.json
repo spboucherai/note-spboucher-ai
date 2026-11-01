@@ -1,0 +1,18 @@
+{
+  "id": "knowledge_synthesis",
+  "category": "Knowledge synthesis",
+  "grader": "synthesis",
+  "max_tokens": 4000,
+  "prompt": "You are given three excerpts from the user's private notes. Write a short synthesis (120-200 words) answering: 'What do we know about the inference speed of the TITAN-MoE runtime, and are the notes consistent?' Cite sources inline as [S1], [S2], [S3]. Explicitly flag any contradiction between the sources and say which figure is more recent.\n\n[S1] (2026-10-20, lab notebook) First end-to-end run of TITAN-MoE on the M3 Ultra: 41 tokens/s on the 30B-A3B model, prefetching one layer ahead gave no gain.\n[S2] (2026-10-28, benchmark sheet) After the contiguous SSD layout change, TITAN-MoE reaches 58 tokens/s on the same 30B-A3B model and bit-exact parity with mlx-lm was confirmed.\n[S3] (2026-10-15, meeting notes) Thunderbolt networking is not available between the nodes; only 1 GbE, so multi-node expert streaming was abandoned.",
+  "must_contain": [
+    "[S1]",
+    "[S2]",
+    "[S3]",
+    "41",
+    "58"
+  ],
+  "words": [
+    100,
+    230
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "programming",
+  "category": "Programming",
+  "grader": "code",
+  "max_tokens": 6000,
+  "prompt": "Write a JavaScript (ES2020, no dependencies) function `topKFrequent(words, k)` that returns the k most frequent strings in the array `words`, sorted by decreasing frequency, ties broken alphabetically. Return the code in a single ```javascript fenced block, exporting nothing (plain function declaration). No explanation outside the block."
+}

@@ -1,0 +1,17 @@
+{
+  "id": "french_writing",
+  "category": "French writing",
+  "grader": "writing",
+  "lang": "fr",
+  "max_tokens": 3000,
+  "prompt": "Rédige un paragraphe en français soutenu (entre 150 et 220 mots) destiné à l'introduction d'un rapport de recherche universitaire, expliquant pourquoi les indices de prix immobiliers municipaux sont utiles aux décideurs publics. Le texte doit employer les expressions « hétérogénéité spatiale », « politique du logement » et « données transactionnelles ». Aucun titre, aucune liste, aucun mot anglais.",
+  "must_contain": [
+    "hétérogénéité spatiale",
+    "politique du logement",
+    "données transactionnelles"
+  ],
+  "words": [
+    150,
+    220
+  ]
+}

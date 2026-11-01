@@ -1,0 +1,11 @@
+{
+  "id": "long_context",
+  "category": "Long-context retrieval",
+  "grader": "regex",
+  "max_tokens": 1500,
+  "haystack": "long-context.txt",
+  "prompt": "Below is a long collection of research lab notes. Somewhere in it is the access code for Project Aurora. Reply with the access code only.\n\n<notes>\n{{HAYSTACK}}\n</notes>",
+  "expect": [
+    "7391-KX-ORION"
+  ]
+}

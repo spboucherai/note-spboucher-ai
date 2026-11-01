@@ -1,0 +1,61 @@
+{
+  "id": "document_analysis",
+  "category": "Document analysis",
+  "grader": "json",
+  "max_tokens": 4000,
+  "schema": {
+    "name": "invoice",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {
+          "type": "string"
+        },
+        "due_date": {
+          "type": "string"
+        },
+        "total_due": {
+          "type": "number"
+        },
+        "purchase_order": {
+          "type": "string"
+        },
+        "line_item_count": {
+          "type": "integer"
+        },
+        "late_fee_percent_per_month": {
+          "type": "number"
+        },
+        "serial_numbers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "invoice_number",
+        "due_date",
+        "total_due",
+        "purchase_order",
+        "line_item_count",
+        "late_fee_percent_per_month",
+        "serial_numbers"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "prompt": "Extract the requested fields from the invoice below as JSON (dates ISO YYYY-MM-DD, amounts as plain numbers).\n\n<document>\nINVOICE\nInvoice number: INV-2026-04471\nIssued by: Laurentide Systèmes Inc., 1200 boul. de la Carrière, Gatineau (Québec) J8Y 6W1\nBilled to: Université du Québec en Outaouais, Département des sciences administratives\nIssue date: 2026-09-14\nDue date: 2026-10-14\nPurchase order: PO-88213-UQO\n\nLine items\n1. Mac Studio M4 Max 16-core / 64 GB / 1 TB — quantity 2 — unit price 4 299,00 $ — 8 598,00 $\n2. Thunderbolt 5 cable 1 m — quantity 4 — unit price 89,00 $ — 356,00 $\n3. On-site installation and network configuration (6 h at 145,00 $/h) — 870,00 $\n4. Extended warranty 3 years — quantity 2 — unit price 349,00 $ — 698,00 $\n\nSubtotal: 10 522,00 $\nGST (5 %): 526,10 $\nQST (9,975 %): 1 049,57 $\nTotal due: 12 097,67 $\n\nTerms: Net 30 days. A late fee of 1,5 % per month applies after the due date. Payment by wire transfer to account ending in 4471 or by cheque payable to Laurentide Systèmes Inc.\nContact: facturation@laurentide-systemes.example (Marie-Ève Tremblay, ext. 212)\nNotes: Equipment delivered 2026-09-12 to room B-2140, Pavillon Lucien-Brault. Serial numbers: JX0PHFQHF1, LY5Q6FD2PL.\n</document>",
+  "expect_json": {
+    "invoice_number": "INV-2026-04471",
+    "due_date": "2026-10-14",
+    "total_due": 12097.67,
+    "purchase_order": "PO-88213-UQO",
+    "line_item_count": 4,
+    "late_fee_percent_per_month": 1.5,
+    "serial_numbers": [
+      "JX0PHFQHF1",
+      "LY5Q6FD2PL"
+    ]
+  }
+}

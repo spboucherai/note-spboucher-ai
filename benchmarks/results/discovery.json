@@ -1,0 +1,4698 @@
+{
+  "generated": "2026-11-01T07:03:46.768Z",
+  "estimated_cost_usd": 0.7736,
+  "models": [
+    {
+      "provider": "openai",
+      "id": "babbage-002",
+      "created": "2023-08-21",
+      "family": "babbage-002",
+      "category": "legacy-completion",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category legacy-completion: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "chat-latest",
+      "created": "2026-05-02",
+      "family": "chat-latest",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 30
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 802
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 916
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 829
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 993
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 948
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 896
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "chatgpt-image-latest",
+      "created": "2025-12-16",
+      "family": "chatgpt-image-latest",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "davinci-002",
+      "created": "2023-08-21",
+      "family": "davinci-002",
+      "category": "legacy-completion",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category legacy-completion: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-3.5-turbo",
+      "created": "2023-02-28",
+      "family": "gpt-3.5-turbo",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 201,
+          "detail": "404 404 The model `gpt-3.5-turbo` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-3.5-turbo-0125",
+      "created": "2024-01-23",
+      "family": "gpt-3.5-turbo-0125",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 224,
+          "detail": "404 404 The model `gpt-3.5-turbo-0125` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-3.5-turbo-1106",
+      "created": "2023-11-02",
+      "family": "gpt-3.5-turbo-1106",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 198,
+          "detail": "404 404 The model `gpt-3.5-turbo-1106` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-3.5-turbo-16k",
+      "created": "2023-05-10",
+      "family": "gpt-3.5-turbo-16k",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 267,
+          "detail": "404 404 The model `gpt-3.5-turbo-16k` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-3.5-turbo-instruct",
+      "created": "2023-08-24",
+      "family": "gpt-3.5-turbo-instruct",
+      "category": "legacy-completion",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category legacy-completion: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-3.5-turbo-instruct-0914",
+      "created": "2023-09-07",
+      "family": "gpt-3.5-turbo-instruct-0914",
+      "category": "legacy-completion",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category legacy-completion: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4",
+      "created": "2023-06-27",
+      "family": "gpt-4",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 195,
+          "detail": "404 404 The model `gpt-4` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4-0613",
+      "created": "2023-06-12",
+      "family": "gpt-4-0613",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 155,
+          "detail": "404 404 The model `gpt-4-0613` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4-turbo",
+      "created": "2024-04-05",
+      "family": "gpt-4-turbo",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 143,
+          "detail": "404 404 The model `gpt-4-turbo` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4-turbo-2024-04-09",
+      "created": "2024-04-08",
+      "family": "gpt-4-turbo",
+      "category": "text",
+      "aliasOf": "gpt-4-turbo",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4-turbo; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4.1",
+      "created": "2025-04-10",
+      "family": "gpt-4.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2,
+        "cached": 0.5,
+        "output": 8
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 650
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 547
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 607
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 612
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 568
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 541
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4.1-2025-04-14",
+      "created": "2025-04-10",
+      "family": "gpt-4.1",
+      "category": "text",
+      "aliasOf": "gpt-4.1",
+      "pricing": {
+        "input": 2,
+        "cached": 0.5,
+        "output": 8
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4.1; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4.1-mini",
+      "created": "2025-04-10",
+      "family": "gpt-4.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.4,
+        "cached": 0.1,
+        "output": 1.6
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 565
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 824
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 634
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 588
+        },
+        "vision": {
+          "status": "unsupported",
+          "ms": 686,
+          "detail": "answer: Pink"
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 430
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4.1-mini-2025-04-14",
+      "created": "2025-04-10",
+      "family": "gpt-4.1",
+      "category": "text",
+      "aliasOf": "gpt-4.1-mini",
+      "pricing": {
+        "input": 0.4,
+        "cached": 0.1,
+        "output": 1.6
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4.1-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4.1-nano",
+      "created": "2025-04-10",
+      "family": "gpt-4.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.1,
+        "cached": 0.025,
+        "output": 0.4
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 568,
+          "detail": "404 404 The model `gpt-4.1-nano` has been deprecated, learn more here: https://platform.openai.com/docs/deprecations"
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4.1-nano-2025-04-14",
+      "created": "2025-04-10",
+      "family": "gpt-4.1",
+      "category": "text",
+      "aliasOf": "gpt-4.1-nano",
+      "pricing": {
+        "input": 0.1,
+        "cached": 0.025,
+        "output": 0.4
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4.1-nano; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o",
+      "created": "2024-05-10",
+      "family": "gpt-4o",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2.5,
+        "cached": 1.25,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 650
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 710
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 606
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 727
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 666
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 566
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-2024-05-13",
+      "created": "2024-05-10",
+      "family": "gpt-4o",
+      "category": "text",
+      "aliasOf": "gpt-4o",
+      "pricing": {
+        "input": 2.5,
+        "cached": 1.25,
+        "output": 10
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-2024-08-06",
+      "created": "2024-08-04",
+      "family": "gpt-4o",
+      "category": "text",
+      "aliasOf": "gpt-4o",
+      "pricing": {
+        "input": 2.5,
+        "cached": 1.25,
+        "output": 10
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-2024-11-20",
+      "created": "2025-02-12",
+      "family": "gpt-4o",
+      "category": "text",
+      "aliasOf": "gpt-4o",
+      "pricing": {
+        "input": 2.5,
+        "cached": 1.25,
+        "output": 10
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini",
+      "created": "2024-07-16",
+      "family": "gpt-4o",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.15,
+        "cached": 0.075,
+        "output": 0.6
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 495
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 589
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 620
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 599
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 662
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1747
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-2024-07-18",
+      "created": "2024-07-16",
+      "family": "gpt-4o",
+      "category": "text",
+      "aliasOf": "gpt-4o-mini",
+      "pricing": {
+        "input": 0.15,
+        "cached": 0.075,
+        "output": 0.6
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-search-preview",
+      "created": "2025-03-07",
+      "family": "gpt-4o-mini-search-preview",
+      "category": "search",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category search: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-search-preview-2025-03-11",
+      "created": "2025-03-07",
+      "family": "gpt-4o-mini-search-preview",
+      "category": "search",
+      "aliasOf": "gpt-4o-mini-search-preview",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-mini-search-preview; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-transcribe",
+      "created": "2025-03-15",
+      "family": "gpt-4o-mini-transcribe",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-transcribe-2025-03-20",
+      "created": "2025-12-13",
+      "family": "gpt-4o-mini-transcribe",
+      "category": "audio",
+      "aliasOf": "gpt-4o-mini-transcribe",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-mini-transcribe; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-transcribe-2025-12-15",
+      "created": "2025-12-13",
+      "family": "gpt-4o-mini-transcribe",
+      "category": "audio",
+      "aliasOf": "gpt-4o-mini-transcribe",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-mini-transcribe; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-tts",
+      "created": "2025-03-19",
+      "family": "gpt-4o-mini-tts",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-tts-2025-03-20",
+      "created": "2025-12-13",
+      "family": "gpt-4o-mini-tts",
+      "category": "audio",
+      "aliasOf": "gpt-4o-mini-tts",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-mini-tts; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-mini-tts-2025-12-15",
+      "created": "2025-12-13",
+      "family": "gpt-4o-mini-tts",
+      "category": "audio",
+      "aliasOf": "gpt-4o-mini-tts",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-mini-tts; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-search-preview",
+      "created": "2026-02-24",
+      "family": "gpt-4o-search-preview",
+      "category": "search",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category search: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-search-preview-2025-03-11",
+      "created": "2026-02-24",
+      "family": "gpt-4o-search-preview",
+      "category": "search",
+      "aliasOf": "gpt-4o-search-preview",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-4o-search-preview; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-transcribe",
+      "created": "2025-03-15",
+      "family": "gpt-4o-transcribe",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-4o-transcribe-diarize",
+      "created": "2025-06-24",
+      "family": "gpt-4o-transcribe-diarize",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5",
+      "created": "2025-08-05",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 2030
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1210
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 986
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 8394
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1105
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 907
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-2025-08-07",
+      "created": "2025-08-01",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": "gpt-5",
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-chat-latest",
+      "created": "2025-08-01",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 163,
+          "detail": "404 404 The model `gpt-5-chat-latest` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-codex",
+      "created": "2025-09-10",
+      "family": "gpt-5",
+      "category": "text-specialized",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 147,
+          "detail": "404 404 The model `gpt-5-codex` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-mini",
+      "created": "2025-08-05",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.25,
+        "cached": 0.025,
+        "output": 2
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1484
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1489
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1556
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 5095
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1442
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1092
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-mini-2025-08-07",
+      "created": "2025-08-05",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": "gpt-5-mini",
+      "pricing": {
+        "input": 0.25,
+        "cached": 0.025,
+        "output": 2
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-nano",
+      "created": "2025-08-05",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.05,
+        "cached": 0.005,
+        "output": 0.4
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1273
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1103
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 966
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 4184
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 898
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 981
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-nano-2025-08-07",
+      "created": "2025-08-05",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": "gpt-5-nano",
+      "pricing": {
+        "input": 0.05,
+        "cached": 0.005,
+        "output": 0.4
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5-nano; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-pro",
+      "created": "2025-10-03",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 15,
+        "cached": null,
+        "output": 120
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 12269
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 8281
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 15045
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 70315
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 157754
+        },
+        "reasoning_control": {
+          "status": "unsupported",
+          "ms": 135,
+          "detail": "400 400 Unsupported value: 'low' is not supported with the 'gpt-5-pro' model. Supported values are: 'high'."
+        }
+      },
+      "verdict": "tested",
+      "notes": [
+        "pro/expensive tier: only text + structured_output probed; benchmark skipped for cost ($30-$150/M input)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-pro-2025-10-06",
+      "created": "2025-10-03",
+      "family": "gpt-5",
+      "category": "text",
+      "aliasOf": "gpt-5-pro",
+      "pricing": {
+        "input": 15,
+        "cached": null,
+        "output": 120
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5-pro; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-search-api",
+      "created": "2025-10-03",
+      "family": "gpt-5-search-api",
+      "category": "search",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category search: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5-search-api-2025-10-14",
+      "created": "2025-10-09",
+      "family": "gpt-5-search-api",
+      "category": "search",
+      "aliasOf": "gpt-5-search-api",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5-search-api; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.1",
+      "created": "2025-11-10",
+      "family": "gpt-5.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 667
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 708
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 703
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 757
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 894
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 672
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.1-2025-11-13",
+      "created": "2025-11-10",
+      "family": "gpt-5.1",
+      "category": "text",
+      "aliasOf": "gpt-5.1",
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.1; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.1-chat-latest",
+      "created": "2025-11-07",
+      "family": "gpt-5.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 153,
+          "detail": "404 404 The model `gpt-5.1-chat-latest` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.1-codex",
+      "created": "2025-11-12",
+      "family": "gpt-5.1",
+      "category": "text-specialized",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 151,
+          "detail": "404 404 The model `gpt-5.1-codex` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.1-codex-max",
+      "created": "2025-11-20",
+      "family": "gpt-5.1",
+      "category": "text-specialized",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.25,
+        "cached": 0.125,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 135,
+          "detail": "404 404 The model `gpt-5.1-codex-max` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.1-codex-mini",
+      "created": "2025-11-13",
+      "family": "gpt-5.1",
+      "category": "text-specialized",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.25,
+        "cached": 0.025,
+        "output": 2
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 134,
+          "detail": "404 404 The model `gpt-5.1-codex-mini` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.2",
+      "created": "2025-12-09",
+      "family": "gpt-5.2",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.75,
+        "cached": 0.175,
+        "output": 14
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 702
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 918
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 742
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 942
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 766
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 752
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.2-2025-12-11",
+      "created": "2025-12-09",
+      "family": "gpt-5.2",
+      "category": "text",
+      "aliasOf": "gpt-5.2",
+      "pricing": {
+        "input": 1.75,
+        "cached": 0.175,
+        "output": 14
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.2; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.2-chat-latest",
+      "created": "2025-12-10",
+      "family": "gpt-5.2",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.75,
+        "cached": 0.175,
+        "output": 14
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 213,
+          "detail": "404 404 The model `gpt-5.2-chat-latest` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.2-codex",
+      "created": "2025-12-19",
+      "family": "gpt-5.2",
+      "category": "text-specialized",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.75,
+        "cached": 0.175,
+        "output": 14
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 166,
+          "detail": "404 404 The model `gpt-5.2-codex` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.2-pro",
+      "created": "2025-12-10",
+      "family": "gpt-5.2",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 21,
+        "cached": null,
+        "output": 168
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 4335
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 4276
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 7643
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 5338
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 5725
+        },
+        "reasoning_control": {
+          "status": "unsupported",
+          "ms": 141,
+          "detail": "400 400 Unsupported value: 'low' is not supported with the 'gpt-5.2-pro' model. Supported values are: 'medium', 'high', and 'xhigh'."
+        }
+      },
+      "verdict": "tested",
+      "notes": [
+        "pro/expensive tier: only text + structured_output probed; benchmark skipped for cost ($30-$150/M input)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.2-pro-2025-12-11",
+      "created": "2025-12-10",
+      "family": "gpt-5.2",
+      "category": "text",
+      "aliasOf": "gpt-5.2-pro",
+      "pricing": {
+        "input": 21,
+        "cached": null,
+        "output": 168
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.2-pro; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.3-chat-latest",
+      "created": "2026-02-27",
+      "family": "gpt-5.3",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.75,
+        "cached": 0.175,
+        "output": 14
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 199,
+          "detail": "404 404 The model `gpt-5.3-chat-latest` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.3-codex",
+      "created": "2026-02-08",
+      "family": "gpt-5.3",
+      "category": "text-specialized",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.75,
+        "cached": 0.175,
+        "output": 14
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 904
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 809
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 885
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 942
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 925
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 844
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4",
+      "created": "2026-03-05",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2.5,
+        "cached": 0.25,
+        "output": 15
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 720
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 955
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1079
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 986
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 767
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 883
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-2026-03-05",
+      "created": "2026-03-04",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": "gpt-5.4",
+      "pricing": {
+        "input": 2.5,
+        "cached": 0.25,
+        "output": 15
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.4; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-mini",
+      "created": "2026-03-14",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.75,
+        "cached": 0.075,
+        "output": 4.5
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 706
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 584
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 851
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 824
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 623
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 546
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-mini-2026-03-17",
+      "created": "2026-03-14",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": "gpt-5.4-mini",
+      "pricing": {
+        "input": 0.75,
+        "cached": 0.075,
+        "output": 4.5
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.4-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-nano",
+      "created": "2026-03-14",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.2,
+        "cached": 0.02,
+        "output": 1.25
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 722
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 704
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 596
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 652
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 521
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 566
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-nano-2026-03-17",
+      "created": "2026-03-14",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": "gpt-5.4-nano",
+      "pricing": {
+        "input": 0.2,
+        "cached": 0.02,
+        "output": 1.25
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.4-nano; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-pro",
+      "created": "2026-03-04",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 30,
+        "cached": null,
+        "output": 180
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 5054
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 6620
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 13017
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 22285
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 7970
+        },
+        "reasoning_control": {
+          "status": "unsupported",
+          "ms": 149,
+          "detail": "400 400 Unsupported value: 'low' is not supported with the 'gpt-5.4-pro' model. Supported values are: 'medium', 'high', and 'xhigh'."
+        }
+      },
+      "verdict": "tested",
+      "notes": [
+        "pro/expensive tier: only text + structured_output probed; benchmark skipped for cost ($30-$150/M input)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.4-pro-2026-03-05",
+      "created": "2026-03-04",
+      "family": "gpt-5.4",
+      "category": "text",
+      "aliasOf": "gpt-5.4-pro",
+      "pricing": {
+        "input": 30,
+        "cached": null,
+        "output": 180
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.4-pro; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.5",
+      "created": "2026-04-22",
+      "family": "gpt-5.5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 30
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 907
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1085
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 972
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1671
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1283
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1074
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.5-2026-04-23",
+      "created": "2026-04-22",
+      "family": "gpt-5.5",
+      "category": "text",
+      "aliasOf": "gpt-5.5",
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 30
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.5; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.5-pro",
+      "created": "2026-04-22",
+      "family": "gpt-5.5",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 30,
+        "cached": null,
+        "output": 180
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 35646
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 3986
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 5643
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 10706
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 4232
+        },
+        "reasoning_control": {
+          "status": "unsupported",
+          "ms": 264,
+          "detail": "400 400 Unsupported value: 'low' is not supported with the 'gpt-5.5-pro' model. Supported values are: 'medium', 'high', and 'xhigh'."
+        }
+      },
+      "verdict": "tested",
+      "notes": [
+        "pro/expensive tier: only text + structured_output probed; benchmark skipped for cost ($30-$150/M input)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.5-pro-2026-04-23",
+      "created": "2026-04-22",
+      "family": "gpt-5.5",
+      "category": "text",
+      "aliasOf": "gpt-5.5-pro",
+      "pricing": {
+        "input": 30,
+        "cached": null,
+        "output": 180
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-5.5-pro; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.6-luna",
+      "created": "2026-06-23",
+      "family": "gpt-5.6",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.2,
+        "cached": 0.02,
+        "output": 1.2
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 709
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 846
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 791
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1606
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 765
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 626
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.6-sol",
+      "created": "2026-06-23",
+      "family": "gpt-5.6",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 4,
+        "cached": 0.4,
+        "output": 20
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 824
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 761
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 794
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 801
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1467
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1011
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-5.6-terra",
+      "created": "2026-06-23",
+      "family": "gpt-5.6",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2,
+        "cached": 0.2,
+        "output": 12
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 645
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 809
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 876
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 917
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 698
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 753
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-6-astra",
+      "created": "2026-08-27",
+      "family": "gpt-6",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 10,
+        "cached": 1,
+        "output": 50
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 2008
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1186
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1513
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 2239
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1071
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 980
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-6-luna",
+      "created": "2026-09-14",
+      "family": "gpt-6",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.1,
+        "cached": 0.01,
+        "output": 0.5
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 862
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 881
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 759
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1453
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1281
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 596
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-6-sol",
+      "created": "2026-09-14",
+      "family": "gpt-6",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2,
+        "cached": 0.2,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 756
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 825
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 789
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1422
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1228
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 703
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-6.1-sol",
+      "created": "2026-09-27",
+      "family": "gpt-6.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2,
+        "cached": 0.1,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1034
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1033
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1140
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 2452
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 923
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1056
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-6.1-terra",
+      "created": "2026-10-13",
+      "family": "gpt-6.1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1,
+        "cached": 0.05,
+        "output": 5
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 800
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 962
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1054
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1373
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1379
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 977
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-audio",
+      "created": "2025-08-28",
+      "family": "gpt-audio",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-audio-1.5",
+      "created": "2026-02-20",
+      "family": "gpt-audio-1.5",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-audio-2025-08-28",
+      "created": "2025-08-27",
+      "family": "gpt-audio",
+      "category": "audio",
+      "aliasOf": "gpt-audio",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-audio; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-audio-mini",
+      "created": "2025-10-03",
+      "family": "gpt-audio",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-audio-mini-2025-10-06",
+      "created": "2025-10-03",
+      "family": "gpt-audio",
+      "category": "audio",
+      "aliasOf": "gpt-audio-mini",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-audio-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-audio-mini-2025-12-15",
+      "created": "2025-12-15",
+      "family": "gpt-audio",
+      "category": "audio",
+      "aliasOf": "gpt-audio-mini",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-audio-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-1",
+      "created": "2025-04-24",
+      "family": "gpt-image-1",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-1-mini",
+      "created": "2025-09-26",
+      "family": "gpt-image-1",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-1.5",
+      "created": "2025-11-25",
+      "family": "gpt-image-1.5",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-2",
+      "created": "2026-04-17",
+      "family": "gpt-image-2",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-2-2026-04-21",
+      "created": "2026-04-17",
+      "family": "gpt-image-2",
+      "category": "image",
+      "aliasOf": "gpt-image-2",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-image-2; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-2.5-flare",
+      "created": "2026-09-04",
+      "family": "gpt-image-2.5-flare",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-2.5-flare-2026-09-08",
+      "created": "2026-09-08",
+      "family": "gpt-image-2.5-flare",
+      "category": "image",
+      "aliasOf": "gpt-image-2.5-flare",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-image-2.5-flare; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-2.5-sunburst",
+      "created": "2026-09-04",
+      "family": "gpt-image-2.5-sunburst",
+      "category": "image",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category image: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-image-2.5-sunburst-2026-09-08",
+      "created": "2026-09-08",
+      "family": "gpt-image-2.5-sunburst",
+      "category": "image",
+      "aliasOf": "gpt-image-2.5-sunburst",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-image-2.5-sunburst; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-live-1",
+      "created": "2026-09-08",
+      "family": "gpt-live-1",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-live-transcribe",
+      "created": "2026-07-27",
+      "family": "gpt-live-transcribe",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime",
+      "created": "2025-08-27",
+      "family": "gpt-realtime",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-1.5",
+      "created": "2026-02-19",
+      "family": "gpt-realtime-1.5",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-2",
+      "created": "2026-05-05",
+      "family": "gpt-realtime-2",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-2.1",
+      "created": "2026-06-23",
+      "family": "gpt-realtime-2.1",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-2.1-mini",
+      "created": "2026-06-23",
+      "family": "gpt-realtime-2.1",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-2025-08-28",
+      "created": "2025-08-27",
+      "family": "gpt-realtime",
+      "category": "realtime",
+      "aliasOf": "gpt-realtime",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-realtime; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-mini",
+      "created": "2025-10-03",
+      "family": "gpt-realtime",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-mini-2025-12-15",
+      "created": "2025-12-13",
+      "family": "gpt-realtime",
+      "category": "realtime",
+      "aliasOf": "gpt-realtime-mini",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of gpt-realtime-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-translate",
+      "created": "2026-05-05",
+      "family": "gpt-realtime-translate",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-realtime-whisper",
+      "created": "2026-05-05",
+      "family": "gpt-realtime-whisper",
+      "category": "realtime",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category realtime: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "gpt-transcribe",
+      "created": "2026-07-27",
+      "family": "gpt-transcribe",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o1",
+      "created": "2024-12-16",
+      "family": "o1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 15,
+        "cached": 7.5,
+        "output": 60
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 429,
+          "detail": "404 404 The model `o1` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "o1-2024-12-17",
+      "created": "2024-12-16",
+      "family": "o1",
+      "category": "text",
+      "aliasOf": "o1",
+      "pricing": {
+        "input": 15,
+        "cached": 7.5,
+        "output": 60
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o1; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o1-pro",
+      "created": "2025-03-17",
+      "family": "o1",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 150,
+        "cached": null,
+        "output": 600
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 207,
+          "detail": "404 404 The model `o1-pro` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": [
+        "pro/expensive tier: only text + structured_output probed; benchmark skipped for cost ($30-$150/M input)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o1-pro-2025-03-19",
+      "created": "2025-03-17",
+      "family": "o1",
+      "category": "text",
+      "aliasOf": "o1-pro",
+      "pricing": {
+        "input": 150,
+        "cached": null,
+        "output": 600
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o1-pro; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o3",
+      "created": "2025-04-09",
+      "family": "o3",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 2,
+        "cached": 0.5,
+        "output": 8
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 823
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1299
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1377
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1299
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1098
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 679
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "o3-2025-04-16",
+      "created": "2025-04-08",
+      "family": "o3",
+      "category": "text",
+      "aliasOf": "o3",
+      "pricing": {
+        "input": 2,
+        "cached": 0.5,
+        "output": 8
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o3; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o3-deep-research",
+      "created": "2025-06-13",
+      "family": "o3-deep-research",
+      "category": "deep-research",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category deep-research: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o3-deep-research-2025-06-26",
+      "created": "2025-06-25",
+      "family": "o3-deep-research",
+      "category": "deep-research",
+      "aliasOf": "o3-deep-research",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o3-deep-research; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o3-mini",
+      "created": "2025-01-17",
+      "family": "o3",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.1,
+        "cached": 0.55,
+        "output": 4.4
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 186,
+          "detail": "404 404 The model `o3-mini` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "o3-mini-2025-01-31",
+      "created": "2025-01-27",
+      "family": "o3",
+      "category": "text",
+      "aliasOf": "o3-mini",
+      "pricing": {
+        "input": 1.1,
+        "cached": 0.55,
+        "output": 4.4
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o3-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o3-pro",
+      "created": "2025-05-28",
+      "family": "o3",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 20,
+        "cached": null,
+        "output": 80
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 4414
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 4539
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 6647
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 5927
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 6121
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 4857
+        }
+      },
+      "verdict": "tested",
+      "notes": [
+        "pro/expensive tier: only text + structured_output probed; benchmark skipped for cost ($30-$150/M input)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o3-pro-2025-06-10",
+      "created": "2025-06-05",
+      "family": "o3",
+      "category": "text",
+      "aliasOf": "o3-pro",
+      "pricing": {
+        "input": 20,
+        "cached": null,
+        "output": 80
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o3-pro; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o4-mini",
+      "created": "2025-04-09",
+      "family": "o4",
+      "category": "text",
+      "aliasOf": null,
+      "pricing": {
+        "input": 1.1,
+        "cached": 0.275,
+        "output": 4.4
+      },
+      "probes": {
+        "text": {
+          "status": "unavailable",
+          "ms": 147,
+          "detail": "404 404 The model `o4-mini` does not exist or you do not have access to it."
+        }
+      },
+      "verdict": "unavailable",
+      "notes": []
+    },
+    {
+      "provider": "openai",
+      "id": "o4-mini-2025-04-16",
+      "created": "2025-04-08",
+      "family": "o4",
+      "category": "text",
+      "aliasOf": "o4-mini",
+      "pricing": {
+        "input": 1.1,
+        "cached": 0.275,
+        "output": 4.4
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o4-mini; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o4-mini-deep-research",
+      "created": "2025-06-11",
+      "family": "o4-mini-deep-research",
+      "category": "deep-research",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category deep-research: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "o4-mini-deep-research-2025-06-26",
+      "created": "2025-06-25",
+      "family": "o4-mini-deep-research",
+      "category": "deep-research",
+      "aliasOf": "o4-mini-deep-research",
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "dated snapshot of o4-mini-deep-research; not probed separately"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "omni-moderation-2024-09-26",
+      "created": "2024-11-27",
+      "family": "omni-moderation",
+      "category": "moderation",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category moderation: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "omni-moderation-latest",
+      "created": "2024-11-15",
+      "family": "omni-moderation-latest",
+      "category": "moderation",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category moderation: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "sora-2",
+      "created": "2025-10-05",
+      "family": "sora-2",
+      "category": "video",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category video: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "sora-2-pro",
+      "created": "2025-10-05",
+      "family": "sora-2",
+      "category": "video",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category video: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "text-embedding-3-large",
+      "created": "2024-01-22",
+      "family": "text-embedding-3-large",
+      "category": "embedding",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.13,
+        "cached": null,
+        "output": 0
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category embedding: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "text-embedding-3-small",
+      "created": "2024-01-22",
+      "family": "text-embedding-3-small",
+      "category": "embedding",
+      "aliasOf": null,
+      "pricing": {
+        "input": 0.02,
+        "cached": null,
+        "output": 0
+      },
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category embedding: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "text-embedding-ada-002",
+      "created": "2022-12-16",
+      "family": "text-embedding-ada-002",
+      "category": "embedding",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category embedding: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "tts-1",
+      "created": "2023-04-19",
+      "family": "tts-1",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "tts-1-1106",
+      "created": "2023-11-03",
+      "family": "tts-1-1106",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "tts-1-hd",
+      "created": "2023-11-03",
+      "family": "tts-1-hd",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "tts-1-hd-1106",
+      "created": "2023-11-03",
+      "family": "tts-1-hd-1106",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "openai",
+      "id": "whisper-1",
+      "created": "2023-02-27",
+      "family": "whisper-1",
+      "category": "audio",
+      "aliasOf": null,
+      "pricing": null,
+      "probes": {},
+      "verdict": "untested",
+      "notes": [
+        "category audio: not a general text model, not probed (inappropriate request type)"
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-haiku-5-5",
+      "display": "Claude Haiku 5.5",
+      "created": "2026-10-07",
+      "family": "claude-haiku-5-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 0.1,
+        "cached": 0.01,
+        "output": 0.5
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 592
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 604
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 620
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1089
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 932
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 567
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-sonnet-5-5",
+      "display": "Claude Sonnet 5.5",
+      "created": "2026-09-28",
+      "family": "claude-sonnet-5-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": false
+            },
+            "between_tools": {
+              "supported": true
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 2,
+        "cached": 0.1,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1265
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1037
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1385
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 772
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1019
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1167
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-5-5",
+      "display": "Claude Opus 5.5",
+      "created": "2026-09-21",
+      "family": "claude-opus-5-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": false
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 4,
+        "cached": 0.2,
+        "output": 20
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 859
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 905
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1020
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1629
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 952
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 3151
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-fable-5-1",
+      "display": "Claude Fable 5.1",
+      "created": "2026-08-28",
+      "family": "claude-fable-5-1",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": false
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 10,
+        "cached": 0.25,
+        "output": 50
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 734
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 740
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1094
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1162
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 751
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 718
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-5",
+      "display": "Claude Opus 5",
+      "created": "2026-07-24",
+      "family": "claude-opus-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 25
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1509
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 771
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1747
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1341
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 940
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1427
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-sonnet-5",
+      "display": "Claude Sonnet 5",
+      "created": "2026-06-29",
+      "family": "claude-sonnet-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 2,
+        "cached": 0.2,
+        "output": 10
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 937
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1024
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1003
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1055
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 891
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 875
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-fable-5",
+      "display": "Claude Fable 5",
+      "created": "2026-06-07",
+      "family": "claude-fable-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": false
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 10,
+        "cached": 1,
+        "output": 50
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1882
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 2063
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 2394
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 2096
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 2119
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 2015
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-4-8",
+      "display": "Claude Opus 4.8",
+      "created": "2026-05-28",
+      "family": "claude-opus-4-8",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 25
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 560
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 614
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1354
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1620
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 836
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 653
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-4-7",
+      "display": "Claude Opus 4.7",
+      "created": "2026-04-14",
+      "family": "claude-opus-4-7",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": false
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 25
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 414
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 670
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1172
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1247
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 664
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 748
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-6",
+      "display": "Claude Sonnet 4.6",
+      "created": "2026-02-17",
+      "family": "claude-sonnet-4-6",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": false
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": true
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 3,
+        "cached": 0.3,
+        "output": 15
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 721
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1063
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1064
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 919
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1393
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 666
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-4-6",
+      "display": "Claude Opus 4.6",
+      "created": "2026-02-04",
+      "family": "claude-opus-4-6",
+      "category": "text",
+      "aliasOf": null,
+      "context": 1000000,
+      "maxOutput": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": true
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": false
+          },
+          "max": {
+            "supported": true
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": true
+            },
+            "adaptive": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 25
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 1530
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1573
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1772
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1864
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 1280
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1515
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-opus-4-5-20251101",
+      "display": "Claude Opus 4.5",
+      "created": "2025-11-24",
+      "family": "claude-opus-4-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 200000,
+      "maxOutput": 64000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": false
+          }
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "xhigh": {
+            "supported": false
+          },
+          "max": {
+            "supported": false
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": true
+            },
+            "adaptive": {
+              "supported": false
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 5,
+        "cached": 0.5,
+        "output": 25
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 610
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 1199
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1301
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1157
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 639
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1454
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-haiku-4-5-20251001",
+      "display": "Claude Haiku 4.5",
+      "created": "2025-10-15",
+      "family": "claude-haiku-4-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 200000,
+      "maxOutput": 64000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": false
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": false
+          }
+        },
+        "effort": {
+          "supported": false,
+          "low": {
+            "supported": false
+          },
+          "medium": {
+            "supported": false
+          },
+          "high": {
+            "supported": false
+          },
+          "xhigh": {
+            "supported": false
+          },
+          "max": {
+            "supported": false
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": true
+            },
+            "adaptive": {
+              "supported": false
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 1,
+        "cached": 0.1,
+        "output": 5
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 428
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 563
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 777
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1178
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 427
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 782
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    },
+    {
+      "provider": "anthropic",
+      "id": "claude-sonnet-4-5-20250929",
+      "display": "Claude Sonnet 4.5",
+      "created": "2025-09-29",
+      "family": "claude-sonnet-4-5",
+      "category": "text",
+      "aliasOf": null,
+      "context": 200000,
+      "maxOutput": 64000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "context_management": {
+          "supported": true,
+          "clear_tool_uses_20250919": {
+            "supported": true
+          },
+          "clear_thinking_20251015": {
+            "supported": true
+          },
+          "compact_20260112": {
+            "supported": false
+          }
+        },
+        "effort": {
+          "supported": false,
+          "low": {
+            "supported": false
+          },
+          "medium": {
+            "supported": false
+          },
+          "high": {
+            "supported": false
+          },
+          "xhigh": {
+            "supported": false
+          },
+          "max": {
+            "supported": false
+          }
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "server_tools": {
+          "supported": true,
+          "code_execution": {
+            "supported": true
+          },
+          "web_search": {
+            "supported": true
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "enabled": {
+              "supported": true
+            },
+            "adaptive": {
+              "supported": false
+            },
+            "disabled": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": false
+            }
+          }
+        }
+      },
+      "pricing": {
+        "input": 3,
+        "cached": 0.3,
+        "output": 15
+      },
+      "probes": {
+        "text": {
+          "status": "ok",
+          "ms": 593
+        },
+        "streaming": {
+          "status": "ok",
+          "ms": 672
+        },
+        "tool_use": {
+          "status": "ok",
+          "ms": 1259
+        },
+        "structured_output": {
+          "status": "ok",
+          "ms": 1075
+        },
+        "vision": {
+          "status": "ok",
+          "ms": 648
+        },
+        "reasoning_control": {
+          "status": "ok",
+          "ms": 1186
+        }
+      },
+      "verdict": "tested",
+      "notes": []
+    }
+  ]
+}

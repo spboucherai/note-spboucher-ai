@@ -1,0 +1,59 @@
+{
+  "id": "json_generation",
+  "category": "JSON generation",
+  "grader": "json",
+  "max_tokens": 4000,
+  "schema": {
+    "name": "research_paper",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "year": {
+          "type": "integer"
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planning",
+            "research",
+            "development",
+            "published"
+          ]
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "estimated_pages": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "title",
+        "year",
+        "authors",
+        "status",
+        "keywords",
+        "estimated_pages"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "prompt": "Create a JSON record for this working paper: 'SHARP-HPI: Monthly municipal house price indices for Quebec' written in 2026 by Simon-Pierre Boucher and Manel Kammoun, currently in development, about 45 pages, keywords: hedonic, state-space, housing, Quebec. Output only JSON.",
+  "expect_json": {
+    "year": 2026,
+    "status": "development",
+    "authors_count": 2
+  }
+}

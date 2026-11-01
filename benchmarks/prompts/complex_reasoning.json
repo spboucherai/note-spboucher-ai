@@ -1,0 +1,11 @@
+{
+  "id": "complex_reasoning",
+  "category": "Complex reasoning",
+  "grader": "regex",
+  "max_tokens": 6000,
+  "prompt": "Five researchers (Ana, Bruno, Chen, Dana, Emil) each wrote exactly one working paper numbered 30 to 34 (distinct). Clues:\n- Ana's number is twice Dana's number minus 32.\n- Bruno's number is odd.\n- Chen's number is exactly 2 more than Emil's number.\n- Dana's number is greater than Bruno's.\n- Nobody with a name starting with a vowel wrote paper 32.\nDetermine which number each researcher wrote. Think it through, then end your answer with a single final line of the form:\nFINAL: Ana=NN, Bruno=NN, Chen=NN, Dana=NN, Emil=NN",
+  "expect": [
+    "FINAL:\\s*Ana=34,\\s*Bruno=31,\\s*Chen=32,\\s*Dana=33,\\s*Emil=30"
+  ],
+  "note": "Unique solution verified by brute force: Ana=34, Bruno=31, Chen=32, Dana=33, Emil=30"
+}
