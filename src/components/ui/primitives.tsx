@@ -14,8 +14,8 @@ export function DialogContent({ className, children, title, description, wide, .
   return (
     <DialogP.Portal>
       <DialogP.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] data-[state=open]:animate-in" />
-      <DialogP.Content className={cn("fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-bg-elev p-5 shadow-pop focus:outline-none fade-up max-h-[90vh] overflow-y-auto", wide ? "max-w-4xl" : "max-w-lg", className)} {...p}>
-        {title && <DialogP.Title className="text-base font-semibold mb-1">{title}</DialogP.Title>}
+      <DialogP.Content className={cn("fixed left-1/2 top-1/2 z-50 w-[calc(100vw-1.5rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-bg-elev p-5 shadow-pop focus:outline-none fade-up max-h-[90dvh] overflow-y-auto sm:p-6", wide ? "max-w-4xl" : "max-w-lg", className)} {...p}>
+        {title && <DialogP.Title className="mb-1 pr-8 text-[16px] font-semibold tracking-[-0.01em]">{title}</DialogP.Title>}
         {description ? <DialogP.Description className="text-sm text-fg-muted mb-4">{description}</DialogP.Description> : <DialogP.Description className="sr-only">Dialog</DialogP.Description>}
         {children}
         <DialogP.Close className="absolute right-3 top-3 rounded p-1 text-fg-faint hover:bg-bg-sunk hover:text-fg"><X className="size-4" /></DialogP.Close>
@@ -39,7 +39,7 @@ export function MenuContent({ className, align = "end", ...p }: DropdownP.Dropdo
   return <DropdownP.Portal><DropdownP.Content align={align} sideOffset={6} className={cn("z-50 min-w-[180px] rounded-lg border border-line bg-bg-elev p-1 shadow-pop fade-up", className)} {...p} /></DropdownP.Portal>;
 }
 export function MenuItem({ className, danger, ...p }: DropdownP.DropdownMenuItemProps & { danger?: boolean }) {
-  return <DropdownP.Item className={cn("flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-[13px] outline-none data-[highlighted]:bg-bg-sunk [&_svg]:size-4 [&_svg]:text-fg-muted", danger && "text-danger", className)} {...p} />;
+  return <DropdownP.Item className={cn("flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-[13px] outline-none data-[highlighted]:bg-bg-hover [&_svg]:size-4 [&_svg]:text-fg-muted", danger && "text-danger", className)} {...p} />;
 }
 export function Switch(p: SwitchP.SwitchProps) {
   return <SwitchP.Root className="relative h-5 w-9 rounded-full bg-line-strong data-[state=checked]:bg-accent transition-colors" {...p}><SwitchP.Thumb className="block size-4 translate-x-0.5 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-[18px]" /></SwitchP.Root>;
@@ -54,5 +54,14 @@ export function Badge({ className, tone = "neutral", children }: { className?: s
 export function Kbd({ children }: { children: React.ReactNode }) { return <kbd className="inline-flex h-5 items-center rounded border border-line bg-bg-sunk px-1 font-mono text-[10px] text-fg-muted">{children}</kbd>; }
 export function Spinner({ className }: { className?: string }) { return <span className={cn("inline-block size-4 animate-spin rounded-full border-2 border-line-strong border-t-accent", className)} />; }
 export function Empty({ icon, title, hint, action }: { icon?: React.ReactNode; title: string; hint?: string; action?: React.ReactNode }) {
-  return <div className="flex flex-col items-center justify-center gap-2 py-14 text-center"><div className="text-fg-faint [&_svg]:size-8">{icon}</div><div className="text-sm font-medium">{title}</div>{hint && <div className="text-[13px] text-fg-muted max-w-sm">{hint}</div>}{action && <div className="mt-2">{action}</div>}</div>;
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 px-4 py-14 text-center">
+      {icon && <div className="mb-1 grid size-12 place-items-center rounded-2xl border border-line bg-bg-elev text-fg-faint shadow-card [&_svg]:size-5">{icon}</div>}
+      <div className="text-[14px] font-semibold tracking-[-0.01em]">{title}</div>
+      {hint && <div className="max-w-sm text-[13px] leading-5 text-fg-muted">{hint}</div>}
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
 }
+/** Shimmer placeholder (respects reduced motion via globals.css). */
+export function Skeleton({ className }: { className?: string }) { return <div aria-hidden className={cn("skeleton h-4", className)} />; }

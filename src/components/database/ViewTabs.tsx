@@ -17,7 +17,7 @@ export function ViewTabs({ db, view, onSelect }: { db: Database; view: View; onS
       <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none]">
         {db.views.map((v) => {
           const active = v.id === view.id;
-          const btn = <button key={v.id} type="button" onClick={() => (active ? setSettings(true) : onSelect(v.id))} className={cn("flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] [&_svg]:size-3.5", active ? "bg-bg-sunk font-medium text-fg" : "text-fg-muted hover:bg-bg-sunk hover:text-fg")}>{VIEW_META[v.type].icon}{v.name}{active && <Settings2 className="ml-0.5 !size-3 text-fg-faint" />}</button>;
+          const btn = <button key={v.id} type="button" onClick={() => (active ? setSettings(true) : onSelect(v.id))} className={cn("flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] [&_svg]:size-3.5", active ? "bg-bg-elev font-medium text-fg shadow-card ring-1 ring-line" : "text-fg-muted hover:bg-bg-sunk hover:text-fg")}>{VIEW_META[v.type].icon}{v.name}{active && <Settings2 className="ml-0.5 !size-3 text-fg-faint" />}</button>;
           return active ? <Popover key={v.id} open={settings} onOpenChange={setSettings}><PopoverTrigger asChild>{btn}</PopoverTrigger><PopoverContent className="w-72"><ViewSettings db={db} view={v} onClose={() => setSettings(false)} onDeleted={() => { setSettings(false); onSelect(db.views.find((x) => x.id !== v.id)?.id ?? v.id); }} /></PopoverContent></Popover> : btn;
         })}
       </div>

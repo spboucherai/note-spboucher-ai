@@ -5,12 +5,14 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-serif: "Source Serif 4", "Iowan Old Style", ui-serif, Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius: 0.5rem;
   --color-bg: var(--bg);
   --color-bg-elev: var(--bg-elev);
   --color-bg-sunk: var(--bg-sunk);
+  --color-bg-side: var(--bg-side);
+  --color-bg-hover: var(--bg-hover);
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
   --color-fg-faint: var(--fg-faint);
@@ -26,48 +28,65 @@
   --color-ai-soft: var(--ai-soft);
   --shadow-card: var(--shadow-card);
   --shadow-pop: var(--shadow-pop);
+  /* type scale (1.2 minor third, 16 px base for reading, 13 px for chrome) */
+  --text-micro: 0.6875rem; --text-micro--line-height: 1rem;
+  --text-ui: 0.8125rem; --text-ui--line-height: 1.25rem;
+  --text-body: 1rem; --text-body--line-height: 1.75rem;
+  --text-h3: 1.25rem; --text-h3--line-height: 1.75rem;
+  --text-h2: 1.5rem; --text-h2--line-height: 2rem;
+  --text-h1: 1.875rem; --text-h1--line-height: 2.375rem;
+  --text-display: 2.5rem; --text-display--line-height: 3rem;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 }
 
+/* Graphite & Ultramarine — light: cool paper, ink text, one saturated accent. */
 :root {
-  --bg: oklch(99% 0.002 95);
+  --bg: oklch(98.7% 0.003 255);
   --bg-elev: oklch(100% 0 0);
-  --bg-sunk: oklch(97% 0.004 95);
-  --fg: oklch(20% 0.01 260);
-  --fg-muted: oklch(48% 0.012 260);
-  --fg-faint: oklch(68% 0.01 260);
-  --line: oklch(91% 0.006 260);
-  --line-strong: oklch(84% 0.008 260);
-  --accent: oklch(52% 0.17 262);
-  --accent-fg: oklch(99% 0 0);
-  --accent-soft: oklch(95% 0.03 262);
-  --danger: oklch(56% 0.2 25);
-  --success: oklch(58% 0.15 150);
-  --warning: oklch(72% 0.16 75);
-  --ai: oklch(55% 0.17 300);
-  --ai-soft: oklch(95% 0.035 300);
-  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.04), 0 1px 1px oklch(0% 0 0 / 0.03);
-  --shadow-pop: 0 10px 30px -10px oklch(0% 0 0 / 0.25), 0 2px 6px oklch(0% 0 0 / 0.08);
+  --bg-sunk: oklch(96.3% 0.005 255);
+  --bg-side: oklch(97.2% 0.005 255);
+  --bg-hover: oklch(94.6% 0.007 258);
+  --fg: oklch(21.5% 0.018 265);
+  --fg-muted: oklch(46% 0.018 262);
+  --fg-faint: oklch(63% 0.014 260);
+  --line: oklch(91.8% 0.006 258);
+  --line-strong: oklch(85.5% 0.009 258);
+  --accent: oklch(52.5% 0.2 265);
+  --accent-fg: oklch(99% 0.003 265);
+  --accent-soft: oklch(95.4% 0.032 265);
+  --danger: oklch(55% 0.2 25);
+  --success: oklch(56% 0.14 155);
+  --warning: oklch(70% 0.15 70);
+  --ai: oklch(53% 0.21 298);
+  --ai-soft: oklch(95.5% 0.035 298);
+  --ring: oklch(52.5% 0.2 265 / 0.35);
+  --shadow-card: 0 1px 2px oklch(25% 0.03 265 / 0.05), 0 0 0 1px oklch(25% 0.03 265 / 0.02);
+  --shadow-pop: 0 16px 40px -12px oklch(25% 0.04 265 / 0.22), 0 3px 8px -2px oklch(25% 0.04 265 / 0.08);
   color-scheme: light;
 }
+/* Dark is designed, not inverted: blue-ink surfaces stepping up in lightness, softer accent, lower-contrast lines. */
 .dark {
-  --bg: oklch(17% 0.008 260);
-  --bg-elev: oklch(21% 0.009 260);
-  --bg-sunk: oklch(14% 0.008 260);
-  --fg: oklch(93% 0.006 95);
-  --fg-muted: oklch(68% 0.01 260);
-  --fg-faint: oklch(50% 0.01 260);
-  --line: oklch(27% 0.01 260);
-  --line-strong: oklch(34% 0.012 260);
-  --accent: oklch(72% 0.14 262);
-  --accent-fg: oklch(15% 0.02 262);
-  --accent-soft: oklch(28% 0.05 262);
-  --danger: oklch(68% 0.18 25);
-  --success: oklch(70% 0.14 150);
-  --warning: oklch(78% 0.15 75);
-  --ai: oklch(74% 0.14 300);
-  --ai-soft: oklch(28% 0.05 300);
-  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.4);
-  --shadow-pop: 0 12px 36px -12px oklch(0% 0 0 / 0.7), 0 2px 6px oklch(0% 0 0 / 0.4);
+  --bg: oklch(17.2% 0.013 268);
+  --bg-elev: oklch(21% 0.015 268);
+  --bg-sunk: oklch(14.6% 0.012 268);
+  --bg-side: oklch(15.6% 0.013 268);
+  --bg-hover: oklch(24.5% 0.016 268);
+  --fg: oklch(94% 0.006 255);
+  --fg-muted: oklch(72% 0.014 260);
+  --fg-faint: oklch(54% 0.014 262);
+  --line: oklch(26.5% 0.015 268);
+  --line-strong: oklch(33.5% 0.018 268);
+  --accent: oklch(73% 0.14 265);
+  --accent-fg: oklch(17% 0.03 265);
+  --accent-soft: oklch(29% 0.065 265);
+  --danger: oklch(69% 0.17 25);
+  --success: oklch(73% 0.13 155);
+  --warning: oklch(80% 0.14 75);
+  --ai: oklch(75% 0.14 298);
+  --ai-soft: oklch(29% 0.07 298);
+  --ring: oklch(73% 0.14 265 / 0.4);
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.35), 0 0 0 1px oklch(100% 0 0 / 0.02);
+  --shadow-pop: 0 18px 44px -14px oklch(0% 0 0 / 0.75), 0 0 0 1px oklch(100% 0 0 / 0.05);
   color-scheme: dark;
 }
 
@@ -77,15 +96,56 @@ body { @apply bg-bg text-fg antialiased; font-feature-settings: "cv11", "ss01", 
 ::selection { background: var(--accent-soft); }
 .safe-top { padding-top: env(safe-area-inset-top); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+@layer base {
+  :where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  :where(input, textarea, [contenteditable]):focus-visible { outline-offset: 0; }
+}
+.ProseMirror:focus-visible { outline: none; }
+.measure { max-width: 46rem; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- Skeletons ---------- */
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.skeleton { border-radius: 0.375rem; background: linear-gradient(90deg, var(--bg-sunk) 25%, var(--bg-hover) 50%, var(--bg-sunk) 75%); background-size: 200% 100%; animation: var(--animate-shimmer); }
+
+/* ---------- Sidebar ---------- */
+@layer components {
+.side-label { @apply px-2 pb-1 pt-4 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-faint; }
+.side-item { @apply flex h-7 items-center gap-2 rounded-md px-2 text-[13px] text-fg-muted transition-colors hover:bg-bg-hover hover:text-fg [&_svg]:size-[15px] [&_svg]:shrink-0; }
+.side-item[data-active="true"] { @apply bg-bg-elev text-fg font-medium shadow-card; }
+}
+
+/* ---------- Covers (presets, no remote images needed) ---------- */
+.cover-aurora { background: radial-gradient(120% 140% at 10% 10%, oklch(78% 0.12 265) 0%, transparent 55%), radial-gradient(120% 140% at 90% 30%, oklch(80% 0.12 300) 0%, transparent 55%), linear-gradient(120deg, oklch(70% 0.1 230), oklch(62% 0.16 280)); }
+.cover-ink { background: linear-gradient(135deg, oklch(28% 0.04 265), oklch(42% 0.09 270) 60%, oklch(55% 0.13 265)); }
+.cover-paper { background: repeating-linear-gradient(0deg, transparent 0 27px, oklch(85% 0.01 258) 27px 28px), linear-gradient(180deg, oklch(97% 0.01 85), oklch(94% 0.015 80)); }
+.cover-dusk { background: linear-gradient(160deg, oklch(72% 0.13 40), oklch(60% 0.16 350) 50%, oklch(42% 0.12 290)); }
+.cover-moss { background: linear-gradient(140deg, oklch(80% 0.08 150), oklch(58% 0.1 170) 55%, oklch(40% 0.07 200)); }
+.cover-grid { background-color: var(--bg-sunk); background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 24px 24px; }
+
+/* ---------- Database ---------- */
+.db-scroll { @apply max-h-[min(72vh,56rem)] overflow-auto rounded-lg border border-line bg-bg-elev; }
+.db-scroll thead th { position: sticky; top: 0; z-index: 4; background: var(--bg-sunk); }
+.db-scroll thead th.sticky { z-index: 5; }
+
+/* ---------- Graph ---------- */
+.graph-canvas { background-color: var(--bg); background-image: radial-gradient(var(--line-strong) 1px, transparent 1.2px); background-size: 22px 22px; background-position: -11px -11px; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  .skeleton { animation: none; }
+}
 
 /* ---------- Editor (ProseMirror) ---------- */
 .note-editor { @apply outline-none; }
 .note-editor .ProseMirror { @apply outline-none min-h-[40vh]; }
 .note-editor .ProseMirror > * + * { margin-top: 0.5rem; }
-.note-editor h1 { @apply text-3xl font-semibold tracking-tight mt-8 mb-2; }
-.note-editor h2 { @apply text-2xl font-semibold tracking-tight mt-7 mb-2; }
-.note-editor h3 { @apply text-xl font-semibold mt-5 mb-1; }
-.note-editor p { @apply leading-7 text-[15.5px]; }
+.note-editor h1 { @apply text-h1 font-semibold tracking-[-0.02em] mt-10 mb-2; }
+.note-editor h2 { @apply text-h2 font-semibold tracking-[-0.015em] mt-8 mb-1.5; }
+.note-editor h3 { @apply text-h3 font-semibold tracking-[-0.01em] mt-6 mb-1; }
+.note-editor p, .note-editor li { @apply text-body text-fg; }
+.note-editor { font-size: 1rem; line-height: 1.75; }
 .note-editor a { @apply text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent; }
 .note-editor ul { @apply list-disc pl-6; } .note-editor ol { @apply list-decimal pl-6; }
 .note-editor li > p { margin: 0.15rem 0; }
@@ -94,7 +154,7 @@ body { @apply bg-bg text-fg antialiased; font-feature-settings: "cv11", "ss01", 
 .note-editor ul[data-type="taskList"] li > label { @apply mt-1.5 shrink-0; }
 .note-editor ul[data-type="taskList"] li > label input { @apply accent-[var(--accent)] size-4; }
 .note-editor ul[data-type="taskList"] li[data-checked="true"] > div { @apply line-through text-fg-faint; }
-.note-editor blockquote { @apply border-l-2 border-line-strong pl-4 text-fg-muted italic; }
+.note-editor blockquote { @apply border-l-[3px] border-accent/40 pl-4 text-fg-muted font-serif text-[1.0625rem]; }
 .note-editor pre { @apply bg-bg-sunk border border-line rounded-lg p-4 text-[13px] font-mono overflow-x-auto; }
 .note-editor pre code { @apply bg-transparent p-0; }
 .note-editor code { @apply bg-bg-sunk border border-line rounded px-1 py-0.5 text-[0.9em] font-mono; }
@@ -114,7 +174,7 @@ body { @apply bg-bg text-fg antialiased; font-feature-settings: "cv11", "ss01", 
 .note-editor .callout[data-kind="danger"] { @apply bg-danger/10 border-danger/30; }
 .note-editor .callout[data-kind="ai"] { @apply bg-ai-soft border-ai/30; }
 .note-editor .callout-icon { @apply text-lg leading-7 select-none; }
-.note-editor .mention { @apply inline-flex items-center gap-1 rounded bg-accent-soft text-accent px-1.5 py-0.5 text-[0.95em] no-underline; }
+.note-editor .mention { @apply inline-flex items-center gap-1 rounded-md bg-accent-soft text-accent px-1.5 py-px text-[0.94em] font-medium no-underline; }
 .note-editor .ai-block { @apply border border-ai/30 bg-ai-soft/40 rounded-lg p-3 my-2 relative; }
 .note-editor .ai-block::before { content: "AI"; @apply absolute -top-2 right-3 text-[10px] font-semibold tracking-wider text-ai bg-bg-elev px-1.5 rounded; }
 .note-editor .Tiptap-mathematics-editor { @apply bg-bg-sunk px-1 rounded font-mono text-[0.9em]; }
@@ -133,7 +193,11 @@ body { @apply bg-bg text-fg antialiased; font-feature-settings: "cv11", "ss01", 
 .prose-md table { @apply border-collapse w-full my-2 text-[13.5px]; } .prose-md th,.prose-md td { @apply border border-line px-2 py-1; }
 .prose-md blockquote { @apply border-l-2 border-line-strong pl-3 text-fg-muted; }
 .prose-md a { @apply text-accent underline; }
-.prose-md .source-ref { @apply inline-flex items-center rounded bg-accent-soft text-accent px-1 text-[11px] font-medium align-baseline cursor-pointer; }
+.prose-md .source-ref { @apply mx-0.5 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent-soft px-1 align-[1px] text-[10.5px] font-semibold text-accent tabular-nums cursor-pointer transition-colors hover:bg-accent hover:text-accent-fg; }
+@layer components {
+.cite-chip { @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-line bg-bg-elev py-0.5 pl-0.5 pr-2.5 text-[11.5px] text-fg-muted shadow-card transition-colors hover:border-accent/40 hover:text-fg; }
+.cite-chip > b { @apply grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent-soft px-1 text-[10.5px] font-semibold text-accent tabular-nums; }
+}
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .fade-up { animation: fade-up 180ms ease-out both; }

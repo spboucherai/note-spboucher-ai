@@ -1,6 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getSession, type SessionUser } from "./session";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
@@ -8,19 +8,17 @@ import { cache } from "react";
 
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 
-/** For route handlers: 401 if no session; 403 if MFA pending. Also enforces same-origin on mutating requests. */
+/** For route handlers: 401 without the access cookie. Also enforces same-origin on mutating requests. */
 export async function requireUser(req?: Request): Promise<SessionUser> {
   const s = await getSession();
-  if (!s) throw new HttpError(401, "Unauthenticated");
-  if (s.totpEnabled && !s.mfaPassed) throw new HttpError(403, "MFA required");
+  if (!s) throw new HttpError(401, "Locked");
   if (req && !["GET", "HEAD", "OPTIONS"].includes(req.method)) await assertSameOrigin();
   return s;
 }
-/** For server components/pages: redirect to login. */
+/** For server components/pages (the proxy already gates; this is defence in depth). */
 export async function requireUserPage(): Promise<SessionUser> {
   const s = await getSession();
-  if (!s) redirect("/login");
-  if (s.totpEnabled && !s.mfaPassed) redirect("/login?step=totp");
+  if (!s) notFound();
   return s;
 }
 export async function assertSameOrigin() {

@@ -29,9 +29,9 @@ export function BoardView() {
 function Column({ g, onAdd }: { g: Group; onAdd: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: g.key });
   return (
-    <div ref={setNodeRef} className={cn("flex w-[17rem] shrink-0 snap-start flex-col rounded-lg bg-bg-sunk/60 p-2 transition-colors", isOver && "bg-accent-soft/60")}>
-      <div className="mb-2 flex items-center gap-1.5 px-1"><span className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-medium", OPTION_CLASS[g.color])}>{g.label}</span><span className="text-[12px] text-fg-faint">{g.rows.length}</span><button type="button" onClick={onAdd} className="ml-auto grid size-7 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg"><Plus className="size-4" /></button></div>
-      <div className="flex min-h-12 flex-1 flex-col gap-1.5">{g.rows.map((r) => <Draggable key={r.id} row={r} />)}</div>
+    <div ref={setNodeRef} className={cn("flex max-h-[min(75vh,60rem)] w-[17.5rem] shrink-0 snap-start flex-col rounded-xl border border-line/60 bg-bg-sunk p-2 transition-colors", isOver && "border-accent/40 bg-accent-soft")}>
+      <div className="sticky top-0 mb-2 flex h-8 items-center gap-1.5 px-1"><span className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-medium", OPTION_CLASS[g.color])}>{g.label}</span><span className="text-[12px] tabular-nums text-fg-faint">{g.rows.length}</span><button type="button" aria-label="Add card" onClick={onAdd} className="ml-auto grid size-7 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg"><Plus className="size-4" /></button></div>
+      <div className="flex min-h-12 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain">{g.rows.map((r) => <Draggable key={r.id} row={r} />)}</div>
       <button type="button" onClick={onAdd} className="mt-1.5 flex h-8 items-center gap-1 rounded-md px-2 text-[12px] text-fg-faint hover:bg-bg-elev hover:text-fg"><Plus className="size-3.5" /> New</button>
     </div>
   );
@@ -43,7 +43,7 @@ function Draggable({ row }: { row: RowOut }) {
 export function Card({ row, overlay }: { row: RowOut; overlay?: boolean }) {
   const ctx = useDb(); const gb = ctx.view.config.groupBy; const props = ctx.visibleProps.filter((p) => p.type !== "title" && p.id !== gb && !isEmpty(row.values[p.id])).slice(0, 4);
   return (
-    <div onClick={() => !overlay && ctx.open(row.id)} className={cn("cursor-pointer rounded-md border border-line bg-bg-elev p-2.5 shadow-card transition-shadow hover:shadow-pop", overlay && "rotate-1 shadow-pop")}>
+    <div onClick={() => !overlay && ctx.open(row.id)} className={cn("cursor-pointer rounded-lg border border-line bg-bg-elev px-3 py-2.5 shadow-card transition-[box-shadow,border-color] hover:border-line-strong hover:shadow-pop", overlay && "rotate-[1.5deg] shadow-pop")}>
       <div className="text-[13px] font-medium leading-5">{row.icon ? `${row.icon} ` : ""}{row.title || <span className="text-fg-faint">Untitled</span>}</div>
       {props.length > 0 && <div className="mt-1.5 space-y-1">{props.map((p) => <div key={p.id} className="text-[12px] text-fg-muted"><CellDisplay p={p} value={row.values[p.id]} compact /></div>)}</div>}
     </div>

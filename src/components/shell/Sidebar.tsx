@@ -2,80 +2,115 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, LogOut, BarChart3, Bot, Inbox, LayoutDashboard } from "lucide-react";
+import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TreeNode, ShellUser } from "./types";
 import { cn } from "@/lib/utils";
 import { useUI } from "@/lib/client/store";
 import { api } from "@/lib/client/api";
-import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "@/components/ui/primitives";
+import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, Kbd } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 
 const SECTIONS: { id: string; label: string; icon: React.ReactNode; type?: string }[] = [
-  { id: "notes", label: "My Notes", icon: <FileText /> }, { id: "documents", label: "Documents", icon: <Files /> }, { id: "databases", label: "Databases", icon: <Database />, type: "database" }, { id: "projects", label: "Projects", icon: <FolderKanban /> }, { id: "research", label: "Research", icon: <FlaskConical />, type: "research" },
+  { id: "notes", label: "Notes", icon: <FileText /> }, { id: "documents", label: "Documents", icon: <Files /> }, { id: "projects", label: "Projects", icon: <FolderKanban /> }, { id: "research", label: "Research", icon: <FlaskConical />, type: "research" },
 ];
+const defaultIcon = (t: string) => (t === "database" ? "🗂" : t === "research" ? "🔬" : "📄");
+
 export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[]; user: ShellUser; workspace: { name: string }; onNavigate?: () => void }) {
   const pathname = usePathname(); const r = useRouter(); const qc = useQueryClient(); const ui = useUI();
   const byParent = useMemo(() => { const m = new Map<string | null, TreeNode[]>(); for (const n of tree) { const k = n.parentId; if (!m.has(k)) m.set(k, []); m.get(k)!.push(n); } return m; }, [tree]);
   const [open, setOpen] = useState<Record<string, boolean>>(() => { try { return JSON.parse(localStorage.getItem("note-tree-open") ?? "{}"); } catch { return {}; } });
-  const toggle = (id: string) => setOpen((o) => { const n = { ...o, [id]: !o[id] }; localStorage.setItem("note-tree-open", JSON.stringify(n)); return n; });
-  async function create(section: string, parentId: string | null = null, type?: string) {
-    const p = await api("/api/pages", { method: "POST", json: { title: "", section, parentId, type: type ?? "page" } });
-    qc.invalidateQueries({ queryKey: ["tree"] }); r.push(`/p/${p.id}`); onNavigate?.();
+  const [capture, setCapture] = useState(""); const [capturing, setCapturing] = useState(false);
+  const toggle = (id: string) => setOpen((o) => { const n = { ...o, [id]: !(o[id] ?? id.startsWith("sec:")) }; localStorage.setItem("note-tree-open", JSON.stringify(n)); return n; });
+  async function create(section: string, parentId: string | null = null, type?: string, title = "") {
+    const p = await api("/api/pages", { method: "POST", json: { title, section, parentId, type: type ?? "page" } });
+    qc.invalidateQueries({ queryKey: ["tree"] }); r.push(`/p/${p.id}`); onNavigate?.(); return p;
+  }
+  async function quickCapture() {
+    const t = capture.trim(); if (!t || capturing) return; setCapturing(true);
+    try { const [first, ...rest] = t.split("\n"); await api("/api/pages", { method: "POST", json: { title: first.slice(0, 200), section: "notes", ...(rest.length ? { content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: rest.join("\n") }] }] } } : {}) } }); qc.invalidateQueries({ queryKey: ["tree"] }); setCapture(""); toast("Captured to Notes", { tone: "success" }); }
+    catch (e: any) { toast("Capture failed", { description: e.message, tone: "danger" }); } finally { setCapturing(false); }
   }
   async function trash(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "DELETE" }); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash", { description: n.title }); if (pathname === `/p/${n.id}`) r.push("/"); }
   async function pin(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "PATCH", json: { pinned: !n.pinned } }); qc.invalidateQueries({ queryKey: ["tree"] }); }
+  async function lock() { if (!window.confirm("Lock this device? You will need the password or the bookmark link to come back.")) return; await api("/api/lock", { method: "POST" }).catch(() => {}); window.location.href = "/"; }
+
   const Item = ({ n, depth }: { n: TreeNode; depth: number }) => {
     const kids = byParent.get(n.id) ?? []; const active = pathname === `/p/${n.id}`; const isOpen = open[n.id];
     return (
-      <div>
-        <div className={cn("group flex items-center gap-1 rounded-md pr-1 text-[13px] hover:bg-bg-sunk", active && "bg-bg-sunk font-medium text-fg")} style={{ paddingLeft: 6 + depth * 12 }}>
-          <button className={cn("grid size-5 shrink-0 place-items-center rounded text-fg-faint hover:bg-line", !kids.length && "invisible")} onClick={() => toggle(n.id)}><ChevronRight className={cn("size-3.5 transition-transform", isOpen && "rotate-90")} /></button>
-          <Link href={`/p/${n.id}`} onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-fg-muted hover:text-fg">
-            <span className="w-4 shrink-0 text-center text-[13px]">{n.icon ?? (n.type === "database" ? "🗂" : n.type === "research" ? "🔬" : "📄")}</span><span className="truncate">{n.title || "Untitled"}</span>
+      <div role="treeitem" aria-expanded={kids.length ? Boolean(isOpen) : undefined} aria-selected={active}>
+        <div data-active={active} className="side-item group gap-1 pr-1" style={{ paddingLeft: 4 + depth * 14 }}>
+          <button aria-label={isOpen ? "Collapse" : "Expand"} className={cn("grid size-5 shrink-0 place-items-center rounded text-fg-faint hover:bg-line", !kids.length && "invisible")} onClick={() => toggle(n.id)}><ChevronRight className={cn("!size-3.5 transition-transform", isOpen && "rotate-90")} /></button>
+          <Link href={`/p/${n.id}`} onClick={onNavigate} className="flex h-full min-w-0 flex-1 items-center gap-1.5">
+            <span className="w-4 shrink-0 text-center text-[13px] leading-none">{n.icon ?? defaultIcon(n.type)}</span><span className="truncate">{n.title || "Untitled"}</span>
           </Link>
-          <Menu><MenuTrigger asChild><button className="invisible grid size-5 place-items-center rounded text-fg-faint hover:bg-line group-hover:visible data-[state=open]:visible"><MoreHorizontal className="size-3.5" /></button></MenuTrigger>
+          <Menu><MenuTrigger asChild><button aria-label="Page actions" className="hidden size-5 place-items-center rounded text-fg-faint hover:bg-line group-hover:grid group-focus-within:grid data-[state=open]:grid max-md:grid"><MoreHorizontal className="!size-3.5" /></button></MenuTrigger>
             <MenuContent><MenuItem onSelect={() => create(n.section, n.id)}><Plus /> Add sub-page</MenuItem><MenuItem onSelect={() => pin(n)}><Star /> {n.pinned ? "Unpin" : "Pin"}</MenuItem><MenuItem onSelect={async () => { const p = await api(`/api/pages/${n.id}?action=duplicate`, { method: "POST" }); qc.invalidateQueries({ queryKey: ["tree"] }); r.push(`/p/${p.id}`); }}><Files /> Duplicate</MenuItem><MenuSeparator /><MenuItem danger onSelect={() => trash(n)}><Trash2 /> Move to trash</MenuItem></MenuContent></Menu>
-          <button className="invisible grid size-5 place-items-center rounded text-fg-faint hover:bg-line group-hover:visible" onClick={() => create(n.section, n.id)} title="Add sub-page"><Plus className="size-3.5" /></button>
+          <button aria-label="Add sub-page" className="hidden size-5 place-items-center rounded text-fg-faint hover:bg-line group-hover:grid group-focus-within:grid" onClick={() => create(n.section, n.id)}><Plus className="!size-3.5" /></button>
         </div>
-        {isOpen && kids.map((k) => <Item key={k.id} n={k} depth={depth + 1} />)}
+        {isOpen && <div role="group">{kids.map((k) => <Item key={k.id} n={k} depth={depth + 1} />)}</div>}
       </div>
     );
   };
-  const NavLink = ({ href, icon, label, onClick }: { href?: string; icon: React.ReactNode; label: string; onClick?: () => void }) => { const active = href && (pathname === href); const cls = cn("flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-fg-muted hover:bg-bg-sunk hover:text-fg [&_svg]:size-4", active && "bg-bg-sunk text-fg font-medium"); return href ? <Link href={href} className={cls} onClick={onNavigate}>{icon}{label}</Link> : <button className={cn(cls, "w-full")} onClick={onClick}>{icon}{label}</button>; };
+  const Nav = ({ href, icon, label, onClick, kbd }: { href?: string; icon: React.ReactNode; label: string; onClick?: () => void; kbd?: string }) => {
+    const active = Boolean(href && (href === "/" ? pathname === "/" : pathname.startsWith(href)));
+    const body = <>{icon}<span className="flex-1 truncate text-left">{label}</span>{kbd && <span className="text-[10.5px] text-fg-faint">{kbd}</span>}</>;
+    return href ? <Link href={href} data-active={active} className="side-item" onClick={onNavigate}>{body}</Link> : <button data-active={false} className="side-item w-full" onClick={onClick}>{body}</button>;
+  };
   const pinned = tree.filter((n) => n.pinned);
+  const databases = tree.filter((n) => n.type === "database");
+  const ThemeIcon = ui.theme === "dark" ? Moon : ui.theme === "light" ? Sun : Laptop;
   return (
-    <div className="flex h-full flex-col safe-top">
-      <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-        <Menu><MenuTrigger asChild><button className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-bg-sunk"><span className="grid size-6 place-items-center rounded-md bg-fg text-[12px] font-semibold text-bg">N</span><span className="truncate text-[13px] font-semibold">{workspace.name}</span></button></MenuTrigger>
-          <MenuContent align="start" className="w-56">
-            <div className="px-2 py-1.5 text-xs text-fg-muted">{user.displayName} · @{user.username}</div><MenuSeparator />
-            <MenuItem onSelect={() => ui.setTheme("light")}><Sun /> Light {ui.theme === "light" && "✓"}</MenuItem><MenuItem onSelect={() => ui.setTheme("dark")}><Moon /> Dark {ui.theme === "dark" && "✓"}</MenuItem><MenuItem onSelect={() => ui.setTheme("system")}><Laptop /> System {ui.theme === "system" && "✓"}</MenuItem><MenuSeparator />
-            <MenuItem onSelect={() => r.push("/settings")}><Settings /> Settings</MenuItem>
-            <MenuItem danger onSelect={async () => { await api("/api/auth/logout", { method: "POST" }); window.location.href = "/login"; }}><LogOut /> Sign out</MenuItem>
-          </MenuContent></Menu>
+    <nav aria-label="Workspace" className="flex h-full w-full flex-col safe-top">
+      <div className="flex items-center gap-2 px-3 pb-2 pt-3">
+        <Link href="/" onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1 py-1 hover:bg-bg-hover">
+          <img src="/icons/icon.svg" alt="" className="size-7 rounded-[8px] shadow-card" />
+          <span className="min-w-0"><span className="block truncate text-[13.5px] font-semibold leading-4 tracking-[-0.01em]">{workspace.name}</span>{user.displayName && <span className="block truncate text-[11px] leading-4 text-fg-faint">{user.displayName}</span>}</span>
+        </Link>
+        <Menu><MenuTrigger asChild><button aria-label="Theme" className="grid size-7 place-items-center rounded-md text-fg-faint hover:bg-bg-hover hover:text-fg"><ThemeIcon className="size-4" /></button></MenuTrigger>
+          <MenuContent align="end" className="w-44"><MenuItem onSelect={() => ui.setTheme("light")}><Sun /> Light {ui.theme === "light" && "✓"}</MenuItem><MenuItem onSelect={() => ui.setTheme("dark")}><Moon /> Dark {ui.theme === "dark" && "✓"}</MenuItem><MenuItem onSelect={() => ui.setTheme("system")}><Laptop /> System {ui.theme === "system" && "✓"}</MenuItem></MenuContent></Menu>
       </div>
-      <div className="px-2 space-y-0.5">
-        <NavLink href="/" icon={<Home />} label="Home" />
-        <NavLink href="/search" icon={<Search />} label="Search" />
-        <NavLink icon={<Sparkles />} label="AI Assistant" onClick={() => ui.openAI()} />
-        <NavLink href="/inbox" icon={<Inbox />} label="Tasks" />
+      <div className="space-y-2 px-3">
+        <button onClick={() => { ui.set({ paletteOpen: true }); onNavigate?.(); }} className="flex h-8 w-full items-center gap-2 rounded-lg border border-line bg-bg-elev px-2.5 text-[13px] text-fg-faint shadow-card transition-colors hover:border-line-strong hover:text-fg-muted"><Search className="size-4" /><span className="flex-1 text-left">Search</span><Kbd>⌘K</Kbd></button>
+        <form onSubmit={(e) => { e.preventDefault(); quickCapture(); }} className="group/cap flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong/80 bg-transparent px-2.5 transition-colors focus-within:border-solid focus-within:border-accent/50 focus-within:bg-bg-elev">
+          <Plus className="size-4 shrink-0 text-fg-faint" />
+          <label htmlFor="quick-capture" className="sr-only">Quick capture</label>
+          <input id="quick-capture" value={capture} onChange={(e) => setCapture(e.target.value)} placeholder="Quick capture…" className="h-8 min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-fg-faint" style={{ outline: "none" }} />
+          {capture.trim() && <button type="submit" aria-label="Save capture" className="grid size-5 place-items-center rounded text-accent"><CornerDownLeft className="size-3.5" /></button>}
+        </form>
       </div>
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-        {pinned.length > 0 && (<div className="mb-3"><div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Pinned</div>{pinned.map((n) => <Link key={n.id} href={`/p/${n.id}`} onClick={onNavigate} className={cn("flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] text-fg-muted hover:bg-bg-sunk hover:text-fg", pathname === `/p/${n.id}` && "bg-bg-sunk text-fg")}><Star className="size-3.5 text-warning" /><span className="truncate">{n.title || "Untitled"}</span></Link>)}</div>)}
-        <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Private</div>
+      <div className="mt-2 space-y-px px-2">
+        <Nav href="/" icon={<Home />} label="Home" />
+        <Nav icon={<Sparkles />} label="Ask AI" kbd="⌘/" onClick={() => { ui.openAI(); onNavigate?.(); }} />
+        <Nav href="/inbox" icon={<Inbox />} label="Tasks" />
+        <Nav href="/graph" icon={<Share2 />} label="Graph" />
+      </div>
+      <div className="mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-4" role="tree" aria-label="Pages">
+        {pinned.length > 0 && <><div className="side-label">Pinned</div>{pinned.map((n) => <Link key={n.id} href={`/p/${n.id}`} onClick={onNavigate} data-active={pathname === `/p/${n.id}`} className="side-item"><span className="w-4 text-center text-[13px] leading-none">{n.icon ?? defaultIcon(n.type)}</span><span className="truncate">{n.title || "Untitled"}</span><Star className="ml-auto !size-3 fill-warning text-warning" /></Link>)}</>}
+        <div className="side-label flex items-center">Databases<button aria-label="New database" onClick={() => create("databases", null, "database", "New database")} className="ml-auto grid size-5 place-items-center rounded text-fg-faint hover:bg-bg-hover hover:text-fg"><Plus className="size-3.5" /></button></div>
+        {databases.length ? databases.slice(0, 12).map((n) => <Link key={n.id} href={`/p/${n.id}`} onClick={onNavigate} data-active={pathname === `/p/${n.id}`} className="side-item"><span className="w-4 text-center text-[13px] leading-none">{n.icon ?? "🗂"}</span><span className="truncate">{n.title || "Untitled"}</span></Link>) : <button onClick={() => create("databases", null, "database", "New database")} className="side-item w-full text-fg-faint"><Database /> Create a database</button>}
+        <div className="side-label">Workspace</div>
         {SECTIONS.map((s) => { const roots = (byParent.get(null) ?? []).filter((n) => n.section === s.id); const isOpen = open[`sec:${s.id}`] ?? true; return (
-          <div key={s.id} className="mb-1">
-            <div className="group flex items-center gap-1 rounded-md pr-1 hover:bg-bg-sunk">
-              <button className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] text-fg-muted hover:text-fg [&_svg]:size-4" onClick={() => toggle(`sec:${s.id}`)}>{s.icon}<span className="flex-1 truncate text-left">{s.label}</span><ChevronRight className={cn("size-3.5 text-fg-faint transition-transform", isOpen && "rotate-90")} /></button>
-              <button className="invisible grid size-5 place-items-center rounded text-fg-faint hover:bg-line group-hover:visible" title={`New in ${s.label}`} onClick={() => create(s.id, null, s.type)}><Plus className="size-3.5" /></button>
+          <div key={s.id}>
+            <div className="side-item group pr-1">
+              <button className="flex h-full min-w-0 flex-1 items-center gap-2" aria-expanded={isOpen} onClick={() => toggle(`sec:${s.id}`)}>{s.icon}<span className="flex-1 truncate text-left">{s.label}</span><span className="text-[10.5px] tabular-nums text-fg-faint">{roots.length || ""}</span><ChevronRight className={cn("!size-3.5 text-fg-faint transition-transform", isOpen && "rotate-90")} /></button>
+              <button aria-label={`New in ${s.label}`} className="grid size-5 place-items-center rounded text-fg-faint opacity-0 hover:bg-line focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100" onClick={() => create(s.id, null, s.type)}><Plus className="!size-3.5" /></button>
             </div>
-            {isOpen && (roots.length ? roots.map((n) => <Item key={n.id} n={n} depth={1} />) : <button onClick={() => create(s.id, null, s.type)} className="ml-7 py-1 text-[12px] text-fg-faint hover:text-fg-muted">+ New {s.type ?? "page"}</button>)}
+            {isOpen && (roots.length ? roots.map((n) => <Item key={n.id} n={n} depth={1} />) : <button onClick={() => create(s.id, null, s.type)} className="ml-8 h-7 text-[12px] text-fg-faint hover:text-fg-muted">+ New {s.type ?? "page"}</button>)}
           </div>); })}
-        <div className="mt-3 px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Knowledge</div>
-        <NavLink href="/graph" icon={<Share2 />} label="Graph" /><NavLink href="/backlinks" icon={<Link2 />} label="Backlinks" /><NavLink href="/ai/models" icon={<BarChart3 />} label="AI models" /><NavLink href="/ai/compare" icon={<LayoutDashboard />} label="Compare models" /><NavLink href="/ai/agents" icon={<Bot />} label="Agents" />
+        <div className="side-label">Intelligence</div>
+        <Nav href="/research" icon={<FlaskConical />} label="Research" />
+        <Nav href="/backlinks" icon={<Link2 />} label="Backlinks" />
+        <Nav href="/ai/agents" icon={<Bot />} label="Agents" />
+        <Nav href="/ai/models" icon={<BarChart3 />} label="AI models" />
+        <Nav href="/ai/compare" icon={<Columns3 />} label="Compare models" />
       </div>
-      <div className="border-t border-line px-2 py-2 space-y-0.5"><NavLink href="/trash" icon={<Trash2 />} label="Trash" /><NavLink href="/settings" icon={<Settings />} label="Settings" /></div>
-    </div>
+      <div className="flex items-center gap-0.5 border-t border-line px-2 py-2 safe-bottom">
+        <Link href="/trash" onClick={onNavigate} aria-label="Trash" title="Trash" data-active={pathname === "/trash"} className="side-item size-8 justify-center px-0"><Trash2 /></Link>
+        <Link href="/settings" onClick={onNavigate} aria-label="Settings" title="Settings" data-active={pathname.startsWith("/settings")} className="side-item size-8 justify-center px-0"><Settings /></Link>
+        <button onClick={() => window.dispatchEvent(new CustomEvent("note:shortcuts"))} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (⌘?)" className="side-item size-8 justify-center px-0"><Keyboard /></button>
+        <button onClick={lock} aria-label="Lock this device" title="Lock this device" className="side-item ml-auto h-8 gap-1.5 px-2 text-[12px]"><Lock /> Lock</button>
+      </div>
+    </nav>
   );
 }

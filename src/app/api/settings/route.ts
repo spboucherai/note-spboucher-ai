@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 
 /** GET → profile + preferences + a few workspace-level settings the Settings screen needs. */
 export const GET = handler(async ({ user, ws }) => {
-  const [u] = await db.select({ id: schema.users.id, username: schema.users.username, displayName: schema.users.displayName, email: schema.users.email, totpEnabled: schema.users.totpEnabled, preferences: schema.users.preferences, createdAt: schema.users.createdAt }).from(schema.users).where(eq(schema.users.id, user.id));
+  const [u] = await db.select({ id: schema.users.id, username: schema.users.username, displayName: schema.users.displayName, email: schema.users.email, preferences: schema.users.preferences, createdAt: schema.users.createdAt }).from(schema.users).where(eq(schema.users.id, user.id));
   const [budget] = await db.select().from(schema.settings).where(eq(schema.settings.key, "ai.daily_budget_usd"));
   return Response.json({ ...u, workspace: { id: ws.id, name: ws.name }, aiBudgetUsd: Number((budget?.value as any) ?? 20), sessionId: user.sessionId });
 });

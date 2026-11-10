@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 import { api } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent, Spinner, Tip } from "@/components/ui/primitives";
+import { Popover, PopoverTrigger, PopoverContent, Spinner, Tip, Skeleton } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { WIDGET_META, WIDGET_TYPES, type Widget, type WidgetSize, type WidgetType } from "./types";
 import { WIDGET_COMPONENTS, type DashboardData } from "./widgets";
@@ -22,10 +22,10 @@ function WidgetCard({ w, editing, data, refresh, onRemove, onResize }: { w: Widg
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: w.id, disabled: !editing });
   const meta = WIDGET_META[w.type]; const Comp = WIDGET_COMPONENTS[w.type];
   return (
-    <section ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn("flex min-h-[200px] flex-col rounded-xl border border-line bg-bg-elev shadow-card", SIZE_CLASS[w.size], isDragging && "z-10 opacity-80 shadow-pop ring-2 ring-accent/40", editing && "border-dashed border-line-strong")}>
-      <header className="flex h-10 shrink-0 items-center gap-1 border-b border-line px-3">
+    <section ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn("flex min-h-[200px] flex-col rounded-2xl border border-line bg-bg-elev shadow-card", SIZE_CLASS[w.size], isDragging && "z-10 opacity-80 shadow-pop ring-2 ring-accent/40", editing && "border-dashed border-line-strong")}>
+      <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line/70 px-4">
         {editing && <button ref={setActivatorNodeRef} {...attributes} {...listeners} className="-ml-1.5 grid size-8 cursor-grab touch-none place-items-center rounded-md text-fg-faint hover:bg-bg-sunk hover:text-fg active:cursor-grabbing" aria-label="Drag to reorder"><GripVertical className="size-4" /></button>}
-        <h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold">{meta.label}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-[12.5px] font-semibold tracking-[-0.005em] text-fg-muted">{meta.label}</h2>
         {editing ? (
           <div className="flex items-center gap-0.5">
             {SIZES.map((s) => <Tip key={s.id} label={s.label}><button onClick={() => onResize(s.id)} className={cn("grid size-8 place-items-center rounded-md text-fg-faint hover:bg-bg-sunk [&_svg]:size-4", w.size === s.id && "bg-bg-sunk text-accent")} aria-label={s.label}>{s.icon}</button></Tip>)}
@@ -34,7 +34,7 @@ function WidgetCard({ w, editing, data, refresh, onRemove, onResize }: { w: Widg
         ) : null}
       </header>
       <div className={cn("flex min-h-0 flex-1 flex-col p-4", editing && "pointer-events-none select-none opacity-60")}>
-        {data ? <Comp data={data} refresh={refresh} config={w.config} /> : <div className="flex flex-1 items-center justify-center"><Spinner /></div>}
+        {data ? <Comp data={data} refresh={refresh} config={w.config} /> : <div className="space-y-2.5 pt-1" aria-hidden><Skeleton className="h-3.5 w-3/4" /><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-2/3" /><Skeleton className="h-3.5 w-5/6" /></div>}
       </div>
     </section>
   );
@@ -67,11 +67,12 @@ export function Dashboard({ displayName }: { displayName: string }) {
   }
   const missing = WIDGET_TYPES.filter((t) => !widgets.some((w) => w.type === t));
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-wrap items-end gap-3">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+      <div className="mb-7 flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{greeting(now)}, {displayName.split(" ")[0]}</h1>
-          <p className="mt-0.5 text-[13px] text-fg-muted">{dateLabel || " "}{data && data.tasks.length > 0 && <span> · {data.tasks.length} task{data.tasks.length === 1 ? "" : "s"} due soon</span>}</p>
+          <p className="mb-1 text-[12px] font-medium uppercase tracking-[0.08em] text-fg-faint">{dateLabel || " "}</p>
+          <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em] sm:text-h1">{greeting(now)}, {displayName.split(" ")[0]}</h1>
+          {data && data.tasks.length > 0 && <p className="mt-1 text-[13px] text-fg-muted">{data.tasks.length} task{data.tasks.length === 1 ? "" : "s"} due soon</p>}
         </div>
         {editing ? (
           <div className="flex flex-wrap items-center gap-1.5">

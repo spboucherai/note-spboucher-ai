@@ -18,13 +18,14 @@ Target: **M4M64c** (`~/apps/note-spboucher-ai`), public URL **https://note.spbou
 # then REMOTE-FIRST: edit on the node, pnpm build, pm2 restart note-web note-worker, git commit/push on the node
 ssh M4M64c 'cd ~/apps/note-spboucher-ai && pnpm build && pm2 restart note-web note-worker'
 ```
-Owner password: `ssh -t M4M64c 'cd ~/apps/note-spboucher-ai && set -a && . ./.env && set +a && pnpm bootstrap'` (interactive, hidden input; stores only the Argon2id hash).
+Owner row + workspace (once): `ssh -t M4M64c 'cd ~/apps/note-spboucher-ai && set -a && . ./.env && set +a && pnpm bootstrap'`. Access gate secrets (since 2026-11-09): `pnpm access:password` (shared password → `ACCESS_PASSWORD_HASH`, also creates `ACCESS_KEY` if missing) and `pnpm access:rotate-key`; restart `note-web` afterwards. See `docs/security.md` → *Access model and rotation*.
 
 ## Health and rollback
 - Local: `curl http://127.0.0.1:8480/api/health` on the node → `{ ok, db, pgvector }`; public: `curl https://note.spboucher.ai/api/health`.
 - `mld status --live`, `mld heal --dry-run`, `mld logs note-spboucher-ai`, `pm2 logs note-web|note-worker`.
 - Rollback code: on the node `git checkout <previous-commit> && pnpm build && pm2 restart note-web note-worker` (or `mld move`/`deploy --force` from a previous staging). Rollback schema: `psql $DATABASE_URL -f drizzle/<n>.down.sql` then delete the row from `drizzle.__drizzle_migrations` (see `docs/operations.md`). Data: restore a backup (`scripts/restore.sh`).
-- Smoke test after deploy: `NOTE_URL=https://note.spboucher.ai NOTE_PASSWORD=… bash scripts/smoke.sh`.
+- Smoke test after deploy: `NOTE_UNLOCK_URL="$(cat ~/Desktop/Cluster/secrets/note-spboucher-ai/unlock-url)" bash scripts/smoke.sh` (from the laptop; the cookie is `Secure`, so test the public HTTPS URL).
+- Public health stays open for `mld heal`: `curl https://note.spboucher.ai/api/health` → 200 without cookie; `/` without cookie → 200 gate page (password field only); `/api/*` without cookie → 401.
 
 ## Processes (PM2, via mld)
 | Name | Command | Notes |

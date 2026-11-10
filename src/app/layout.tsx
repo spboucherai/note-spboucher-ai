@@ -8,9 +8,11 @@ export const metadata: Metadata = {
   description: "Private AI-native knowledge operating system.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Note" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
+  icons: { icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192" }], apple: "/icons/apple-touch-icon.png" },
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+  referrer: "same-origin",
 };
-export const viewport: Viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#fcfcfb" }, { media: "(prefers-color-scheme: dark)", color: "#141518" }], viewportFit: "cover", width: "device-width", initialScale: 1, maximumScale: 1, interactiveWidget: "resizes-content" };
+export const viewport: Viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#f9fafc" }, { media: "(prefers-color-scheme: dark)", color: "#12141c" }], viewportFit: "cover", width: "device-width", initialScale: 1, maximumScale: 1, interactiveWidget: "resizes-content" };
 
 const themeScript = `(function(){try{var t=localStorage.getItem('note-theme');var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
 

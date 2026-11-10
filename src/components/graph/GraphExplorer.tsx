@@ -73,7 +73,7 @@ export function GraphExplorer({ focus }: { focus?: string | null }) {
 
   return (
     <div className="absolute inset-0 flex flex-col pb-16 md:pb-0">
-      <div className="flex items-center gap-2 border-b border-line bg-bg-elev/80 px-3 py-2 backdrop-blur">
+      <div className="flex items-center gap-2 border-b border-line bg-bg/85 px-3 py-2 backdrop-blur-md">
         <div className="relative w-full max-w-xs"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-faint" /><Input ref={search} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onSearchEnter(); }} placeholder="Search to focus…" className="h-8 pl-8 pr-14 text-[13px]" />{q ? <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-fg-faint">{matches} match{matches === 1 ? "" : "es"}</span> : <span className="absolute right-2 top-1/2 hidden -translate-y-1/2 md:block"><Kbd>/</Kbd></span>}</div>
         <div className="hidden min-w-0 flex-1 lg:block">{filterControls(false)}</div>
         <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -85,16 +85,16 @@ export function GraphExplorer({ focus }: { focus?: string | null }) {
         </div>
       </div>
       <div className="relative flex min-h-0 flex-1">
-        <div className="relative min-w-0 flex-1">
+        <div className="graph-canvas relative min-w-0 flex-1">
           {graph.isLoading ? <div className="grid h-full place-items-center"><Spinner /></div>
             : graph.isError ? <Empty icon={<Share2 />} title="Could not load the graph" hint={(graph.error as any)?.message} action={<Button size="sm" onClick={() => graph.refetch()}>Retry</Button>} />
             : !data.nodes.length ? <Empty icon={<Share2 />} title="Nothing to show" hint={f.pageId || f.section || f.range !== "all" || f.hideOrphans || f.types.length !== NODE_KINDS.length ? "No node matches the current filters." : "Create pages and mention them with @ to grow your graph."} action={(f.pageId || f.section || f.range !== "all" || f.hideOrphans || f.types.length !== NODE_KINDS.length) ? <Button size="sm" variant="outline" onClick={() => setF(DEFAULT)}>Reset filters</Button> : undefined} />
             : <GraphCanvas ref={canvas} data={data} selectedId={selected} highlight={highlight} frozen={frozen} onSelect={onSelect} />}
-          <div className="pointer-events-none absolute left-3 bottom-3 hidden flex-col gap-1 rounded-lg border border-line bg-bg-elev/90 p-2 text-[11px] text-fg-muted backdrop-blur sm:flex">
+          <div className="pointer-events-none absolute left-3 bottom-3 hidden flex-col gap-1.5 rounded-xl border border-line bg-bg-elev/90 px-3 py-2.5 text-[11px] text-fg-muted shadow-card backdrop-blur-md sm:flex">
             <div className="flex flex-wrap gap-x-3 gap-y-1">{NODE_KINDS.filter((k) => f.types.includes(k)).map((k) => <span key={k} className="inline-flex items-center gap-1"><span className={cn("size-2 rounded-full", KIND_CLASS[k])} />{NODE_KIND_LABELS[k]}</span>)}</div>
             <div className="flex gap-3"><span className="inline-flex items-center gap-1"><span className="inline-block h-0 w-5 border-t-2 border-line-strong" /> link / relation</span><span className="inline-flex items-center gap-1"><span className="inline-block h-0 w-5 border-t-2 border-dashed border-ai" /> AI suggested</span></div>
           </div>
-          <div className="pointer-events-none absolute right-3 bottom-3 rounded-md bg-bg-elev/90 px-2 py-1 text-[11px] text-fg-muted backdrop-blur">{data.nodes.length} nodes · {data.edges.length} edges{data.stats.suggested ? ` · ${data.stats.suggested} suggested` : ""}{graph.isFetching && !graph.isLoading ? " · updating…" : ""}{frozen ? " · frozen" : ""}</div>
+          <div className="pointer-events-none absolute right-3 bottom-3 rounded-full border border-line bg-bg-elev/90 px-3 py-1 text-[11px] tabular-nums text-fg-muted shadow-card backdrop-blur-md">{data.nodes.length} nodes · {data.edges.length} edges{data.stats.suggested ? ` · ${data.stats.suggested} suggested` : ""}{graph.isFetching && !graph.isLoading ? " · updating…" : ""}{frozen ? " · frozen" : ""}</div>
         </div>
         {side && <aside className="hidden w-80 shrink-0 border-l border-line bg-bg-elev md:block xl:w-96">{side}</aside>}
         {side && <div className="absolute inset-x-0 bottom-0 z-20 max-h-[62%] overflow-hidden rounded-t-2xl border-t border-line bg-bg-elev shadow-pop fade-up md:hidden"><div className="mx-auto mt-1.5 h-1 w-10 rounded-full bg-line-strong" /><div className="h-[calc(62vh-1rem)] max-h-[60vh]">{side}</div></div>}
