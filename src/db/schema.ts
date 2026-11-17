@@ -35,6 +35,9 @@ export const sessions = pgTable("sessions", {
   createdAt: created(), lastSeenAt: created(),
   expiresAt: ts().notNull(), absoluteExpiresAt: ts("absolute_expires_at").notNull(),
   revokedAt: ts("revoked_at"), mfaPassed: boolean("mfa_passed").notNull().default(false),
+  // v2 (passkeys): which credential opened the session, a readable device label, last user-verification time (step-up freshness)
+  credentialId: text("credential_id"), label: text(), verifiedAt: ts("verified_at"), revokedReason: text("revoked_reason"),
+  prevTokenHash: text("prev_token_hash"), prevValidUntil: ts("prev_valid_until"), // 60 s grace for requests in flight during a token rotation
 }, (t) => [index("sessions_user_idx").on(t.userId)]);
 export const loginAttempts = pgTable("login_attempts", {
   id: uuid().primaryKey().defaultRandom(),
@@ -44,11 +47,24 @@ export const webauthnCredentials = pgTable("webauthn_credentials", {
   id: text().primaryKey(), userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   publicKey: text("public_key").notNull(), counter: bigint({ mode: "number" }).notNull().default(0),
   transports: jsonb().$type<string[]>().default([]), deviceType: text("device_type"), backedUp: boolean("backed_up").default(false),
-  label: text(), createdAt: created(), lastUsedAt: ts("last_used_at"),
+  label: text(), createdAt: created(), lastUsedAt: ts("last_used_at"), aaguid: text(),
 });
+/** One row per WebAuthn ceremony: random challenge, single use (deleted when consumed), short expiry, bound to the browser by an HttpOnly cookie holding `id`. */
 export const webauthnChallenges = pgTable("webauthn_challenges", {
   id: uuid().primaryKey().defaultRandom(), userId: uuid("user_id"), challenge: text().notNull(), kind: text().notNull(), createdAt: created(),
+  expiresAt: ts("expires_at"), sessionId: uuid("session_id"), enrollmentId: uuid("enrollment_id"),
 });
+/** Enrollment windows opened from the node CLI only (bootstrap = first passkey, recovery = all devices lost). Only the SHA-256 of the one-time token is stored. */
+export const authEnrollments = pgTable("auth_enrollments", {
+  id: uuid().primaryKey().defaultRandom(), purpose: text().notNull(), // bootstrap | recovery
+  tokenHash: text("token_hash").notNull().unique(), revokeExisting: boolean("revoke_existing").notNull().default(false),
+  createdAt: created(), expiresAt: ts("expires_at").notNull(), consumedAt: ts("consumed_at"), closedReason: text("closed_reason"),
+});
+/** Replay protection for mutating API calls: same key + same session → the stored response is returned instead of running the mutation twice. */
+export const idempotencyKeys = pgTable("idempotency_keys", {
+  key: text().primaryKey(), sessionId: text("session_id").notNull(), method: text().notNull(), path: text().notNull(),
+  status: integer(), response: jsonb(), createdAt: created(),
+}, (t) => [index("idempotency_created_idx").on(t.createdAt)]);
 
 // ---------- workspace & pages
 export const workspaces = pgTable("workspaces", {
@@ -72,7 +88,8 @@ export const pages = pgTable("pages", {
   pinned: boolean().notNull().default(false), archived: boolean().notNull().default(false),
   version: integer().notNull().default(1), wordCount: integer("word_count").notNull().default(0),
   createdAt: created(), updatedAt: created(), lastOpenedAt: ts("last_opened_at"), deletedAt: ts("deleted_at"),
-}, (t) => [index("pages_ws_parent_idx").on(t.workspaceId, t.parentId), index("pages_tsv_idx").using("gin", t.tsv), index("pages_updated_idx").on(t.updatedAt), index("pages_db_idx").on(t.databaseId), index("pages_title_trgm_idx").using("gin", sql`${t.title} gin_trgm_ops`)]);
+  inboxAt: ts("inbox_at"), captureKind: text("capture_kind"), // v2: non-null inbox_at = waiting in the capture inbox; note | tasks | link | photo | file | audio
+}, (t) => [index("pages_inbox_idx").on(t.workspaceId, t.inboxAt), index("pages_ws_parent_idx").on(t.workspaceId, t.parentId), index("pages_tsv_idx").using("gin", t.tsv), index("pages_updated_idx").on(t.updatedAt), index("pages_db_idx").on(t.databaseId), index("pages_title_trgm_idx").using("gin", sql`${t.title} gin_trgm_ops`)]);
 export const pageVersions = pgTable("page_versions", {
   id: uuid().primaryKey().defaultRandom(), pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
   version: integer().notNull(), title: text().notNull(), content: jsonb().notNull(), properties: jsonb().default({}),
@@ -126,6 +143,13 @@ export const tasks = pgTable("tasks", {
   pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }), title: text().notNull(), status: text().notNull().default("todo"), priority: text().default("medium"),
   dueAt: ts("due_at"), completedAt: ts("completed_at"), project: text(), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"),
 }, (t) => [index("tasks_due_idx").on(t.dueAt)]);
+/** Journal of inbox triage actions so each one can be undone (page state before + ids of what the action created). */
+export const inboxActions = pgTable("inbox_actions", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }), action: text().notNull(),
+  before: jsonb().$type<Record<string, unknown>>().notNull().default({}), created: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: created(), undoneAt: ts("undone_at"),
+}, (t) => [index("inbox_actions_ws_idx").on(t.workspaceId, t.createdAt)]);
 export const links = pgTable("links", {
   id: uuid().primaryKey().defaultRandom(), fromPageId: uuid("from_page_id").notNull().references(() => pages.id, { onDelete: "cascade" }), toPageId: uuid("to_page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
   kind: text().notNull().default("link"), createdAt: created(),

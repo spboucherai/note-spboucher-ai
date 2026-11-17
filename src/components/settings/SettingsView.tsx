@@ -15,7 +15,7 @@ import { applyPrefs } from "./prefs";
 export interface SettingsProfile { id: string; username: string; displayName: string; email: string | null; preferences: Record<string, unknown>; createdAt: string; workspace: { id: string; name: string }; aiBudgetUsd: number; sessionId: string }
 // @ts-ignore — DataSection is written by another engineer; a missing export falls back to a placeholder.
 const DataSection = dynamic(() => import("@/components/settings/DataSection").then((m: any) => (m.DataSection ?? m.default ?? (() => <p className="text-[13px] text-fg-muted">Data tools are not available yet.</p>)) as React.ComponentType<any>).catch(() => (() => <p className="text-[13px] text-fg-muted">Data tools are not available yet.</p>) as React.ComponentType<any>), { ssr: false, loading: () => <div className="flex justify-center py-8"><Spinner /></div> });
-const TABS = [{ id: "profile", label: "Profile", icon: <User /> }, { id: "security", label: "Access", icon: <ShieldCheck /> }, { id: "appearance", label: "Appearance", icon: <Palette /> }, { id: "ai", label: "AI", icon: <Sparkles /> }, { id: "data", label: "Data", icon: <Database /> }, { id: "about", label: "About", icon: <Info /> }];
+const TABS = [{ id: "profile", label: "Profile", icon: <User /> }, { id: "security", label: "Security", icon: <ShieldCheck /> }, { id: "appearance", label: "Appearance", icon: <Palette /> }, { id: "ai", label: "AI", icon: <Sparkles /> }, { id: "data", label: "Data", icon: <Database /> }, { id: "about", label: "About", icon: <Info /> }];
 
 export function SettingsView({ version }: { version: string }) {
   const [tab, setTab] = useState("profile");

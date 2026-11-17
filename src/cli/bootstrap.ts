@@ -1,15 +1,14 @@
 /**
- * Secure owner bootstrap: prompts for username + password interactively (never echoed, never logged),
- * stores only the Argon2id hash, creates the workspace and the default home layout.
+ * Owner bootstrap: creates the single owner row, the workspace and the default home layout. No password exists in v2:
+ * access is by passkey only — after this, run `pnpm auth:open-enrollment` to register the first passkey.
  * Usage (on the node): pnpm bootstrap
  */
 import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { eq } from "drizzle-orm";
 import { db, schema, sql } from "../db/index";
-import { hashPassword, passwordPolicy } from "../lib/auth/password";
 
-// Non-interactive mode (stdin is a pipe): answers are read line by line in order: username, display name, email, password, confirm.
+// Non-interactive mode (stdin is a pipe): answers are read line by line in order: username, display name, email.
 const piped: string[] = stdin.isTTY ? [] : (await new Promise<string>((res) => { let b = ""; stdin.setEncoding("utf8"); stdin.on("data", (c) => (b += c)); stdin.on("end", () => res(b)); })).split("\n");
 const ask = async (q: string, hidden = false): Promise<string> => {
   if (!stdin.isTTY) { stdout.write(q + (hidden ? "[hidden]" : (piped[0] ?? "")) + "\n"); return (piped.shift() ?? "").trim(); }
@@ -23,20 +22,14 @@ const ask = async (q: string, hidden = false): Promise<string> => {
 const username = (await ask("Owner username [simon]: ")) || "simon";
 const displayName = (await ask("Display name [Simon-Pierre Boucher]: ")) || "Simon-Pierre Boucher";
 const email = (await ask("Email (optional): ")) || null;
-let password = "";
-for (;;) {
-  password = await ask("Password (min 12 chars, upper/lower/digit): ", true);
-  const err = passwordPolicy(password); if (err) { console.log(err); if (!stdin.isTTY) process.exit(1); continue; }
-  const again = await ask("Confirm password: ", true);
-  if (again !== password) { console.log("Passwords differ."); if (!stdin.isTTY) process.exit(1); continue; }
-  break;
-}
-const passwordHash = await hashPassword(password);
-password = "";
 const [existing] = await db.select().from(schema.users).where(eq(schema.users.username, username)).limit(1);
 let userId: string;
-if (existing) { await db.update(schema.users).set({ passwordHash, displayName, email, updatedAt: new Date() }).where(eq(schema.users.id, existing.id)); userId = existing.id; console.log(`Password updated for '${username}'.`); }
-else { const [u] = await db.insert(schema.users).values({ username, displayName, email, passwordHash }).returning(); userId = u.id; console.log(`User '${username}' created.`); }
+if (existing) { await db.update(schema.users).set({ displayName, email, updatedAt: new Date() }).where(eq(schema.users.id, existing.id)); userId = existing.id; console.log(`Owner '${username}' updated.`); }
+else {
+  const [any] = await db.select({ id: schema.users.id }).from(schema.users).limit(1);
+  if (any) { console.error("An owner already exists under another username: this is a single-owner application."); process.exit(1); }
+  const [u] = await db.insert(schema.users).values({ username, displayName, email, passwordHash: "!" }).returning(); userId = u.id; console.log(`Owner '${username}' created.`);
+}
 const [ws] = await db.select().from(schema.workspaces).where(eq(schema.workspaces.ownerId, userId)).limit(1);
 if (!ws) { await db.insert(schema.workspaces).values({ ownerId: userId, name: "Note SPBoucher AI", slug: "main" }); console.log("Workspace created."); }
 const [layout] = await db.select().from(schema.dashboardLayouts).where(eq(schema.dashboardLayouts.userId, userId)).limit(1);
@@ -45,5 +38,5 @@ if (!layout) await db.insert(schema.dashboardLayouts).values({ userId, name: "Ho
   { id: "tasks", type: "tasks_due", size: "half" }, { id: "projects", type: "active_projects", size: "half" }, { id: "research", type: "research_activity", size: "half" },
   { id: "graph", type: "graph_highlights", size: "half" }, { id: "summary", type: "ai_summary", size: "wide" }, { id: "chat", type: "ai_chat", size: "wide" }] });
 await db.insert(schema.aiProviders).values([{ id: "openai", name: "OpenAI" }, { id: "anthropic", name: "Anthropic" }]).onConflictDoNothing();
-console.log("Bootstrap complete. Only the password hash was stored.");
+console.log("Bootstrap complete. Next: pnpm auth:open-enrollment (first passkey).");
 await sql.end();

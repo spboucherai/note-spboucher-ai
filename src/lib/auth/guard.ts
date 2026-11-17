@@ -1,36 +1,42 @@
 import "server-only";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getSession, type SessionUser } from "./session";
+import { allowedOrigins } from "./config";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 
-export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
+export class HttpError extends Error { constructor(public status: number, message: string, public code?: string) { super(message); } }
 
-/** For route handlers: 401 without the access cookie. Also enforces same-origin on mutating requests. */
+/** For route handlers: 401 without a valid session. Also enforces same-origin on mutating requests. */
 export async function requireUser(req?: Request): Promise<SessionUser> {
-  const s = await getSession();
-  if (!s) throw new HttpError(401, "Locked");
   if (req && !["GET", "HEAD", "OPTIONS"].includes(req.method)) await assertSameOrigin();
+  const s = await getSession();
+  if (!s) throw new HttpError(401, "Sign-in required", "unauthenticated");
   return s;
 }
-/** For server components/pages (the proxy already gates; this is defence in depth). */
+/** Sensitive actions: the passkey must have been verified in the last 5 minutes (step-up). The client reacts to code `reauth_required`. */
+export function requireFresh(user: SessionUser) {
+  if (!user.fresh) throw new HttpError(403, "Confirm with your passkey to continue", "reauth_required");
+}
+/** For server components/pages (the proxy already gates; this is the authoritative check next to the data). */
 export async function requireUserPage(): Promise<SessionUser> {
   const s = await getSession();
-  if (!s) notFound();
+  if (!s) redirect("/login");
   return s;
 }
+/**
+ * CSRF: every mutating request must come from one of our exact origins. Browsers always send Origin on cross-origin and on same-origin
+ * POST/PATCH/PUT/DELETE fetches; Sec-Fetch-Site is checked too when present. A request with neither header is refused.
+ */
 export async function assertSameOrigin() {
   const h = await headers();
   const sfs = h.get("sec-fetch-site");
-  if (sfs && sfs !== "same-origin" && sfs !== "none") throw new HttpError(403, "Cross-site request blocked");
+  if (sfs && sfs !== "same-origin") throw new HttpError(403, "Cross-site request blocked", "csrf");
   const origin = h.get("origin");
-  if (origin) {
-    const host = h.get("x-forwarded-host") ?? h.get("host");
-    const allowed = new Set([process.env.APP_URL?.replace(/\/$/, ""), `https://${host}`, `http://${host}`].filter(Boolean));
-    if (!allowed.has(origin)) throw new HttpError(403, "Origin mismatch");
-  }
+  if (origin) { if (!allowedOrigins().includes(origin)) throw new HttpError(403, "Origin mismatch", "csrf"); return; }
+  if (sfs !== "same-origin") throw new HttpError(403, "Missing Origin header", "csrf");
 }
 /** The single owner workspace (created at bootstrap). */
 export const getWorkspace = cache(async (userId: string) => {
@@ -38,8 +44,8 @@ export const getWorkspace = cache(async (userId: string) => {
   if (!ws) throw new HttpError(500, "Workspace missing — run pnpm bootstrap");
   return ws;
 });
-export function jsonError(e: unknown) {
-  if (e instanceof HttpError) return Response.json({ error: e.message }, { status: e.status });
-  console.error(e);
-  return Response.json({ error: "Internal error" }, { status: 500 });
+export function jsonError(e: unknown, requestId?: string) {
+  const h: Record<string, string> = { "cache-control": "no-store" }; if (requestId) h["x-request-id"] = requestId;
+  if (e instanceof HttpError) return Response.json({ error: e.message, ...(e.code ? { code: e.code } : {}) }, { status: e.status, headers: h });
+  return Response.json({ error: "Internal error", ...(requestId ? { requestId } : {}) }, { status: 500, headers: h });
 }

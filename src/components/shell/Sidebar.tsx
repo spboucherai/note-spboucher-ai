@@ -10,6 +10,7 @@ import { useUI } from "@/lib/client/store";
 import { api } from "@/lib/client/api";
 import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, Kbd } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
+import { wipeLocalData } from "@/lib/client/offline";
 
 const SECTIONS: { id: string; label: string; icon: React.ReactNode; type?: string }[] = [
   { id: "notes", label: "Notes", icon: <FileText /> }, { id: "documents", label: "Documents", icon: <Files /> }, { id: "projects", label: "Projects", icon: <FolderKanban /> }, { id: "research", label: "Research", icon: <FlaskConical />, type: "research" },
@@ -33,7 +34,7 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
   }
   async function trash(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "DELETE" }); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash", { description: n.title }); if (pathname === `/p/${n.id}`) r.push("/"); }
   async function pin(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "PATCH", json: { pinned: !n.pinned } }); qc.invalidateQueries({ queryKey: ["tree"] }); }
-  async function lock() { if (!window.confirm("Lock this device? You will need the password or the bookmark link to come back.")) return; await api("/api/lock", { method: "POST" }).catch(() => {}); window.location.href = "/"; }
+  async function lock() { if (!window.confirm("Lock this device? You come back with your passkey. Drafts not yet synced on this device are erased.")) return; await api("/api/auth/logout", { method: "POST", idempotencyKey: false }).catch(() => {}); await wipeLocalData(); window.location.href = "/login"; }
 
   const Item = ({ n, depth }: { n: TreeNode; depth: number }) => {
     const kids = byParent.get(n.id) ?? []; const active = pathname === `/p/${n.id}`; const isOpen = open[n.id];

@@ -1,22 +1,48 @@
 "use client";
-export async function api<T = any>(url: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-  const { json, ...rest } = init;
-  const res = await fetch(url, { ...rest, headers: { ...(json !== undefined ? { "content-type": "application/json" } : {}), ...(rest.headers ?? {}) }, body: json !== undefined ? JSON.stringify(json) : rest.body, credentials: "same-origin" });
-  if (res.status === 401) { if (typeof window !== "undefined") window.location.reload(); throw new Error("Locked"); }
+export class ApiError extends Error { constructor(message: string, public status: number, public code?: string, public body?: any) { super(message); } }
+export const newKey = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
+let redirecting = false;
+/** Session ended (expired, revoked, locked elsewhere): go to the sign-in page and come back to the same screen afterwards. Local drafts stay on the device. */
+export function toLogin() {
+  if (typeof window === "undefined" || redirecting) return; redirecting = true;
+  const next = window.location.pathname + window.location.search + window.location.hash;
+  window.location.assign(`/login${next && next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`);
+}
+/**
+ * JSON fetch helper. Every mutating call carries an Idempotency-Key (generated here, or supplied by the offline outbox so a replay
+ * after a timeout cannot create a second page/row) and an x-request-id for correlation with the server log.
+ */
+export async function api<T = any>(url: string, init: RequestInit & { json?: unknown; idempotencyKey?: string | false; timeoutMs?: number } = {}): Promise<T> {
+  const { json, idempotencyKey, timeoutMs, ...rest } = init;
+  const method = (rest.method ?? "GET").toUpperCase(); const mutating = method !== "GET" && method !== "HEAD";
+  const headers: Record<string, string> = { ...(json !== undefined ? { "content-type": "application/json" } : {}), ...((rest.headers as Record<string, string>) ?? {}) };
+  if (mutating && idempotencyKey !== false && method === "POST") headers["idempotency-key"] = idempotencyKey || newKey();
+  else if (mutating && typeof idempotencyKey === "string") headers["idempotency-key"] = idempotencyKey;
+  headers["x-request-id"] = newKey();
+  const ctl = timeoutMs ? new AbortController() : null; const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+  let res: Response;
+  try { res = await fetch(url, { ...rest, headers, body: json !== undefined ? JSON.stringify(json) : rest.body, credentials: "same-origin", signal: ctl?.signal ?? rest.signal }); }
+  catch (e: any) { throw new ApiError(e?.name === "AbortError" ? "Request timed out" : "Network unreachable", 0, "network"); }
+  finally { if (timer) clearTimeout(timer); }
   const ct = res.headers.get("content-type") ?? "";
-  const body = ct.includes("application/json") ? await res.json() : await res.text();
-  if (!res.ok) throw new Error((body && body.error) || `HTTP ${res.status}`);
+  const body = ct.includes("application/json") ? await res.json().catch(() => null) : await res.text();
+  if (res.status === 401) { toLogin(); throw new ApiError("Sign-in required", 401, "unauthenticated"); }
+  if (!res.ok) throw new ApiError((body && body.error) || `HTTP ${res.status}`, res.status, body?.code, body);
   return body as T;
 }
 /** Consume a server-sent events stream (data: JSON lines, [DONE] terminator). */
 export async function sse(url: string, json: unknown, onEvent: (ev: any) => void, signal?: AbortSignal) {
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(json), signal, credentials: "same-origin" });
-  if (res.status === 401) { window.location.reload(); return; }
-  if (!res.ok || !res.body) { let msg = `HTTP ${res.status}`; try { msg = (await res.json()).error ?? msg; } catch {} onEvent({ type: "error", message: msg }); return; }
+  let res: Response;
+  try { res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "x-request-id": newKey() }, body: JSON.stringify(json), signal, credentials: "same-origin" }); }
+  catch (e: any) { if (e?.name !== "AbortError") onEvent({ type: "error", message: "Network unreachable — nothing was sent twice; try again.", code: "network" }); return; }
+  if (res.status === 401) { toLogin(); return; }
+  if (!res.ok || !res.body) { let msg = `HTTP ${res.status}`; let code: string | undefined; try { const j = await res.json(); msg = j.error ?? msg; code = j.code; } catch {} onEvent({ type: "error", message: msg, code }); return; }
   const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read(); if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i; while ((i = buf.indexOf("\n\n")) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 2); if (!line.startsWith("data: ")) continue; const data = line.slice(6); if (data === "[DONE]") return; try { onEvent(JSON.parse(data)); } catch {} }
-  }
+  try {
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i; while ((i = buf.indexOf("\n\n")) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 2); if (!line.startsWith("data: ")) continue; const data = line.slice(6); if (data === "[DONE]") return; try { onEvent(JSON.parse(data)); } catch {} }
+    }
+  } catch (e: any) { if (e?.name !== "AbortError") onEvent({ type: "error", message: "Connection lost while the answer was streaming.", code: "network" }); }
 }

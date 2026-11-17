@@ -1,37 +1,34 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ACCESS_COOKIE, cookieOptions, accessToken, hasAccess, isAccessKey, safeNext, absolute } from "@/lib/access";
+import { SESSION_COOKIE } from "@/lib/auth/config";
+import { resolveSession } from "@/lib/auth/sessions";
 
-/** Reachable without the access cookie: health probe (mld), gate form + its POST, PWA assets, build assets. */
-const PUBLIC = [/^\/api\/health$/, /^\/api\/gate$/, /^\/gate$/, /^\/manifest\.webmanifest$/, /^\/sw\.js$/, /^\/icons\//, /^\/_next\//, /^\/favicon/];
+/**
+ * Network boundary (Next.js 16 proxy, Node.js runtime). Nothing private is rendered or returned without a valid server-side session:
+ * the session token is checked against the database HERE, before any page or route handler runs, and again next to the data
+ * (requireUser / requireUserPage). Reachable without a session: health probe, the sign-in and enrollment ceremonies, PWA shell assets.
+ * The pre-v2 entry points (/gate, /unlock/<key>, ?k=, /api/gate, /api/lock) no longer exist and answer 404.
+ */
+const PUBLIC = [/^\/api\/health$/, /^\/api\/auth\/login\/(options|verify)$/, /^\/api\/auth\/enroll\/(options|verify)$/, /^\/api\/auth\/logout$/, /^\/login$/, /^\/enroll$/, /^\/offline$/, /^\/manifest\.webmanifest$/, /^\/sw\.js$/, /^\/icons\//, /^\/_next\//, /^\/favicon/];
+const GONE = [/^\/gate(\/|$)/, /^\/unlock(\/|$)/, /^\/api\/gate$/, /^\/api\/lock$/];
 const ROBOTS = "User-agent: *\nDisallow: /\n";
 const noindex = (res: NextResponse) => { res.headers.set("X-Robots-Tag", "noindex, nofollow"); return res; };
+const safeNext = (p: string) => (!p.startsWith("/") || p.startsWith("//") || p.startsWith("/login") || p.startsWith("/enroll") || p.startsWith("/api/") ? "/" : p);
 
 export async function proxy(req: NextRequest) {
-  const { pathname, searchParams } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
   if (pathname === "/robots.txt") return noindex(new NextResponse(ROBOTS, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" } }));
-
-  // Bookmark unlock: /unlock/<key> or ?k=<key> on any path.
-  const fromPath = pathname.startsWith("/unlock/") ? decodeURIComponent(pathname.slice("/unlock/".length)) : null;
-  const candidate = fromPath ?? searchParams.get("k");
-  if (candidate !== null || pathname === "/unlock") {
-    if (candidate && (await isAccessKey(candidate))) {
-      const token = (await accessToken())!;
-      let dest = "/";
-      if (fromPath === null) { const u = new URL(req.nextUrl.toString()); u.searchParams.delete("k"); dest = safeNext(u.pathname + (u.search || "")); }
-      const res = new NextResponse(null, { status: 303, headers: { Location: absolute(dest, req.url), "cache-control": "no-store", "referrer-policy": "no-referrer" } });
-      res.cookies.set(ACCESS_COOKIE, token, cookieOptions);
-      return noindex(res);
-    }
-    return noindex(new NextResponse("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } }));
+  if (GONE.some((re) => re.test(pathname))) return noindex(new NextResponse("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } }));
+  if (PUBLIC.some((re) => re.test(pathname))) {
+    // Already signed in → no point showing the sign-in page.
+    if (pathname === "/login" && (await session(req))) return NextResponse.redirect(new URL(safeNext(req.nextUrl.searchParams.get("next") ?? "/"), origin(req)), 303);
+    return noindex(NextResponse.next());
   }
-
-  const ok = await hasAccess(req.cookies.get(ACCESS_COOKIE)?.value);
-  if (pathname === "/gate" && ok) return new NextResponse(null, { status: 303, headers: { Location: absolute(safeNext(searchParams.get("next")), req.url) } });
-  if (PUBLIC.some((re) => re.test(pathname))) return noindex(NextResponse.next());
-  if (ok) return noindex(NextResponse.next());
-  if (pathname.startsWith("/api/")) return noindex(NextResponse.json({ error: "Locked" }, { status: 401, headers: { "cache-control": "no-store" } }));
-  // Everything else: render the neutral gate in place (URL unchanged), then come back here after the password.
-  const url = req.nextUrl.clone(); url.pathname = "/gate"; url.search = ""; url.searchParams.set("next", pathname + (req.nextUrl.search || ""));
-  const res = NextResponse.rewrite(url); res.headers.set("cache-control", "no-store"); return noindex(res);
+  if (await session(req)) { const res = NextResponse.next(); if (!pathname.startsWith("/_next/")) res.headers.set("cache-control", "private, no-store"); return noindex(res); }
+  if (pathname.startsWith("/api/")) return noindex(NextResponse.json({ error: "Sign-in required", code: "unauthenticated" }, { status: 401, headers: { "cache-control": "no-store" } }));
+  const to = new URL("/login", origin(req)); const next = safeNext(pathname + (search || "")); if (next !== "/") to.searchParams.set("next", next);
+  const res = NextResponse.redirect(to, 303); res.headers.set("cache-control", "no-store"); return noindex(res);
 }
+async function session(req: NextRequest) { try { return await resolveSession(req.cookies.get(SESSION_COOKIE)?.value); } catch { return null; /* database down → fail closed */ } }
+/** Absolute base for redirects: APP_URL wins over the internal request URL (the app sits behind Caddy + WireGuard). */
+const origin = (req: NextRequest) => process.env.APP_URL || req.url;
 export const config = { matcher: ["/((?!_next/static|_next/image).*)"] };

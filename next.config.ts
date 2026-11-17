@@ -27,7 +27,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pg-boss", "postgres", "@node-rs/argon2", "pdf-parse", "mammoth", "pino"],
+  serverExternalPackages: ["pg-boss", "postgres", "pdf-parse", "mammoth", "pino"],
   experimental: { serverActions: { bodySizeLimit: "50mb" } },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

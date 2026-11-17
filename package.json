@@ -1,9 +1,10 @@
 {
   "name": "note-spboucher-ai",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/katex": "^0.16.8",
     "@types/node": "^26.6.6",
     "@types/papaparse": "^5.5.2",
@@ -20,7 +21,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@node-rs/argon2": "^2.2.2",
     "@radix-ui/react-avatar": "^1.3.1",
     "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-context-menu": "^2.4.1",
@@ -35,6 +35,8 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "@radix-ui/react-toast": "^1.3.1",
     "@radix-ui/react-tooltip": "^1.4.1",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.1.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.105.0",
     "@tiptap/core": "^3.32.2",
@@ -115,13 +117,19 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "bootstrap": "tsx src/cli/bootstrap.ts",
-    "access:password": "tsx src/cli/access.ts password",
-    "access:rotate-key": "tsx src/cli/access.ts rotate-key",
+    "auth:status": "tsx src/cli/auth.ts status",
+    "auth:open-enrollment": "tsx src/cli/auth.ts open-enrollment",
+    "auth:recover": "tsx src/cli/auth.ts recover",
+    "auth:close-enrollment": "tsx src/cli/auth.ts close-enrollment",
+    "auth:revoke-sessions": "tsx src/cli/auth.ts revoke-sessions",
     "seed:ai": "tsx src/cli/seed-ai-models.ts",
     "backup": "bash scripts/backup.sh",
     "restore": "bash scripts/restore.sh",
     "bench:discover": "tsx benchmarks/scripts/discover.ts",
     "bench:run": "tsx benchmarks/scripts/bench.ts",
-    "bench:report": "tsx benchmarks/scripts/report.ts"
+    "bench:report": "tsx benchmarks/scripts/report.ts",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test tests/unit/*.test.ts",
+    "test:e2e": "playwright test"
   }
 }
