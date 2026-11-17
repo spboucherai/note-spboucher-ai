@@ -14,12 +14,14 @@ export function cellToString(v: unknown): string {
   if (typeof v === "object") { const o = v as any; return o.label ?? o.name ?? o.title ?? o.url ?? JSON.stringify(o); }
   return String(v);
 }
-export function databaseCsv(set: ExportSet, databaseId: string): { name: string; csv: string } {
+export function databaseCsv(set: ExportSet, databaseId: string): { name: string; csv: string; rows: number; columns: number; orphanRows: number } {
   const d = set.databases.find((x) => x.id === databaseId); if (!d) throw new Error("Database not found");
   const props = set.properties.filter((p) => p.databaseId === databaseId && p.type !== "title").sort((a, b) => a.position - b.position);
   const pageById = new Map(set.pages.map((p) => [p.id, p]));
-  const rows = set.rows.filter((r) => r.databaseId === databaseId).sort((a, b) => a.position - b.position);
+  // a row whose page is in the trash is not exported as a blank line: it is counted in `orphanRows` (and in the export report)
+  const all = set.rows.filter((r) => r.databaseId === databaseId).sort((a, b) => a.position - b.position);
+  const rows = all.filter((r) => pageById.has(r.pageId));
   const header = ["Title", ...props.map((p) => p.name), "Created", "Updated"];
   const data = rows.map((r) => { const page = pageById.get(r.pageId); const v = (r.values ?? {}) as Record<string, unknown>; return [page?.title ?? "", ...props.map((p) => { const raw = v[p.id] ?? v[p.name]; if (raw == null || raw === "") return ""; if (["date", "number", "created_time", "last_edited_time", "url", "text"].includes(p.type)) return cellToString(raw); try { return displayValue(asProperty(p), raw); } catch { return cellToString(raw); } }), (page?.createdAt ?? r.createdAt).toISOString(), (page?.updatedAt ?? r.updatedAt).toISOString()]; });
-  return { name: d.name, csv: Papa.unparse({ fields: header, data }, { newline: "\n" }) + "\n" };
+  return { name: d.name, csv: Papa.unparse({ fields: header, data }, { newline: "\n" }) + "\n", rows: rows.length, columns: header.length, orphanRows: all.length - rows.length };
 }

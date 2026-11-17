@@ -1,24 +1,29 @@
 "use client";
+import { ChevronRight } from "lucide-react";
 import { Badge, Spinner } from "@/components/ui/primitives";
-import { cn, timeAgo } from "@/lib/utils";
-import { ms, usd } from "@/components/ai/models/format";
-import { STATUS_TONE, isLive } from "./ExecutionDrawer";
-export interface ExecSummary { id: string; agent: string; task: string; model: string | null; status: string; scopes: string[]; outcome: string | null; error: string | null; costUsd: number | null; createdAt: string; startedAt: string | null; finishedAt: string | null; proposals: number; pendingProposals: number; toolCalls: number }
+import { timeAgo } from "@/lib/utils";
+import { usd } from "@/components/ai/models/format";
+
+export const STATUS_TONE: Record<string, "neutral" | "accent" | "ai" | "success" | "warning" | "danger"> = { pending: "neutral", running: "ai", awaiting_approval: "warning", approved: "success", completed: "success", rejected: "neutral", failed: "danger" };
+export const STATUS_LABEL: Record<string, string> = { pending: "queued", running: "running", awaiting_approval: "to review", approved: "reviewed", completed: "done", rejected: "rejected", failed: "failed" };
+export const isLive = (s: string | undefined) => s === "pending" || s === "running";
+export interface ExecSummary { id: string; agent: string; model: string | null; status: string; outcome: string | null; error: string | null; costUsd: number | null; createdAt: string; startedAt: string | null; finishedAt: string | null; proposals: number; pendingProposals: number; toolCalls: number }
+
+/** Past and current runs as a list of large rows (no table: nothing to scroll sideways on a phone). */
 export function ExecutionList({ items, agents, onOpen }: { items: ExecSummary[]; agents: Record<string, { name: string; icon: string }>; onOpen: (id: string) => void }) {
-  if (!items.length) return <div className="rounded-xl border border-dashed border-line-strong p-8 text-center text-[13px] text-fg-muted">No executions yet. Pick an agent, describe a task and run it.</div>;
+  if (!items.length) return <div className="rounded-xl border border-dashed border-line-strong px-4 py-8 text-center text-[13px] text-fg-muted">No run yet. Choose a task above: you will see its scope and cost limit before anything starts.</div>;
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-bg-elev shadow-card"><table className="w-full min-w-[720px] text-[12.5px]">
-      <thead><tr className="text-left text-[10.5px] uppercase tracking-wide text-fg-muted">{["Status", "Agent", "Task", "Model", "Tools", "Proposals", "Cost", "Duration", "When"].map((h) => <th key={h} className="px-2 py-1.5 font-medium">{h}</th>)}</tr></thead>
-      <tbody>{items.map((e) => { const a = agents[e.agent]; const dur = e.startedAt ? ((e.finishedAt ? new Date(e.finishedAt) : new Date()).getTime() - new Date(e.startedAt).getTime()) : null; return (
-        <tr key={e.id} onClick={() => onOpen(e.id)} className="cursor-pointer border-t border-line hover:bg-bg-sunk/60">
-          <td className="px-2 py-1.5"><Badge tone={STATUS_TONE[e.status] ?? "neutral"}>{isLive(e.status) && <Spinner className="mr-1 size-3" />}{e.status.replace("_", " ")}</Badge></td>
-          <td className="whitespace-nowrap px-2 py-1.5">{a?.icon} {a?.name ?? e.agent}</td>
-          <td className="max-w-[320px] truncate px-2 py-1.5" title={e.task}>{e.task}</td>
-          <td className="px-2 py-1.5 font-mono text-[11.5px] text-fg-muted">{e.model ?? "—"}</td>
-          <td className="px-2 py-1.5 tabular-nums">{e.toolCalls}</td>
-          <td className="px-2 py-1.5 tabular-nums">{e.proposals}{e.pendingProposals > 0 && <span className={cn("ml-1 rounded bg-warning/20 px-1 text-[10.5px] text-warning")}>{e.pendingProposals} pending</span>}</td>
-          <td className="px-2 py-1.5 tabular-nums">{usd(e.costUsd)}</td><td className="px-2 py-1.5 tabular-nums">{dur != null ? ms(dur) : "—"}</td><td className="whitespace-nowrap px-2 py-1.5 text-fg-muted">{timeAgo(e.createdAt)}</td>
-        </tr>); })}</tbody>
-    </table></div>
+    <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg-elev shadow-card">
+      {items.map((e) => { const a = agents[e.agent]; return (
+        <li key={e.id}><button type="button" onClick={() => onOpen(e.id)} className="flex min-h-16 w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-bg-sunk/60">
+          <span className="text-xl leading-none" aria-hidden>{a?.icon ?? "🤖"}</span>
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 truncate text-[14px] font-medium">{a?.name ?? e.agent}</span><Badge tone={STATUS_TONE[e.status] ?? "neutral"}>{isLive(e.status) && <Spinner className="mr-1 size-3" />}{STATUS_LABEL[e.status] ?? e.status}</Badge>{e.pendingProposals > 0 && <Badge tone="warning">{e.pendingProposals} to review</Badge>}</span>
+            <span className="mt-0.5 block text-[12px] leading-4 text-fg-muted [overflow-wrap:anywhere]">{e.status === "failed" ? e.error ?? "failed" : e.outcome ?? (isLive(e.status) ? "Working…" : "")}</span>
+            <span className="mt-0.5 block text-[11.5px] text-fg-faint">{timeAgo(e.createdAt)} · {usd(e.costUsd)}{e.model ? ` · ${e.model}` : ""}</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-faint" />
+        </button></li>); })}
+    </ul>
   );
 }

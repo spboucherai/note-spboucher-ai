@@ -235,3 +235,19 @@ html[data-editing="1"] #main-scroll { scroll-padding-bottom: calc(var(--kb, 0px)
   .db-scroll { max-height: none; }
 }
 @media (pointer: coarse) { .side-item { height: 2.75rem; font-size: 15px; } .side-item svg { width: 18px; height: 18px; } }
+/* Grid items default to min-width:auto, which lets one long line (a title, a URL) widen the whole column past the screen.
+   Zero it once for every grid so content truncates or wraps inside its cell instead. */
+:where(.grid) > * { min-width: 0; }
+
+/* ---------- Assistant / AI actions / agents (v2) — owned by the AI workstream ---------- */
+/* AI-rendered Markdown never widens its column: long words wrap, code / tables / maths scroll inside themselves. */
+.chat-md { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.chat-md pre { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; white-space: pre; overflow-wrap: normal; }
+.chat-md pre code { overflow-wrap: normal; word-break: normal; }
+.chat-md table { display: block; width: max-content; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; overflow-wrap: normal; }
+.chat-md .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.chat-md img { max-width: 100%; height: auto; }
+.chat-md ul.contains-task-list { list-style: none; padding-left: 0.25rem; }
+/* Inline citation markers get a finger-sized hit area without changing the line height. */
+@media (pointer: coarse) { .chat-md .source-ref { position: relative; } .chat-md .source-ref::after { content: ""; position: absolute; inset: -13px -9px; } }
+.cite-chip > span { min-width: 0; }

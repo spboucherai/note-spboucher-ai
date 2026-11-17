@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
-# Post-deploy smoke test: health, gate, unlock, page create/update, search, AI action (one cheap call), lock.
-# Usage: NOTE_URL=https://note.spboucher.ai NOTE_UNLOCK_URL="$(cat ~/Desktop/Cluster/secrets/note-spboucher-ai/unlock-url)" bash scripts/smoke.sh
-# (the access cookie is Secure: run against the public HTTPS URL)
-set -euo pipefail
-URL=${NOTE_URL:-https://note.spboucher.ai}; UNLOCK=${NOTE_UNLOCK_URL:?NOTE_UNLOCK_URL required}
-J=$(mktemp); trap 'rm -f $J' EXIT
-step() { printf '%-28s' "$1"; }
-step "health"; curl -fsS "$URL/api/health" | grep -q '"ok":true' && echo OK
-step "gate without cookie"; curl -fsS "$URL/" | grep -q 'name="password"' && echo OK
-step "api without cookie → 401"; [ "$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/tree")" = "401" ] && echo OK
-step "bookmark unlock"; [ "$(curl -s -c "$J" -o /dev/null -w '%{http_code}' "$UNLOCK")" = "303" ] && echo OK
-step "create page"; PID=$(curl -fsS -b "$J" -X POST "$URL/api/pages" -H 'content-type: application/json' -H "origin: $URL" -d '{"title":"Smoke test page","section":"notes"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'); echo "OK $PID"
-step "update content"; curl -fsS -b "$J" -X PATCH "$URL/api/pages/$PID" -H 'content-type: application/json' -H "origin: $URL" -d '{"content":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Smoke test content about hedonic indices."}]}]}}' | grep -q '"version":2' && echo OK
-step "quick search"; sleep 2; curl -fsS -b "$J" "$URL/api/search?mode=quick&q=smoke" | grep -q "Smoke test page" && echo OK
-step "ai action (quick)"; curl -fsS -N -b "$J" -X POST "$URL/api/ai/action" -H 'content-type: application/json' -H "origin: $URL" -d '{"action":"fix","text":"Ths is a smoke tset.","model":"claude-haiku-5-5"}' | grep -q '"type":"done"' && echo OK
-step "trash page"; curl -fsS -b "$J" -X DELETE "$URL/api/pages/$PID" -H "origin: $URL" | grep -q '"ok":true' && echo OK
-step "purge page"; curl -fsS -b "$J" -X DELETE "$URL/api/pages/$PID?purge=1" -H "origin: $URL" | grep -q '"ok":true' && echo OK
-step "lock"; curl -fsS -b "$J" -X POST "$URL/api/lock" -H "origin: $URL" | grep -q '"ok":true' && echo OK
-echo "smoke test passed"
+# Post-deploy smoke test — public surface only, no credential needed (v2: access is by passkey, which a script cannot hold).
+#   bash scripts/smoke.sh [https://note.spboucher.ai]
+# Checks: health, that nothing private answers without a session, that the old entry points are gone, and the PWA shell.
+set -u
+BASE="${1:-${APP_URL:-https://note.spboucher.ai}}"; fail=0
+code() { curl -s -o /dev/null -m 15 -w '%{http_code}' "$@"; }
+expect() { local want="$1" got="$2" what="$3"; if [ "$got" = "$want" ]; then echo "ok   $what ($got)"; else echo "FAIL $what: expected $want, got $got"; fail=1; fi; }
+health="$(curl -s -m 15 "$BASE/api/health")"; echo "health: $health"
+for k in '"ok":true' '"db":true' '"pgvector":true' '"worker":true' '"passkeys":true'; do case "$health" in *"$k"*) echo "ok   health $k";; *) echo "FAIL health lacks $k"; fail=1;; esac; done
+expect 303 "$(code "$BASE/")" "home redirects to sign-in"
+expect 200 "$(code "$BASE/login")" "sign-in page"
+expect 401 "$(code "$BASE/api/tree")" "API refuses anonymous reads"
+expect 401 "$(code "$BASE/api/export?format=json")" "export refuses anonymous"
+expect 401 "$(code "$BASE/api/files/00000000-0000-0000-0000-000000000000")" "files refuse anonymous"
+expect 403 "$(code -X POST -H 'Origin: https://evil.example' "$BASE/api/auth/login/options")" "ceremony refuses a foreign origin"
+expect 403 "$(code -X POST -H "Origin: $BASE" -H 'content-type: application/json' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' "$BASE/api/auth/enroll/options")" "enrollment is closed to unknown tokens"
+for p in /gate /unlock/abcdefgh /api/gate /api/lock; do expect 404 "$(code "$BASE$p")" "old entry point $p is gone"; done
+expect 200 "$(code "$BASE/manifest.webmanifest")" "manifest"; expect 200 "$(code "$BASE/sw.js")" "service worker"; expect 200 "$(code "$BASE/offline")" "offline page"
+hdr="$(curl -s -D - -o /dev/null -m 15 "$BASE/login")"
+for h in 'strict-transport-security' 'content-security-policy' 'x-content-type-options' 'x-robots-tag'; do echo "$hdr" | grep -qi "^$h:" && echo "ok   header $h" || { echo "FAIL header $h missing"; fail=1; }; done
+[ "$fail" = 0 ] && echo "SMOKE OK" || { echo "SMOKE FAILED"; exit 1; }

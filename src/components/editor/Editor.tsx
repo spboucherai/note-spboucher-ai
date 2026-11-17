@@ -59,7 +59,8 @@ export function Editor({ content, onChange, onReady, pageId, editable = true, pl
     try {
       const up = await uploadFile(job.file, pageId, { signal: job.abort.signal, onProgress: (f) => setJobs((js) => js.map((j) => (j.id === job.id ? { ...j, progress: f } : j))) });
       const f = job.file; const node = f.type.startsWith("image/") ? { type: "image", attrs: { src: up.url, alt: up.name, title: up.name } } : { type: "fileBlock", attrs: { src: up.url, name: up.name, size: up.size, mime: up.mime, attachmentId: up.id } };
-      if (job.pos != null && job.pos <= editor.state.doc.content.size) editor.chain().insertContentAt(job.pos, node).run(); else editor.chain().focus().insertContent(node).run();
+      // Insert AFTER the current selection: a freshly inserted image is a node selection, and inserting "at the selection" would replace it with the next file.
+      if (job.pos != null && job.pos <= editor.state.doc.content.size) editor.chain().insertContentAt(job.pos, node).run(); else { const at = editor.state.selection.to; editor.chain().insertContentAt(at, node).setTextSelection(Math.min(at + 1, editor.state.doc.content.size + 1)).run(); }
       setJobs((js) => js.filter((j) => j.id !== job.id));
     } catch (e: any) {
       if (e?.name === "AbortError") setJobs((js) => js.filter((j) => j.id !== job.id));

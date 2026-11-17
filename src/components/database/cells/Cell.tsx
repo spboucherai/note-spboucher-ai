@@ -10,6 +10,7 @@ import { useDb } from "../hooks";
 import { OptionChip, SelectPopover } from "./SelectCell";
 import { RelationChip, RelationPopover } from "./RelationCell";
 import { FileChip, FilePopover } from "./FileCell";
+import { ValueEditor } from "./ValueEditor";
 
 const toLocalInput = (v: unknown, time: boolean) => { if (typeof v !== "string" || !v) return ""; if (!time) return v.slice(0, 10); const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; const z = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
 
@@ -40,7 +41,9 @@ export function Cell({ p, row, editing, onEdit, mode = "table" }: { p: Property;
   const ctx = useDb(); const value = row.values[p.id]; const set = (v: unknown) => ctx.setCell(row.id, { [p.id]: v });
   const readonly = READONLY_TYPES.has(p.type);
   const base = cn("flex min-h-9 w-full items-center gap-1 px-2 py-1 text-[13px]", mode === "form" && "min-h-10 rounded-md hover:bg-bg-sunk", !readonly && "cursor-text");
-  if (p.type === "checkbox") return <button type="button" onClick={() => set(!value)} className={cn(base, "cursor-pointer")}><span className={cn("grid size-5 place-items-center rounded border transition-colors", value ? "border-accent bg-accent text-accent-fg" : "border-line-strong hover:border-fg-faint")}>{value ? <Check className="size-3.5" /> : null}</span></button>;
+  // Phones, row sheet: always-visible touch controls (sheets with large options, native date picker, switch) instead of tap-to-edit cells.
+  if (mode === "form" && ctx.isMobile && !readonly) return <ValueEditor p={p} value={value} onChange={set} pageId={row.pageId} addOption={(n) => ctx.addOption(p.id, n)} labelId={`prop-label-${p.id}`} />;
+  if (p.type === "checkbox") return <button type="button" role="checkbox" aria-checked={!!value} aria-label={p.name} onClick={() => set(!value)} className={cn(base, "cursor-pointer")}><span className={cn("grid size-5 place-items-center rounded border transition-colors", value ? "border-accent bg-accent text-accent-fg" : "border-line-strong hover:border-fg-faint")}>{value ? <Check className="size-3.5" /> : null}</span></button>;
   if (p.type === "ai") return <AiCell p={p} row={row} mode={mode} />;
   if (readonly) return <div className={cn(base, "cursor-default text-fg-muted")}><CellDisplay p={p} value={value} compact={mode === "table"} /></div>;
   if (p.type === "select" || p.type === "status" || p.type === "multi_select") return <SelectPopover p={p} value={value} multi={p.type === "multi_select"} onChange={set} addOption={(n) => ctx.addOption(p.id, n)} open={editing} onOpenChange={onEdit}><div className={cn(base, "cursor-pointer flex-wrap")}><CellDisplay p={p} value={value} /></div></SelectPopover>;
@@ -60,7 +63,7 @@ function TextCell({ p, row, value, editing, onEdit, onChange, className, mode }:
   return (
     <div className={cn(className, "group/cell relative", p.type === "number" && "justify-end")} onClick={() => onEdit(true)}>
       <span className={cn("min-w-0 flex-1", mode === "table" ? "truncate" : "whitespace-pre-wrap")}><CellDisplay p={p} value={value} row={row} compact={mode === "table"} /></span>
-      {p.type === "title" && mode === "table" && <button type="button" onClick={(e) => { e.stopPropagation(); ctx.open(row.id); }} className="ml-auto hidden h-7 shrink-0 items-center gap-1 rounded-md border border-line bg-bg-elev px-1.5 text-[11px] text-fg-muted shadow-card group-hover/cell:flex hover:text-fg"><Maximize2 className="size-3" /> Open</button>}
+      {p.type === "title" && mode === "table" && <button type="button" onClick={(e) => { e.stopPropagation(); ctx.open(row.id); }} aria-label={`Open ${row.title || "Untitled"}`} className="ml-auto hidden h-7 shrink-0 items-center gap-1 rounded-md border border-line bg-bg-elev px-1.5 text-[11px] text-fg-muted shadow-card group-hover/cell:flex group-focus-within/cell:flex hover:text-fg [@media(hover:none)]:flex [@media(hover:none)]:h-9 [@media(hover:none)]:px-2"><Maximize2 className="size-3" /> Open</button>}
     </div>
   );
 }
@@ -74,8 +77,8 @@ function AiCell({ p, row, mode }: { p: Property; row: RowOut; mode: "table" | "f
   const ctx = useDb(); const v = row.values[p.id]; const pending = isPending(v);
   return (
     <div className={cn("group/cell relative flex min-h-9 w-full items-start gap-1 px-2 py-1.5 text-[13px]", mode === "form" && "min-h-10 rounded-md")}>
-      <span className="min-w-0 flex-1">{isEmpty(v) && !pending && !isError(v) ? <button type="button" onClick={() => ctx.regenerate(row.id, p.id)} className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[12px] text-ai hover:bg-ai-soft"><Sparkles className="size-3.5" /> Generate</button> : <CellDisplay p={p} value={v} compact={mode === "table"} />}</span>
-      {!isEmpty(v) && !pending && <Tip label="Regenerate"><button type="button" onClick={() => ctx.regenerate(row.id, p.id)} className={cn("grid size-7 shrink-0 place-items-center rounded-md text-ai hover:bg-ai-soft", mode === "table" && "opacity-0 group-hover/cell:opacity-100 focus:opacity-100")}><RefreshCw className="size-3.5" /></button></Tip>}
+      <span className="min-w-0 flex-1">{isEmpty(v) && !pending && !isError(v) ? <button type="button" onClick={() => ctx.regenerate(row.id, p.id)} className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[12px] text-ai hover:bg-ai-soft max-md:h-11 max-md:px-3 max-md:text-[14px]"><Sparkles className="size-3.5" /> Generate</button> : <CellDisplay p={p} value={v} compact={mode === "table"} />}</span>
+      {!isEmpty(v) && !pending && <Tip label="Regenerate"><button type="button" aria-label={`Regenerate ${p.name}`} onClick={() => ctx.regenerate(row.id, p.id)} className={cn("grid size-7 shrink-0 place-items-center rounded-md text-ai hover:bg-ai-soft max-md:size-11", mode === "table" && "opacity-0 group-hover/cell:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100")}><RefreshCw className="size-3.5" /></button></Tip>}
     </div>
   );
 }

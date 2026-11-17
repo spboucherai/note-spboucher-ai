@@ -1,7 +1,7 @@
 /** Experiments service (params/metrics jsonb, status planned|running|done|failed). */
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 const E = schema.experiments;
 export type ExperimentRow = typeof E.$inferSelect;
 export const EXPERIMENT_STATUSES = ["planned", "running", "done", "failed"] as const;

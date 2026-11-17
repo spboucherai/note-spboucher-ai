@@ -58,7 +58,7 @@ function ConfigEditor({ type, config, set, prop }: { type: PropertyType; config:
     case "relation": return <RelationConfig config={config} set={set} isNew={!prop} />;
     case "rollup": return <RollupConfig config={config} set={set} />;
     case "formula": return <FormulaConfig config={config} set={set} />;
-    case "ai": return <Field label="Prompt" hint="Describe what to generate. Use {{Property}} to insert a value; all other properties and the page text are provided as context."><textarea value={config.prompt ?? ""} onChange={(e) => set({ prompt: e.target.value })} rows={4} placeholder="Summarize this paper in 3 sentences…" className={cn(inputCls, "h-auto py-1.5")} /></Field>;
+    case "ai": return <Field label="Prompt" hint="Describe what to generate. Use {{Property}} to insert a value; all other properties and the page text are provided as context."><textarea value={config.prompt ?? ""} onChange={(e) => set({ prompt: e.target.value })} rows={4} placeholder="Summarize this paper in 3 sentences…" className={cn(inputCls, "h-auto py-1.5 max-md:h-auto")} /></Field>;
     default: return null;
   }
 }
@@ -112,7 +112,7 @@ function FormulaConfig({ config, set }: { config: PropertyConfig; set: (c: Parti
   const err = preview && typeof preview === "object" && "error" in preview ? preview.error : null;
   return (
     <div className="space-y-1.5">
-      <Field label="Expression"><textarea value={expr} onChange={(e) => set({ expression: e.target.value })} rows={3} spellCheck={false} placeholder='if(prop("Done"), "✓", dateDiff(prop("Due"), today(), "days"))' className={cn(inputCls, "h-auto py-1.5 font-mono text-[12px]")} /></Field>
+      <Field label="Expression"><textarea value={expr} onChange={(e) => set({ expression: e.target.value })} rows={3} spellCheck={false} placeholder='if(prop("Done"), "✓", dateDiff(prop("Due"), today(), "days"))' className={cn(inputCls, "h-auto py-1.5 font-mono text-[12px] max-md:h-auto")} /></Field>
       {expr.trim() && <div className={cn("rounded-md px-2 py-1.5 text-[12px]", err ? "bg-danger/10 text-danger" : "bg-bg-sunk text-fg-muted")}>{err ? err : <>Preview{row ? ` (${row.title || "first row"})` : ""}: <span className="font-medium text-fg">{preview == null ? "—" : displayValue({ id: "", databaseId: "", name: "", type: "formula", config: {}, position: 0, width: null }, preview)}</span></>}</div>}
       <details className="text-[11px] text-fg-faint"><summary className="cursor-pointer select-none">Functions</summary><pre className="mt-1 whitespace-pre-wrap font-mono text-[10.5px] leading-4">{FORMULA_HELP}</pre><div className="mt-1">Properties: {ctx.props.filter((p) => p.type !== "formula" || p.config.expression !== expr).map((p) => `prop("${p.name}")`).join(" · ")}</div></details>
     </div>

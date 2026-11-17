@@ -1,51 +1,114 @@
 "use client";
 import { useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent } from "@dnd-kit/core";
-import { Plus } from "lucide-react";
+import { Plus, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/primitives";
+import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import type { RowOut } from "@/lib/databases/types";
 import { isEmpty } from "@/lib/databases/values";
 import { useDb } from "../hooks";
 import { CellDisplay } from "../cells/Cell";
+import { MoveTo } from "../RowPeek";
 import { groupRows, type Group } from "../group";
 import { OPTION_CLASS } from "../colors";
 
+/**
+ * Board. Columns scroll horizontally inside the board (scroll-snap, one column ≈ 85 % of a phone screen); the page never
+ * scrolls sideways. Cards move by drag with a mouse/trackpad, and without any drag through "Move to…" (on each card and
+ * in the row sheet) — on phones drag is off so a horizontal swipe always scrolls the columns.
+ */
 export function BoardView() {
-  const ctx = useDb(); const gb = ctx.props.find((p) => p.id === ctx.view.config.groupBy); const [active, setActive] = useState<RowOut | null>(null);
+  const ctx = useDb();
+  const gb = ctx.props.find((p) => p.id === ctx.view.config.groupBy);
+  const [active, setActive] = useState<RowOut | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }));
-  if (!gb) return <Empty title="Choose a property to group by" hint="Open the view settings (click the active tab) and pick a status or select property." />;
+
+  if (!gb) {
+    return (
+      <Empty
+        title="Choose a property to group by"
+        hint="A board needs a status, select or checkbox property: each option becomes a column."
+        action={<Button size="sm" variant="outline" className="max-md:h-11 max-md:px-4" onClick={ctx.openViewSettings}><Settings2 /> Open view settings</Button>}
+      />
+    );
+  }
   const groups = groupRows(ctx.rows, gb);
-  const onDragEnd = (e: DragEndEvent) => { setActive(null); const { active, over } = e; if (!over) return; const g = groups.find((x) => x.key === over.id); const row = ctx.rows.find((r) => r.id === active.id); if (!g || !row) return; if ((row.values[gb.id] ?? null) !== (g.value ?? null)) ctx.setCell(row.id, { [gb.id]: g.value ?? null }); };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    setActive(null);
+    const { active: dragged, over } = e;
+    if (!over) return;
+    const g = groups.find((x) => x.key === over.id);
+    const row = ctx.rows.find((r) => r.id === dragged.id);
+    if (!g || !row) return;
+    const previous = row.values[gb.id] ?? null;
+    if (previous === (g.value ?? null)) return;
+    ctx.setCell(row.id, { [gb.id]: g.value ?? null });
+    toast(`Moved to ${g.label}`, { action: { label: "Undo", run: () => ctx.setCell(row.id, { [gb.id]: previous }) } });
+  };
+
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setActive(ctx.rows.find((r) => r.id === e.active.id) ?? null)} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
-      <div className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-3 md:-mx-10 md:px-10">
-        {groups.map((g) => <Column key={g.key} g={g} onAdd={() => ctx.addRow(g.value === undefined ? {} : { [gb.id]: g.value })} />)}
+      <div
+        role="region"
+        aria-label={`Board grouped by ${gb.name}. ${groups.length} columns, scroll sideways.`}
+        tabIndex={0}
+        className="flex max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 sm:-mx-5 sm:px-5 md:-mx-10 md:snap-none md:px-10"
+      >
+        {groups.map((g) => <Column key={g.key} g={g} dragDisabled={ctx.isMobile} onAdd={() => ctx.newRow(g.value === undefined ? {} : { [gb.id]: g.value })} />)}
       </div>
       <DragOverlay>{active ? <Card row={active} overlay /> : null}</DragOverlay>
     </DndContext>
   );
 }
-function Column({ g, onAdd }: { g: Group; onAdd: () => void }) {
+
+function Column({ g, onAdd, dragDisabled }: { g: Group; onAdd: () => void; dragDisabled: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: g.key });
   return (
-    <div ref={setNodeRef} className={cn("flex max-h-[min(75vh,60rem)] w-[17.5rem] shrink-0 snap-start flex-col rounded-xl border border-line/60 bg-bg-sunk p-2 transition-colors", isOver && "border-accent/40 bg-accent-soft")}>
-      <div className="sticky top-0 mb-2 flex h-8 items-center gap-1.5 px-1"><span className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-medium", OPTION_CLASS[g.color])}>{g.label}</span><span className="text-[12px] tabular-nums text-fg-faint">{g.rows.length}</span><button type="button" aria-label="Add card" onClick={onAdd} className="ml-auto grid size-7 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg"><Plus className="size-4" /></button></div>
-      <div className="flex min-h-12 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain">{g.rows.map((r) => <Draggable key={r.id} row={r} />)}</div>
-      <button type="button" onClick={onAdd} className="mt-1.5 flex h-8 items-center gap-1 rounded-md px-2 text-[12px] text-fg-faint hover:bg-bg-elev hover:text-fg"><Plus className="size-3.5" /> New</button>
-    </div>
+    <section
+      ref={setNodeRef}
+      aria-label={`${g.label}, ${g.rows.length} card${g.rows.length === 1 ? "" : "s"}`}
+      className={cn("flex max-h-[min(75dvh,60rem)] w-[85%] max-w-[20rem] shrink-0 snap-start flex-col rounded-xl border border-line/60 bg-bg-sunk p-2 transition-colors md:w-[17.5rem]", isOver && "border-accent/40 bg-accent-soft")}
+    >
+      <div className="mb-2 flex h-8 items-center gap-1.5 px-1 max-md:h-11">
+        <span className={cn("truncate rounded-md px-1.5 py-0.5 text-[12px] font-medium max-md:text-[13px]", OPTION_CLASS[g.color])}>{g.label}</span>
+        <span className="text-[12px] tabular-nums text-fg-faint max-md:text-[13px] max-md:text-fg-muted">{g.rows.length}</span>
+        <button type="button" aria-label={`New card in ${g.label}`} onClick={onAdd} className="ml-auto grid size-7 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg max-md:size-11 max-md:text-fg-muted"><Plus className="size-4 max-md:size-5" /></button>
+      </div>
+      <div className="flex min-h-12 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-y-contain max-md:gap-2">
+        {g.rows.map((r) => <Draggable key={r.id} row={r} disabled={dragDisabled} />)}
+        {!g.rows.length && <p className="px-1 py-2 text-[12px] text-fg-faint max-md:text-[13px] max-md:text-fg-muted">No card here.</p>}
+      </div>
+      <button type="button" onClick={onAdd} className="mt-1.5 flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-[12px] text-fg-faint hover:bg-bg-elev hover:text-fg max-md:h-11 max-md:text-[14px] max-md:text-fg-muted"><Plus className="size-3.5" /> New</button>
+    </section>
   );
 }
-function Draggable({ row }: { row: RowOut }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: row.id });
-  return <div ref={setNodeRef} {...attributes} {...listeners} className={cn("touch-manipulation", isDragging && "opacity-30")}><Card row={row} /></div>;
+
+function Draggable({ row, disabled }: { row: RowOut; disabled: boolean }) {
+  const { listeners, setNodeRef, isDragging } = useDraggable({ id: row.id, disabled });
+  return <div ref={setNodeRef} {...(disabled ? {} : listeners)} className={cn(isDragging && "opacity-30")}><Card row={row} /></div>;
 }
+
 export function Card({ row, overlay }: { row: RowOut; overlay?: boolean }) {
-  const ctx = useDb(); const gb = ctx.view.config.groupBy; const props = ctx.visibleProps.filter((p) => p.type !== "title" && p.id !== gb && !isEmpty(row.values[p.id])).slice(0, 4);
+  const ctx = useDb();
+  const gb = ctx.view.config.groupBy;
+  const source = ctx.isMobile ? ctx.priorityProps : ctx.visibleProps;
+  const props = source.filter((p) => p.type !== "title" && p.id !== gb && !isEmpty(row.values[p.id])).slice(0, 4);
   return (
-    <div onClick={() => !overlay && ctx.open(row.id)} className={cn("cursor-pointer rounded-lg border border-line bg-bg-elev px-3 py-2.5 shadow-card transition-[box-shadow,border-color] hover:border-line-strong hover:shadow-pop", overlay && "rotate-[1.5deg] shadow-pop")}>
-      <div className="text-[13px] font-medium leading-5">{row.icon ? `${row.icon} ` : ""}{row.title || <span className="text-fg-faint">Untitled</span>}</div>
-      {props.length > 0 && <div className="mt-1.5 space-y-1">{props.map((p) => <div key={p.id} className="text-[12px] text-fg-muted"><CellDisplay p={p} value={row.values[p.id]} compact /></div>)}</div>}
+    <div className={cn("relative rounded-lg border border-line bg-bg-elev shadow-card transition-[box-shadow,border-color] hover:border-line-strong hover:shadow-pop", overlay && "rotate-[1.5deg] shadow-pop")}>
+      {!overlay && <button type="button" aria-label={`Open ${row.title || "Untitled"}`} onClick={() => ctx.open(row.id)} className="absolute inset-0 cursor-pointer rounded-lg focus-visible:ring-2 focus-visible:ring-accent/50" />}
+      <div className="pointer-events-none relative px-3 py-2.5">
+        <div className="text-[13px] font-medium leading-5 [overflow-wrap:anywhere] max-md:text-[15px]">{row.icon ? `${row.icon} ` : ""}{row.title || <span className="text-fg-faint">Untitled</span>}</div>
+        {props.length > 0 && <div className="mt-1.5 space-y-1">{props.map((p) => <div key={p.id} className="text-[12px] text-fg-muted [overflow-wrap:anywhere] max-md:text-[13px] [&_a]:pointer-events-auto"><CellDisplay p={p} value={row.values[p.id]} compact /></div>)}</div>}
+      </div>
+      {/* Non-drag way to change column: always visible on phones and on any touch screen (drag stays the mouse way). */}
+      {!overlay && (
+        <div className="relative px-1.5 pb-1.5 md:hidden [@media(hover:none)]:md:block" onPointerDown={(e) => e.stopPropagation()}>
+          <MoveTo row={row} className="flex h-11 w-full items-center gap-1.5 rounded-md px-2 text-[13px] text-fg-muted hover:bg-bg-sunk hover:text-fg" />
+        </div>
+      )}
     </div>
   );
 }

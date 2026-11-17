@@ -27,10 +27,10 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
   const [title, setTitle] = useState(page.title === "Untitled" ? "" : page.title); const [icon, setIcon] = useState<string | null>(page.icon); const [cover, setCover] = useState<string | null>(page.cover);
   const [versions, setVersions] = useState<any[] | null>(null); const [preview, setPreview] = useState<any | null>(null); const [compare, setCompare] = useState(false); const [resolving, setResolving] = useState<string | null>(null);
   const [pinned, setPinned] = useState<boolean>(page.pinned); const [tags, setTags] = useState<string[] | null>(null); const [tagOpen, setTagOpen] = useState(false); const [tagDraft, setTagDraft] = useState("");
-  const editorRef = useRef<TEditor | null>(null); const titleRef = useRef(title); titleRef.current = title; const docRef = useRef<any>(page.content);
+  const editorRef = useRef<TEditor | null>(null); const titleRef = useRef(title); titleRef.current = title; const docRef = useRef<any>(page.content); const restored = useRef<any>(null); const editorSynced = useRef(false);
   const sync = usePageSync(page, {
     current: () => ({ title: titleRef.current, content: editorRef.current?.getJSON() ?? docRef.current }),
-    applyRemote: (c: ServerCopy) => { setTitle(c.title === "Untitled" ? "" : c.title); docRef.current = c.content; const ed = editorRef.current; if (ed) ed.commands.setContent(c.content, { emitUpdate: false }); },
+    applyRemote: (c: ServerCopy) => { setTitle(c.title === "Untitled" ? "" : c.title); docRef.current = c.content; restored.current = c.content; const ed = editorRef.current; if (ed) { ed.commands.setContent(c.content, { emitUpdate: false }); editorSynced.current = true; } },
     onSaved: (patch) => { if (patch.title !== undefined || patch.icon !== undefined) qc.invalidateQueries({ queryKey: ["tree"] }); },
     onDraftRestored: () => toast("Unsaved changes restored", { description: "Text typed before the last interruption was recovered from this device." }),
   });
@@ -43,8 +43,15 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
     try { const r = await sync.resolve(choice); setCompare(false); toast(choice === "mine" ? "Your version was kept" : choice === "theirs" ? "The other version was kept" : "Both kept", { description: choice === "both" ? "Your text is in a new page “… (conflict copy)”." : "The other copy is in the version history.", tone: "success" }); if (r.copyId) qc.invalidateQueries({ queryKey: ["tree"] }); }
     catch (e: any) { toast("Could not resolve", { description: e.message, tone: "danger" }); } finally { setResolving(null); }
   }
-  useEffect(() => { const h = (e: Event) => { const md = (e as CustomEvent).detail as string; const ed = editorRef.current; if (!ed) return; ed.chain().focus("end").insertContent([{ type: "aiBlock", attrs: { model: "assistant", at: new Date().toISOString() }, content: markdownToDoc(md) }]).run(); toast("Inserted into page"); }; window.addEventListener("note:insert-markdown", h); return () => window.removeEventListener("note:insert-markdown", h); }, []);
-  useEffect(() => { if (location.hash.startsWith("#block-")) setTimeout(() => { const el = document.getElementById(location.hash.slice(1)); if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("bg-accent-soft"); setTimeout(() => el.classList.remove("bg-accent-soft"), 2000); } }, 300); }, []);
+  // Content pushed into the page from a panel. AI answers arrive as a string and are wrapped in an AI block (provenance stays visible);
+  // the owner's own material (reference extracts, LaTeX snippets) arrives as { markdown, plain: true } and is inserted as ordinary blocks.
+  useEffect(() => { const h = (e: Event) => { const d = (e as CustomEvent).detail as string | { markdown: string; plain?: boolean }; const md = typeof d === "string" ? d : d?.markdown; const plain = typeof d !== "string" && Boolean(d?.plain); const ed = editorRef.current; if (!ed || !md) return; const blocks = markdownToDoc(md); ed.chain().focus("end").insertContent(plain ? blocks : [{ type: "aiBlock", attrs: { model: "assistant", at: new Date().toISOString() }, content: blocks }]).run(); toast("Inserted into page"); }; window.addEventListener("note:insert-markdown", h); return () => window.removeEventListener("note:insert-markdown", h); }, []);
+  // Deep link to a paragraph (search result, citation): wait for the editor to render, then centre and flash the block.
+  useEffect(() => {
+    if (!location.hash.startsWith("#block-")) return; const id = location.hash.slice(1); let tries = 0; let done = false;
+    const t = setInterval(() => { let el = document.getElementById(id); if (el) { done = true; const hl = (new URLSearchParams(location.search).get("hl") ?? "").toLowerCase().split(/\s+/).filter((w) => w.length > 2); if (hl.length) { /* the anchor is the first block of the indexed passage: walk on to the paragraph that actually holds the words */ for (let n: Element | null = el, i = 0; n && i < 40; n = n.nextElementSibling, i++) { const txt = (n.textContent ?? "").toLowerCase(); if (hl.some((w) => txt.includes(w))) { el = n as HTMLElement; break; } } } clearInterval(t); const target = el; target.scrollIntoView({ block: "center" }); /* Web Animations, not a class: ProseMirror owns the attributes of its nodes and would strip it */ try { const c = getComputedStyle(target).getPropertyValue("--accent-soft").trim() || "rgba(80,110,255,.18)"; target.animate([{ backgroundColor: c, boxShadow: `0 0 0 6px ${c}` }, { backgroundColor: c, boxShadow: `0 0 0 6px ${c}`, offset: 0.7 }, { backgroundColor: "transparent", boxShadow: "0 0 0 6px transparent" }], { duration: 2600, easing: "ease-out" }); } catch { /* no animation support */ } } else if (++tries > 25) { clearInterval(t); if (!done) toast("That paragraph was edited or removed", { description: "The page is shown from the top." }); } }, 120);
+    return () => clearInterval(t);
+  }, []);
   async function loadVersions() { setVersions(await api(`/api/pages/${page.id}/versions`)); }
   async function restore(v: number) { await sync.flush(); const res = await api<{ version: number }>(`/api/pages/${page.id}/versions`, { method: "POST", json: { version: v } }); toast("Version restored", { description: "The previous state was saved to the history first." }); setVersions(null); setPreview(null); window.location.reload(); void res; }
   const isTrashed = Boolean(page.deletedAt); const isDb = page.type === "database";
@@ -107,7 +114,7 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
         <div className="mt-4"><DatabaseView pageId={page.id} /></div>
       ) : (
         <div className="mt-3">
-          <Editor content={page.content} pageId={page.id} editable={!isTrashed} autofocus={!title} onReady={(e) => (editorRef.current = e)} onChange={(doc) => { docRef.current = doc; queue({ content: doc }); }} />
+          <Editor content={page.content} pageId={page.id} editable={!isTrashed} autofocus={!title} onReady={(e) => { editorRef.current = e; /* a recovered draft or a remote copy may have arrived before the editor existed: show it now, without emitting an edit */ if (restored.current && !editorSynced.current) { e.commands.setContent(restored.current, { emitUpdate: false }); editorSynced.current = true; } }} onChange={(doc) => { docRef.current = doc; queue({ content: doc }); }} />
         </div>
       )}
       {!isTrashed && <div className="mt-16 border-t border-line pt-5"><div className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-faint">Connections</div><PageGraphCard pageId={page.id} /></div>}

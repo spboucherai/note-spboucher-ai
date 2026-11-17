@@ -1,35 +1,45 @@
 import { z } from "zod";
-import { handler, parseBody, uuid } from "@/lib/api";
+import { handler, parseBody, uuid, HttpError } from "@/lib/api";
 import { db, schema } from "@/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit } from "@/lib/audit";
-import { decideProposals } from "@/lib/agents/apply";
-import { AGENT_BY_ID } from "@/lib/agents/definitions";
-import { parseMeta } from "@/lib/agents/runner";
+import { decideProposals, undoProposals } from "@/lib/agents/apply";
+import { AGENT_BY_ID, agentInfo } from "@/lib/agents/definitions";
+import { parseMeta, reapStale } from "@/lib/agents/runner";
 
-/** GET → execution detail (live status, tool timeline, documents accessed with titles, proposals, approvals). */
+const E = schema.aiExecutions;
+/** GET → one execution: live status, proposals with their before/after previews, and the execution log (tools, documents, approvals, cost). */
 export const GET = handler(async ({ ws, params }) => {
   const id = uuid.parse(params.id);
-  const [ex] = await db.select().from(schema.aiExecutions).where(and(eq(schema.aiExecutions.id, id), eq(schema.aiExecutions.workspaceId, ws.id)));
-  if (!ex) return Response.json({ error: "Not found" }, { status: 404 });
+  await reapStale(ws.id);
+  const [ex] = await db.select().from(E).where(and(eq(E.id, id), eq(E.workspaceId, ws.id)));
+  if (!ex) throw new HttpError(404, "Execution not found");
   const ids = ex.documentsAccessed ?? [];
-  const docs = ids.length ? await db.select({ id: schema.pages.id, title: schema.pages.title, icon: schema.pages.icon, section: schema.pages.section, deletedAt: schema.pages.deletedAt }).from(schema.pages).where(inArray(schema.pages.id, ids)) : [];
-  const a = AGENT_BY_ID[ex.agent];
-  return Response.json({ ...ex, outcome: ex.status === "pending" ? null : ex.outcome, contextPageId: parseMeta(ex.status === "pending" ? ex.outcome : null).pageId ?? null, agentName: a?.name ?? ex.agent, agentIcon: a?.icon ?? "🤖", documents: ids.map((d) => docs.find((x) => x.id === d) ?? { id: d, title: "(unknown page)", icon: null, section: null, deletedAt: null }) });
+  const docs = ids.length ? await db.select({ id: schema.pages.id, title: schema.pages.title, icon: schema.pages.icon, deletedAt: schema.pages.deletedAt }).from(schema.pages).where(and(eq(schema.pages.workspaceId, ws.id), inArray(schema.pages.id, ids))) : [];
+  const a = AGENT_BY_ID[ex.agent]; const pending = ex.status === "pending";
+  return Response.json({ ...ex, outcome: pending ? null : ex.outcome, contextPageId: pending ? parseMeta(ex.outcome).pageId ?? null : null, agentName: a?.name ?? ex.agent, agentIcon: a?.icon ?? "🤖", info: a ? agentInfo(a) : null, documents: ids.map((d) => docs.find((x) => x.id === d) ?? { id: d, title: "(page no longer available)", icon: null, deletedAt: null }) });
 });
-/** POST { action: "approve" | "reject", changes: number[] } | { action: "cancel" } */
+/**
+ * POST { action: "approve", changes, confirmDestructive? } | { action: "reject", changes } | { action: "undo", changes } | { action: "cancel" }
+ * Approving is the only path by which an agent proposal is written. Trash proposals need `confirmDestructive: true` (409 otherwise).
+ */
 export const POST = handler(async ({ req, ws, params, user }) => {
-  const id = uuid.parse(params.id);
-  const b = await parseBody(req, z.discriminatedUnion("action", [z.object({ action: z.literal("approve"), changes: z.array(z.number().int().min(0)).min(1) }), z.object({ action: z.literal("reject"), changes: z.array(z.number().int().min(0)).min(1) }), z.object({ action: z.literal("cancel") })]));
+  const id = uuid.parse(params.id); const changes = z.array(z.number().int().min(0).max(500)).min(1).max(200);
+  const b = await parseBody(req, z.discriminatedUnion("action", [z.object({ action: z.literal("approve"), changes, confirmDestructive: z.boolean().optional() }), z.object({ action: z.literal("reject"), changes }), z.object({ action: z.literal("undo"), changes }), z.object({ action: z.literal("cancel") })]));
   if (b.action === "cancel") {
-    const [ex] = await db.select({ status: schema.aiExecutions.status, proposedChanges: schema.aiExecutions.proposedChanges }).from(schema.aiExecutions).where(and(eq(schema.aiExecutions.id, id), eq(schema.aiExecutions.workspaceId, ws.id)));
-    if (!ex) return Response.json({ error: "Not found" }, { status: 404 });
-    if (["pending", "running"].includes(ex.status)) { await db.update(schema.aiExecutions).set({ status: "failed", error: "Cancelled by the owner", outcome: "cancelled", finishedAt: new Date() }).where(eq(schema.aiExecutions.id, id)); }
-    else if (ex.status === "awaiting_approval") { const at = new Date().toISOString(); const props = ((ex.proposedChanges ?? []) as any[]).map((p) => (p.status === "proposed" ? { ...p, status: "rejected", decidedAt: at } : p)); await db.update(schema.aiExecutions).set({ status: "rejected", outcome: "all proposals rejected (cancelled)", proposedChanges: props, approvals: props.filter((p) => p.decidedAt === at).map((p) => ({ change: p.idx, approved: false, at })) }).where(eq(schema.aiExecutions.id, id)); }
-    else return Response.json({ error: `Cannot cancel a ${ex.status} execution` }, { status: 409 });
+    const [ex] = await db.select({ status: E.status, proposedChanges: E.proposedChanges }).from(E).where(and(eq(E.id, id), eq(E.workspaceId, ws.id)));
+    if (!ex) throw new HttpError(404, "Execution not found");
+    if (ex.status === "pending" || ex.status === "running") {
+      // The runner only writes while the row is `running`: after this update it stops at its next step and nothing of the run survives.
+      await db.update(E).set({ status: "failed", error: "Cancelled by the owner. Nothing was changed.", outcome: "cancelled", proposedChanges: [], finishedAt: new Date() }).where(and(eq(E.id, id), inArray(E.status, ["pending", "running"])));
+    } else if (ex.status === "awaiting_approval") {
+      const at = new Date().toISOString(); const props = ((ex.proposedChanges ?? []) as { idx: number; status: string; decidedAt?: string }[]).map((p) => (p.status === "proposed" ? { ...p, status: "rejected", decidedAt: at } : p));
+      const anyApplied = props.some((p) => p.status === "applied" || p.status === "undone");
+      await db.update(E).set({ status: anyApplied ? "approved" : "rejected", outcome: "remaining proposals rejected", proposedChanges: props }).where(eq(E.id, id));
+    } else throw new HttpError(409, `A ${ex.status} run cannot be cancelled`);
     await audit(user.id, "agent.cancel", { type: "execution", id });
     return Response.json({ ok: true });
   }
-  const r = await decideProposals(ws, user.id, id, { approve: b.action === "approve" ? b.changes : [], reject: b.action === "reject" ? b.changes : [] });
-  return Response.json(r);
+  if (b.action === "undo") return Response.json(await undoProposals(ws, user.id, id, b.changes));
+  return Response.json(await decideProposals(ws, user.id, id, { approve: b.action === "approve" ? b.changes : [], reject: b.action === "reject" ? b.changes : [], confirmDestructive: b.action === "approve" ? b.confirmDestructive : false }));
 });

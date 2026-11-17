@@ -9,8 +9,36 @@ import { sortedProps, titleProp } from "@/lib/databases/values";
 
 export interface DbCtx {
   db: Database; props: Property[]; visibleProps: Property[]; view: View; rows: RowOut[]; total: number; loading: boolean; isMobile: boolean; search: string;
-  setCell: (rowId: string, values: Record<string, unknown>) => void; addRow: (values?: Record<string, unknown>, title?: string) => Promise<RowOut>; removeRows: (ids: string[]) => Promise<void>;
-  open: (rowId: string | null) => void; patchView: (config: Partial<ViewConfig>) => void; refresh: () => void; regenerate: (rowId: string, propertyId: string) => Promise<void>; addOption: (propId: string, name: string) => Promise<SelectOption>;
+  /** Properties shown on phone cards and in the quick-create sheet (view.config.mobileProps, else the first visible ones). */
+  priorityProps: Property[];
+  /** Phone layout of a table view: vertical cards (default) or the real grid. */
+  mobileLayout: MobileLayout;
+  /** Rows query failed (rows may still hold the last good copy). */
+  error: Error | null; fetching: boolean; retry: () => void;
+  setCell: (rowId: string, values: Record<string, unknown>) => void;
+  /** Creates the row immediately. `open: false` keeps the row sheet closed (quick-create form). Rejects on failure (a toast is already shown). */
+  addRow: (values?: Record<string, unknown>, title?: string, opts?: { open?: boolean }) => Promise<RowOut>;
+  /** The "New" action of every view: on phones opens the quick-create sheet (prefilled with `preset`), on desktop creates the row inline. */
+  newRow: (preset?: Record<string, unknown>) => void;
+  /** Moves rows to the trash and offers Undo. */
+  removeRows: (ids: string[]) => Promise<void>;
+  open: (rowId: string | null) => void; openViewSettings: () => void; patchView: (config: Partial<ViewConfig>) => void; refresh: () => void; regenerate: (rowId: string, propertyId: string) => Promise<void>; addOption: (propId: string, name: string) => Promise<SelectOption>;
+}
+export type MobileLayout = "cards" | "grid";
+export const MOBILE_PROP_COUNT = 4;
+/** `database_views.config.mobileLayout` — anything but "grid" means cards. */
+export const mobileLayoutOf = (view: View): MobileLayout => (view.config.mobileLayout === "grid" ? "grid" : "cards");
+/** Ids explicitly chosen for phone cards (`database_views.config.mobileProps`), or null when the default applies. */
+export function configuredMobileProps(view: View): string[] | null {
+  const raw = view.config.mobileProps;
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : null;
+}
+/** The 3–4 properties a phone card shows under the title. `props` must already be sorted by position. */
+export function priorityPropsOf(props: Property[], view: View): Property[] {
+  const configured = configuredMobileProps(view);
+  if (configured) return configured.map((id) => props.find((p) => p.id === id)).filter((p): p is Property => !!p && p.type !== "title");
+  const hidden = new Set(view.config.hidden ?? []);
+  return props.filter((p) => p.type !== "title" && !hidden.has(p.id)).slice(0, MOBILE_PROP_COUNT);
 }
 export const DbContext = createContext<DbCtx | null>(null);
 export const useDb = () => { const c = useContext(DbContext); if (!c) throw new Error("DbContext missing"); return c; };
@@ -35,13 +63,18 @@ export function useRowMutations(db: Database | undefined) {
     onSuccess: (row) => { patchRows(qc, dbId, (rows) => (rows.some((r) => r.id === row.id) ? rows : [...rows, row])); qc.invalidateQueries({ queryKey: ["db-rows", dbId] }); },
     onError: (e: any) => toast("Could not create row", { description: e?.message, tone: "danger" }),
   });
+  const restore = useMutation({
+    mutationFn: (ids: string[]) => api(`/api/databases/${dbId}/rows/restore`, { method: "POST", json: { ids } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["db-rows", dbId] }); qc.invalidateQueries({ queryKey: ["tree"] }); },
+    onError: (e: any) => toast("Could not restore", { description: e?.message ?? "The rows are still in the trash.", tone: "danger" }),
+  });
   const remove = useMutation({
     mutationFn: (ids: string[]) => api(`/api/databases/${dbId}/rows?ids=${ids.join(",")}`, { method: "DELETE" }),
     onMutate: async (ids) => { await qc.cancelQueries({ queryKey: ["db-rows", dbId] }); const prev = qc.getQueriesData<QueryResult>({ queryKey: ["db-rows", dbId] }); patchRows(qc, dbId, (rows) => rows.filter((r) => !ids.includes(r.id))); return { prev }; },
     onError: (e: any, _v, ctx) => { ctx?.prev.forEach(([k, d]) => qc.setQueryData(k, d)); toast("Delete failed", { description: e?.message, tone: "danger" }); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["tree"] }); },
   });
-  return { update, create, remove };
+  return { update, create, remove, restore };
 }
 export function useViewMutations(db: Database | undefined, pageId: string) {
   const qc = useQueryClient(); const dbId = db?.id ?? ""; const inv = () => qc.invalidateQueries({ queryKey: ["db", pageId] });
@@ -51,7 +84,7 @@ export function useViewMutations(db: Database | undefined, pageId: string) {
     onSuccess: (view) => { qc.setQueryData<Database>(["db", pageId], (old) => old ? { ...old, views: old.views.map((x) => (x.id === view.id ? view : x)) } : old); qc.invalidateQueries({ queryKey: ["db-rows", dbId] }); },
     onError: (e: any) => { toast("View update failed", { description: e?.message, tone: "danger" }); inv(); },
   });
-  const createView = useMutation({ mutationFn: (input: { name: string; type: string; config?: ViewConfig }) => api<View>(`/api/databases/${dbId}/views`, { method: "POST", json: input }), onSuccess: inv });
+  const createView = useMutation({ mutationFn: (input: { name: string; type: string; config?: ViewConfig }) => api<View>(`/api/databases/${dbId}/views`, { method: "POST", json: input }), onSuccess: inv, onError: (e: any) => toast("Could not create the view", { description: e?.message, tone: "danger" }) });
   const deleteView = useMutation({ mutationFn: (id: string) => api(`/api/databases/${dbId}/views?id=${id}`, { method: "DELETE" }), onSuccess: inv, onError: (e: any) => toast(e?.message, { tone: "danger" }) });
   return { patchView, createView, deleteView, invalidate: inv };
 }

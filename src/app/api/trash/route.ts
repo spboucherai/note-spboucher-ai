@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { and, eq, isNotNull, lt, sql as dsql } from "drizzle-orm";
-import { handler, parseBody } from "@/lib/api";
+import { handler, parseBody, requireFresh } from "@/lib/api";
 import { db, schema } from "@/db";
 import { audit } from "@/lib/audit";
 
@@ -13,13 +13,15 @@ async function purge(wsId: string, olderThanDays: number | null) {
 }
 /** DELETE ?olderThanDays=N → purge trashed pages older than N days (all trashed pages when omitted). */
 export const DELETE = handler(async ({ req, ws, user }) => {
+  requireFresh(user); // permanent deletion
   const q = new URL(req.url).searchParams.get("olderThanDays"); const days = q == null ? null : Math.max(0, Number(q) || 0);
   const n = await purge(ws.id, days);
   await audit(user.id, "trash.empty", undefined, { purged: n, olderThanDays: days });
   return Response.json({ ok: true, purged: n });
 });
-/** POST { action: "purge-old", days? } → auto-purge items trashed more than `days` (default 30) ago. */
+/** POST { action: "purge-old", days? } → purge items trashed more than `days` (default 30) ago. */
 export const POST = handler(async ({ req, ws, user }) => {
+  requireFresh(user); // permanent deletion — never triggered by opening the trash
   const b = await parseBody(req, z.object({ action: z.literal("purge-old"), days: z.number().int().min(1).max(365).optional() }));
   const n = await purge(ws.id, b.days ?? AUTO_PURGE_DAYS);
   if (n) await audit(user.id, "trash.auto_purge", undefined, { purged: n, days: b.days ?? AUTO_PURGE_DAYS });

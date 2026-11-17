@@ -1,7 +1,7 @@
 /** Research tasks = rows of `tasks` scoped to a research page. */
 import { and, asc, eq, isNull, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 const T = schema.tasks;
 export type TaskRow = typeof T.$inferSelect;
 export interface TaskInput { pageId: string; title: string; status?: "todo" | "doing" | "done"; priority?: "low" | "medium" | "high"; dueAt?: string | null; project?: string | null }
@@ -28,3 +28,5 @@ export async function updateTask(wsId: string, id: string, patch: Partial<TaskIn
   const [t] = await db.update(T).set(set).where(eq(T.id, id)).returning(); return t;
 }
 export async function deleteTask(wsId: string, id: string) { await db.update(T).set({ deletedAt: new Date() }).where(and(eq(T.id, id), eq(T.workspaceId, wsId))); }
+/** Undo of a delete. */
+export async function restoreTask(wsId: string, id: string) { const [t] = await db.update(T).set({ deletedAt: null, updatedAt: new Date() }).where(and(eq(T.id, id), eq(T.workspaceId, wsId))).returning(); if (!t) throw new HttpError(404, "Task not found"); return t; }

@@ -13,6 +13,8 @@ export interface GraphEdge {
   id: string; source: string; target: string; kind: EdgeKind; status: EdgeStatus;
   /** link: "link" | "ai" ; relation: property name ; ai_suggested: model id */
   sub: string | null; confidence: number | null; rationale: string | null;
+  /** Model that proposed the edge (AI suggestions, and accepted AI links mirrored as real links). Provenance: never dropped. */
+  model?: string | null;
 }
 export interface GraphFilters {
   types?: NodeKind[]; section?: string | null; since?: Date | null;
@@ -21,6 +23,13 @@ export interface GraphFilters {
   hideOrphans?: boolean; suggestions?: boolean;
 }
 export interface GraphData { nodes: GraphNode[]; edges: GraphEdge[]; center?: string | null; stats: { pages: number; edges: number; suggested: number } }
+
+/**
+ * AI suggestions below this confidence (or without a recorded confidence) are collapsed under "Low confidence" in the
+ * review UI instead of being presented like the others.
+ */
+export const LOW_CONFIDENCE_THRESHOLD = 0.6;
+export type SuggestionStatus = "suggested" | "accepted" | "rejected";
 
 export interface Suggestion {
   id: string; fromId: string; toId: string; status: string; confidence: number | null; rationale: string | null; model: string | null;

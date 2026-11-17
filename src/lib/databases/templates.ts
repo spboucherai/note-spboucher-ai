@@ -1,7 +1,7 @@
 /** Built-in database templates: applied onto an existing (empty) database. */
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 import type { PropertyType, PropertyConfig, ViewType, ViewConfig, SelectOption } from "./types";
 import { ensureDatabase, createProperty, createView } from "./service";
 import { loadProps } from "./query";

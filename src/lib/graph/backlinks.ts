@@ -3,7 +3,7 @@ import { eq, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getPage, updatePage } from "@/lib/pages/service";
 import type { PMNode } from "@/lib/editor/text";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 import type { BacklinkRow, UnlinkedMention } from "./types";
 
 const rows = async <T = any>(q: ReturnType<typeof dsql>): Promise<T[]> => (await db.execute(q)) as unknown as T[];

@@ -5,7 +5,7 @@
  */
 import { and, eq, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 import { NODE_KINDS, type EdgeKind, type GraphData, type GraphEdge, type GraphFilters, type GraphNode, type NodeKind, type Suggestion } from "./types";
 
 /** Postgres array literal for parameterised any() */
@@ -64,8 +64,15 @@ export async function buildGraph(wsId: string, f: GraphFilters = {}): Promise<Gr
     for (const r of rels) push({ id: r.id, source: r.a, target: r.b, kind: "relation", status: "accepted", sub: r.prop, confidence: null, rationale: null });
     for (const k of kedges) {
       // accepted AI edges are mirrored as links(kind=ai) and a suggestion is moot once the pair is explicitly linked: draw the confirmed line once
-      if (seenPair.has(`link|${k.a}|${k.b}`) || seenPair.has(`link|${k.b}|${k.a}`)) continue;
-      push({ id: k.id, source: k.a, target: k.b, kind: "ai_suggested", status: k.status === "suggested" ? "suggested" : "accepted", sub: k.model, confidence: k.confidence, rationale: k.rationale });
+      if (seenPair.has(`link|${k.a}|${k.b}`) || seenPair.has(`link|${k.b}|${k.a}`)) {
+        // …but keep the provenance of an accepted AI link on the confirmed edge (why it exists, which model proposed it, how sure it was).
+        if (k.status === "accepted") {
+          const mirrored = edges.find((e) => e.kind === "link" && e.sub === "ai" && ((e.source === k.a && e.target === k.b) || (e.source === k.b && e.target === k.a)));
+          if (mirrored) { mirrored.rationale = k.rationale; mirrored.confidence = k.confidence; mirrored.model = k.model; }
+        }
+        continue;
+      }
+      push({ id: k.id, source: k.a, target: k.b, kind: "ai_suggested", status: k.status === "suggested" ? "suggested" : "accepted", sub: k.model, confidence: k.confidence, rationale: k.rationale, model: k.model });
     }
     if (types.has("attachment")) {
       const atts = await rows<{ id: string; page_id: string; filename: string; created_at: Date }>(dsql`select a.id, a.page_id, a.filename, a.created_at from attachments a where a.workspace_id = ${wsId} and a.deleted_at is null and a.page_id = any(${inSet})`);
@@ -111,6 +118,18 @@ export async function decideSuggestion(wsId: string, id: string, status: "accept
   if (status === "accepted") await db.insert(schema.links).values({ fromPageId: k.fromId, toPageId: k.toId, kind: "ai" }).onConflictDoNothing();
   else await db.delete(schema.links).where(and(eq(schema.links.fromPageId, k.fromId), eq(schema.links.toPageId, k.toId), eq(schema.links.kind, "ai")));
   return { ...k, status };
+}
+
+/**
+ * Undo a decision: the suggestion goes back to the review queue (status = suggested) and the link created by an
+ * acceptance is removed. Rationale, confidence and model are left untouched.
+ */
+export async function revertSuggestion(wsId: string, id: string) {
+  const [k] = await db.select().from(schema.knowledgeEdges).where(and(eq(schema.knowledgeEdges.id, id), eq(schema.knowledgeEdges.workspaceId, wsId), eq(schema.knowledgeEdges.kind, "ai_suggested")));
+  if (!k) throw new HttpError(404, "Suggestion not found");
+  await db.update(schema.knowledgeEdges).set({ status: "suggested", decidedAt: null }).where(eq(schema.knowledgeEdges.id, id));
+  await db.delete(schema.links).where(and(eq(schema.links.fromPageId, k.fromId), eq(schema.links.toPageId, k.toId), eq(schema.links.kind, "ai")));
+  return { ...k, previousStatus: k.status, status: "suggested" as const };
 }
 
 /** Linked pages of one page (both directions, confirmed only) for the inspector. */

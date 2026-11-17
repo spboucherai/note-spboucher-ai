@@ -47,7 +47,8 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
       reg.addEventListener("updatefound", () => watch(reg.installing));
       const check = () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); }; document.addEventListener("visibilitychange", check);
     }).catch(() => {});
-    let reloaded = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded) { reloaded = true; window.location.reload(); } });
+    // Reload only when the user asked for the update. (The first install also fires controllerchange — reloading then would throw away an open sheet or a half-typed capture.)
+    let reloaded = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded && (window as any).__noteUpdateAccepted) { reloaded = true; window.location.reload(); } });
   }, []);
   // Installed-app shortcuts (manifest): /?capture=1 opens the capture sheet, /?ai=1 the assistant.
   useEffect(() => { const q = new URLSearchParams(window.location.search); if (q.get("capture") === "1") { ui.set({ captureOpen: true }); history.replaceState(null, "", "/"); } else if (q.get("ai") === "1") { ui.openAI(); history.replaceState(null, "", "/"); } /* eslint-disable-next-line */ }, []);
@@ -67,7 +68,7 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
       {ui.aiOpen && !ui.focusMode && <AIPanel pathname={pathname} />}
       <CommandPalette tree={tree} />
       <CaptureSheet />
-      {update && <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] mx-auto flex max-w-md items-center gap-3 rounded-xl border border-line bg-bg-elev p-3 text-[13.5px] shadow-pop"><span className="min-w-0 flex-1">A new version is ready.</span><button className="h-9 rounded-lg bg-accent px-3 font-medium text-accent-fg" onClick={() => update.postMessage({ type: "SKIP_WAITING" })}>Reload</button><button aria-label="Later" className="h-9 px-2 text-fg-muted" onClick={() => setUpdate(null)}>Later</button></div>}
+      {update && <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] mx-auto flex max-w-md items-center gap-3 rounded-xl border border-line bg-bg-elev p-3 text-[13.5px] shadow-pop"><span className="min-w-0 flex-1">A new version is ready.</span><button className="h-9 rounded-lg bg-accent px-3 font-medium text-accent-fg" onClick={() => { (window as any).__noteUpdateAccepted = true; update.postMessage({ type: "SKIP_WAITING" }); }}>Reload</button><button aria-label="Later" className="h-9 px-2 text-fg-muted" onClick={() => setUpdate(null)}>Later</button></div>}
       <ShortcutsDialog open={help} onOpenChange={setHelp} />
       {ui.focusMode && <button onClick={() => ui.set({ focusMode: false })} title="Exit focus mode (⌘.)" className="fixed right-3 top-3 z-30 grid size-8 place-items-center rounded-md border border-line bg-bg-elev/80 text-fg-muted shadow-card backdrop-blur hover:text-fg safe-top"><Minimize2 className="size-4" /></button>}
     </div>

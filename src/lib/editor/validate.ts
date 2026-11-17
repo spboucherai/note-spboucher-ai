@@ -1,4 +1,4 @@
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 /**
  * Server-side sanity check of an editor document before it is stored: it must be a ProseMirror `doc`, bounded in size and depth, and every
  * node must have a string type. (Rendering is done by Tiptap from JSON — never as HTML — so this is about integrity, not sanitising markup.)

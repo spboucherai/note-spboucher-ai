@@ -7,6 +7,8 @@ import type { Resolvers } from "./markdown";
 
 const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const safeHref = (h: unknown) => { const s = String(h ?? ""); return /^(https?:\/\/|mailto:|\/p\/|\/api\/files\/|\.{1,2}\/|#)/i.test(s) ? s : "#"; };
+/** Image sources: same rules as links, plus inline `data:image/…` (pasted images) which would otherwise print as a broken image. */
+const safeSrc = (h: unknown) => { const s = String(h ?? ""); return /^data:image\/(png|jpe?g|gif|webp|avif);base64,/i.test(s) ? s : safeHref(s); };
 const tex = (latex: string, display: boolean) => { try { return katex.renderToString(latex, { displayMode: display, throwOnError: false, output: "htmlAndMathml" }); } catch { return `<code>${esc(latex)}</code>`; } };
 
 export function docToHtml(doc: PMNode | null | undefined, r: Resolvers = {}): { html: string; hasMath: boolean } {
@@ -31,7 +33,7 @@ export function docToHtml(doc: PMNode | null | undefined, r: Resolvers = {}): { 
       case "taskList": return `<ul class="tasks">${(n.content ?? []).map((li) => `<li class="${li.attrs?.checked ? "done" : ""}"><input type="checkbox" disabled ${li.attrs?.checked ? "checked" : ""}> <div>${blocks(li.content)}</div></li>`).join("")}</ul>`;
       case "table": { const rows = n.content ?? []; return `<table>${rows.map((row, i) => `<tr>${(row.content ?? []).map((c) => { const tag = c.type === "tableHeader" || i === 0 ? "th" : "td"; const a = c.attrs ?? {}; return `<${tag}${a.colspan > 1 ? ` colspan="${a.colspan}"` : ""}${a.rowspan > 1 ? ` rowspan="${a.rowspan}"` : ""}>${blocks(c.content)}</${tag}>`; }).join("")}</tr>`).join("")}</table>`; }
       case "horizontalRule": return "<hr>";
-      case "image": { const src = r.file?.(String(n.attrs?.src ?? "")) ?? n.attrs?.src; return `<figure><img src="${esc(safeHref(src))}" alt="${esc(n.attrs?.alt ?? "")}">${n.attrs?.title ? `<figcaption>${esc(n.attrs.title)}</figcaption>` : ""}</figure>`; }
+      case "image": { const src = r.file?.(String(n.attrs?.src ?? "")) ?? n.attrs?.src; return `<figure><img src="${esc(safeSrc(src))}" alt="${esc(n.attrs?.alt ?? "")}">${n.attrs?.title ? `<figcaption>${esc(n.attrs.title)}</figcaption>` : ""}</figure>`; }
       case "fileBlock": { const src = r.file?.(String(n.attrs?.src ?? "")) ?? n.attrs?.src; return `<p class="file">📎 <a href="${esc(safeHref(src))}">${esc(n.attrs?.name ?? "file")}</a>${n.attrs?.size ? ` <small>(${Math.round(Number(n.attrs.size) / 1024)} KB)</small>` : ""}</p>`; }
       case "youtube": return `<p class="file">▶ <a href="${esc(safeHref(n.attrs?.src))}">${esc(n.attrs?.src)}</a></p>`;
       case "blockMath": hasMath = true; return `<div class="math-block">${tex(String(n.attrs?.latex ?? ""), true)}</div>`;

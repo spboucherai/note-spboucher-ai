@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { handler, parseBody, uuid } from "@/lib/api";
-import { listSuggestions, suggestionCounts, decideSuggestion } from "@/lib/graph/service";
+import { listSuggestions, suggestionCounts, decideSuggestion, revertSuggestion } from "@/lib/graph/service";
 import { suggestLinksForPage } from "@/lib/graph/suggest";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import { audit } from "@/lib/audit";
@@ -27,9 +27,14 @@ export const POST = handler(async ({ req, ws, user }) => {
   return Response.json({ queued: true, jobId });
 });
 
-/** PATCH { id, status: "accepted" | "rejected" } */
+/** PATCH { id, status: "accepted" | "rejected" | "suggested" } — "suggested" undoes a decision (back to the review queue). */
 export const PATCH = handler(async ({ req, ws, user }) => {
-  const b = await parseBody(req, z.object({ id: uuid, status: z.enum(["accepted", "rejected"]) }));
+  const b = await parseBody(req, z.object({ id: uuid, status: z.enum(["accepted", "rejected", "suggested"]) }));
+  if (b.status === "suggested") {
+    const k = await revertSuggestion(ws.id, b.id);
+    await audit(user.id, "graph.suggestion.reverted", { type: "knowledge_edge", id: b.id }, { from: k.fromId, to: k.toId, previous: k.previousStatus });
+    return Response.json({ ok: true, id: k.id, status: k.status, fromId: k.fromId, toId: k.toId });
+  }
   const k = await decideSuggestion(ws.id, b.id, b.status);
   await audit(user.id, `graph.suggestion.${b.status}`, { type: "knowledge_edge", id: b.id }, { from: k.fromId, to: k.toId });
   return Response.json({ ok: true, id: k.id, status: k.status, fromId: k.fromId, toId: k.toId });

@@ -27,3 +27,21 @@ export async function expectNoHorizontalOverflow(page: Page) {
   const r = await page.evaluate(() => { const w = document.documentElement.clientWidth; const bad: string[] = []; if (document.documentElement.scrollWidth > w + 1) bad.push(`document scrollWidth ${document.documentElement.scrollWidth} > ${w}`); const main = document.getElementById("main-scroll"); if (main && main.scrollWidth > main.clientWidth + 1) bad.push(`main scrollWidth ${main.scrollWidth} > ${main.clientWidth}`); return bad; });
   if (r.length) throw new Error(`Horizontal overflow: ${r.join("; ")}`);
 }
+
+export const ORIGIN = process.env.E2E_BASE_URL ?? "http://localhost:8481";
+/** Authenticated JSON call from the test process with the browser's cookies (adds the Origin header the CSRF check requires). */
+export async function apiCall(page: Page, method: "POST" | "PATCH" | "PUT" | "DELETE" | "GET", url: string, data?: unknown, headers: Record<string, string> = {}) {
+  const res = await page.request.fetch(url, { method, data: data as any, headers: { origin: ORIGIN, ...(data !== undefined ? { "content-type": "application/json" } : {}), ...headers } });
+  let body: any = null; try { body = await res.json(); } catch { /* not json */ }
+  return { status: res.status(), body, headers: res.headers() };
+}
+export const para = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+export const docOf = (...nodes: unknown[]) => ({ type: "doc", content: nodes });
+/** Bottom-docked UI must not cover the element (e.g. the caret line or the primary action). */
+export async function expectNotCovered(page: Page, selector: string) {
+  const r = await page.evaluate((sel) => { const el = document.querySelector(sel); if (!el) return "missing"; const b = el.getBoundingClientRect(); const x = Math.min(window.innerWidth - 2, Math.max(2, b.left + b.width / 2)), y = b.top + b.height / 2; if (y < 0 || y > window.innerHeight) return `outside viewport (y=${Math.round(y)})`; const top = document.elementFromPoint(x, y); return top && (el === top || el.contains(top) || top.contains(el)) ? "ok" : `covered by <${top?.tagName.toLowerCase()} class="${(top as HTMLElement)?.className?.toString().slice(0, 60)}">`; }, selector);
+  if (r !== "ok") throw new Error(`${selector}: ${r}`);
+}
+/** 1×1 PNG and a minimal one-page PDF for upload tests. */
+export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+export const PDF = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length 44>>stream\nBT /F1 12 Tf 20 100 Td (Hello note) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\nxref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \n0000000211 00000 n \n0000000300 00000 n \ntrailer<</Size 6/Root 1 0 R>>\nstartxref\n362\n%%EOF\n");

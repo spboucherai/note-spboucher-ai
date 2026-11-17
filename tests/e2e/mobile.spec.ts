@@ -1,0 +1,182 @@
+import { test, expect, type Page } from "@playwright/test";
+import { apiCall, docOf, para, expectNoHorizontalOverflow, expectNotCovered, PNG, PDF, sql, withSavedPasskey, ORIGIN } from "./helpers";
+
+/** Phone journeys. Each project (360×740, 375×667, 430×932) runs the whole file with touch + an iPhone user agent. */
+const made: string[] = [];
+const uniq = (t: { project: { name: string } }, s: string) => `${s} ${t.project.name} ${Date.now().toString(36)}`;
+const newPage = async (page: Page, title: string, content?: unknown) => { const r = await apiCall(page, "POST", "/api/pages", { title, ...(content ? { content } : {}) }); expect(r.status).toBe(201); made.push(r.body.id); return r.body as { id: string; version: number }; };
+const serverPage = async (page: Page, id: string) => (await apiCall(page, "GET", `/api/pages/${id}`)).body;
+const saved = (page: Page) => expect(page.getByRole("status").filter({ hasText: /^Saved/ })).toBeVisible({ timeout: 15_000 });
+test.afterAll(async () => { if (made.length) { await sql`delete from tasks where page_id = any(${made}::uuid[])`; await sql`delete from pages where id = any(${made}::uuid[]) or title like '%E2E-%'`; } });
+
+test("home, navigation bar, drawer: reachable, labelled, nothing overflows", async ({ page }) => {
+  await page.goto("/"); const nav = page.getByRole("navigation", { name: "Primary" }); await expect(nav).toBeVisible();
+  for (const name of ["Home", "Search", "Quick capture", "More"]) await expect(nav.getByRole(name === "Quick capture" || name === "More" ? "button" : "link", { name })).toBeVisible();
+  await expect(nav.getByRole("link", { name: /Inbox/ })).toBeVisible(); await expect(nav.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  for (const b of await nav.locator("a,button").all()) { const box = (await b.boundingBox())!; expect(box.height, "touch target height").toBeGreaterThanOrEqual(44); }
+  await expectNoHorizontalOverflow(page);
+  await nav.getByRole("button", { name: "More" }).click(); const drawer = page.getByRole("dialog"); await expect(drawer.getByRole("heading", { name: "Spaces" })).toBeVisible();
+  await drawer.getByRole("button", { name: /^Notes/ }).click(); await expect(drawer.getByRole("button", { name: "All" })).toBeVisible(); await drawer.getByRole("button", { name: "All" }).click();
+  await page.keyboard.press("Escape"); await expect(drawer).toBeHidden(); await expect(nav.getByRole("button", { name: "More" })).toBeFocused();
+  await nav.getByRole("link", { name: "Search" }).click(); await expect(page).toHaveURL(/\/search/); await page.getByRole("button", { name: "Back" }).click(); await expect(page).toHaveURL(/:\d+\/$/);
+});
+
+test("quick capture: note, to-do and link land in the inbox without choosing anything", async ({ page }, t) => {
+  await page.goto("/"); const title = uniq(t, "E2E-capture");
+  await page.getByRole("button", { name: "Quick capture" }).click(); const sheet = page.getByRole("dialog");
+  await expect(sheet.getByLabel("Capture text")).toBeFocused(); await expectNoHorizontalOverflow(page);
+  await sheet.getByLabel("Capture text").fill(`${title}\nsecond line of the note`); await expect(sheet.getByRole("button", { name: "Capture", exact: true })).toBeInViewport({ ratio: 1 });
+  await sheet.getByRole("button", { name: "Capture", exact: true }).click(); await expect(page.getByText("Captured to inbox")).toBeVisible(); await expect(sheet).toBeHidden();
+  await page.getByRole("button", { name: "Quick capture" }).click(); await sheet.getByRole("radio", { name: "To-do" }).click(); await sheet.getByLabel("Capture text").fill(`${title} task A\n${title} task B`); await sheet.getByRole("button", { name: "Capture", exact: true }).click(); await expect(sheet).toBeHidden();
+  await page.getByRole("button", { name: "Quick capture" }).click(); await sheet.getByLabel("Capture text").fill("https://example.org/e2e-article"); await expect(sheet.getByRole("radio", { name: "Link" })).toHaveAttribute("aria-checked", "true"); await sheet.getByRole("button", { name: "Capture", exact: true }).click(); await expect(sheet).toBeHidden();
+  await page.getByRole("link", { name: /Inbox/ }).click(); await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
+  await expect(page.getByText(title, { exact: true })).toBeVisible(); await expect(page.getByText("2 to do")).toBeVisible(); await expect(page.getByText("example.org").first()).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  const rows = await sql`select id, title from pages where (title like ${title + "%"} or title like 'To-do%' or title = 'example.org') and inbox_at is not null and created_at > now() - interval '1 minute'`; for (const r of rows) made.push(r.id);
+  expect(rows.filter((r) => r.title === title).length, "exactly one note for one capture").toBe(1);
+});
+
+test("inbox triage is reversible: file, undo, archive", async ({ page }, t) => {
+  const title = uniq(t, "E2E-triage"); const c = await apiCall(page, "POST", "/api/capture", { kind: "note", text: title }); made.push(c.body.id);
+  await page.goto("/inbox"); const card = page.getByRole("listitem").filter({ hasText: title });
+  await card.getByRole("button", { name: "File" }).click(); await page.getByRole("dialog").getByRole("button", { name: "Projects" }).click();
+  await expect(page.getByText("Filed in projects")).toBeVisible(); await expect(card).toHaveCount(0);
+  expect((await serverPage(page, c.body.id)).section).toBe("projects");
+  await page.getByRole("button", { name: "Undo" }).click(); await expect(page.getByText("Back in the inbox")).toBeVisible(); await expect(card).toBeVisible();
+  const back = await serverPage(page, c.body.id); expect(back.section).toBe("notes"); expect(back.inboxAt).toBeTruthy();
+  await card.getByRole("button", { name: /More actions/ }).click(); await page.getByRole("dialog").getByRole("button", { name: /Turn into a task/ }).click(); await expect(page.getByText("1 task created")).toBeVisible();
+  const [{ n }] = await sql`select count(*)::int as n from tasks where page_id = ${c.body.id} and deleted_at is null`; expect(n).toBe(1);
+  await page.getByRole("button", { name: "Undo" }).click(); await expect(card).toBeVisible();
+  const [{ n: n2 }] = await sql`select count(*)::int as n from tasks where page_id = ${c.body.id} and deleted_at is null`; expect(n2).toBe(0);
+});
+
+test("editing with the phone bar: formatting, long title, autosave, nothing covered", async ({ page }, t) => {
+  const long = uniq(t, "E2E-edit a deliberately long title that has to wrap on a narrow phone screen without being clipped");
+  const p = await newPage(page, long, docOf(para("first paragraph")));
+  await page.goto(`/p/${p.id}`); const ed = page.locator(".ProseMirror").first(); await expect(ed).toContainText("first paragraph");
+  const title = page.getByLabel("Page title"); const tb = (await title.boundingBox())!; expect(tb.width).toBeLessThanOrEqual(page.viewportSize()!.width); expect(tb.height, "long title wraps").toBeGreaterThan(40);
+  await ed.click(); await page.keyboard.press("Control+End"); await page.keyboard.press("Meta+ArrowDown");
+  const bar = page.getByRole("toolbar", { name: "Formatting" }); await expect(bar).toBeVisible(); await expect(page.getByRole("navigation", { name: "Primary" })).toBeHidden();
+  await page.keyboard.type(" plain "); await bar.getByRole("button", { name: "Bold" }).click(); await expect(bar.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true"); await page.keyboard.type("bold-word");
+  await expect(ed.locator("strong")).toHaveText("bold-word"); await expect(ed).toBeFocused();
+  await bar.getByRole("button", { name: "Bold" }).click(); await page.keyboard.press("Enter"); await bar.getByRole("button", { name: "Checklist" }).click(); await page.keyboard.type("a task");
+  await expect(ed.locator('ul[data-type="taskList"] li')).toHaveCount(1);
+  await page.keyboard.press("Enter"); await page.keyboard.press("Enter"); await bar.getByRole("button", { name: "More styles and blocks" }).click(); await bar.getByRole("button", { name: "Table" }).click();
+  await expect(ed.locator("table")).toBeVisible(); await expect(bar.getByRole("button", { name: "Add row below" })).toBeVisible(); await bar.getByRole("button", { name: "Add row below" }).click(); await expect(ed.locator("tr")).toHaveCount(4);
+  await page.keyboard.type("cell"); await expectNoHorizontalOverflow(page);
+  const wrap = await ed.locator(".tableWrapper").evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth, ox: getComputedStyle(el).overflowX })); expect(["auto", "scroll"]).toContain(wrap.ox);
+  // the caret line stays above the bar
+  const caret = await page.evaluate(() => { const s = getSelection(); if (!s || !s.rangeCount) return null; const r = s.getRangeAt(0).getBoundingClientRect(); const b = document.querySelector('[role="toolbar"][aria-label="Formatting"]')!.getBoundingClientRect(); return { caretBottom: r.bottom, barTop: b.top }; });
+  expect(caret!.caretBottom, "caret not under the editing bar").toBeLessThanOrEqual(caret!.barTop + 1);
+  await bar.getByRole("button", { name: "Undo" }).click(); await bar.getByRole("button", { name: "Redo" }).click();
+  await bar.getByRole("button", { name: "Hide keyboard" }).click(); await expect(bar).toBeHidden(); await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+  await saved(page); const srv = await serverPage(page, p.id); expect(JSON.stringify(srv.content)).toContain("bold-word"); expect(srv.version).toBeGreaterThan(p.version);
+  // link sheet keeps the selection
+  await ed.getByText("first paragraph").dblclick(); await page.getByRole("toolbar", { name: "Formatting" }).getByRole("button", { name: "Link" }).click();
+  await page.getByLabel("Link address").fill("example.org/x"); await page.getByRole("button", { name: "Apply" }).click(); await expect(ed.locator('a[href="https://example.org/x"]')).toBeVisible();
+  await saved(page); await expectNoHorizontalOverflow(page);
+});
+
+test("photo and PDF upload: progress, insertion, authenticated delivery", async ({ page }, t) => {
+  const p = await newPage(page, uniq(t, "E2E-upload")); await page.goto(`/p/${p.id}`); const ed = page.locator(".ProseMirror").first(); await ed.click();
+  const input = page.locator('.note-editor input[type="file"]').first();
+  await input.setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: PNG }); await expect(ed.locator('img[src^="/api/files/"]')).toBeVisible({ timeout: 15_000 });
+  await input.setInputFiles({ name: "scan.pdf", mimeType: "application/pdf", buffer: PDF }); await expect(ed.locator("a.file-block")).toContainText("scan.pdf", { timeout: 15_000 });
+  await saved(page); const src = await ed.locator("img").first().getAttribute("src");
+  expect((await page.request.get(src!)).status()).toBe(200);
+  const anon = await page.request.fetch(ORIGIN + src!, { headers: { cookie: "" } }); expect([401, 303]).toContain(anon.status());
+  // a refused type shows an error row with Retry / Dismiss instead of failing silently
+  await input.setInputFiles({ name: "evil.html", mimeType: "text/html", buffer: Buffer.from("<script>1</script>") });
+  await expect(page.getByRole("list", { name: "Uploads" }).getByText(/not allowed/i)).toBeVisible(); await page.getByRole("button", { name: "Dismiss" }).click();
+  await expectNoHorizontalOverflow(page);
+});
+
+test("network loss and return: text is kept on the device and saved once", async ({ page, context }, t) => {
+  const p = await newPage(page, uniq(t, "E2E-offline"), docOf(para("online text"))); await page.goto(`/p/${p.id}`); const ed = page.locator(".ProseMirror").first(); await ed.click(); await page.keyboard.press("Control+End");
+  await context.setOffline(true); await page.keyboard.type(" typed-while-offline");
+  await expect(page.getByRole("status").filter({ hasText: /Offline · kept on this device/ })).toBeVisible({ timeout: 15_000 }); await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  expect(JSON.stringify((await sql`select content from pages where id = ${p.id}`)[0].content)).not.toContain("typed-while-offline");
+  const draft = await page.evaluate((id) => new Promise((res) => { const r = indexedDB.open("note-local"); r.onsuccess = () => { const g = r.result.transaction("drafts").objectStore("drafts").get(id); g.onsuccess = () => res(JSON.stringify(g.result ?? null)); }; }), p.id); expect(draft).toContain("typed-while-offline");
+  await context.setOffline(false); await saved(page);
+  const srv = (await sql`select plain_text, version from pages where id = ${p.id}`)[0]; expect(srv.plain_text.match(/typed-while-offline/g)?.length, "saved exactly once").toBe(1);
+  const gone = await page.evaluate((id) => new Promise((res) => { const r = indexedDB.open("note-local"); r.onsuccess = () => { const g = r.result.transaction("drafts").objectStore("drafts").get(id); g.onsuccess = () => res(g.result ?? null); }; }), p.id); expect(gone, "draft removed once the server confirmed").toBeNull();
+});
+
+test("a tab closed while offline loses nothing: the draft is replayed at the next visit", async ({ page, context }, t) => {
+  const p = await newPage(page, uniq(t, "E2E-closed"), docOf(para("before"))); await page.goto(`/p/${p.id}`); const ed = page.locator(".ProseMirror").first(); await ed.click(); await page.keyboard.press("Control+End");
+  await context.setOffline(true); await page.keyboard.type(" survives-a-closed-tab"); await expect(page.getByRole("status").filter({ hasText: /Offline · kept on this device/ })).toBeVisible({ timeout: 15_000 });
+  // no wait here on purpose: the tab goes away right after the last keystroke was acknowledged as "offline"
+  await page.goto("about:blank"); await context.setOffline(false);
+  await page.goto(`/p/${p.id}`); await expect(page.getByText("Unsaved changes restored")).toBeVisible(); await expect(page.locator(".ProseMirror").first()).toContainText("survives-a-closed-tab"); await saved(page);
+  expect((await sql`select plain_text from pages where id = ${p.id}`)[0].plain_text).toContain("survives-a-closed-tab");
+});
+
+test("offline capture is sent once when the network returns", async ({ page, context }, t) => {
+  await page.goto("/"); const title = uniq(t, "E2E-offline-capture"); await context.setOffline(true);
+  await page.getByRole("button", { name: "Quick capture" }).click(); await expect(page.getByText(/Offline — the capture is kept/)).toBeVisible();
+  await page.getByLabel("Capture text").fill(title); await page.getByRole("button", { name: "Capture", exact: true }).click(); await expect(page.getByText("Saved on this device")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /1 kept/ })).toBeVisible();
+  await context.setOffline(false);
+  await expect.poll(async () => (await sql`select count(*)::int as n from pages where title = ${title}`)[0].n, { timeout: 20_000 }).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event("online"))); await page.waitForTimeout(1500);
+  const rows = await sql`select id from pages where title = ${title}`; expect(rows.length, "no duplicate after a second replay trigger").toBe(1); made.push(rows[0].id);
+  await expect(page.getByRole("status").filter({ hasText: /kept|to sync/ })).toHaveCount(0);
+});
+
+test("two sessions edit the same note: conflict is shown, compared, and both versions are kept", async ({ page }, t) => {
+  const title = uniq(t, "E2E-conflict"); const p = await newPage(page, title, docOf(para("shared base"))); await page.goto(`/p/${p.id}`); const ed = page.locator(".ProseMirror").first(); await expect(ed).toContainText("shared base");
+  const other = await apiCall(page, "PATCH", `/api/pages/${p.id}`, { content: docOf(para("text from the OTHER session")), baseVersion: p.version }); expect(other.status).toBe(200);
+  await ed.click(); await page.keyboard.press("Control+End"); await page.keyboard.type(" text from THIS phone");
+  const banner = page.getByRole("alert").filter({ hasText: "also changed in another session" }); await expect(banner).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("status").filter({ hasText: "Conflict" })).toBeVisible();
+  expect((await serverPage(page, p.id)).plainText, "nothing was overwritten").toBe("text from the OTHER session");
+  await page.getByRole("toolbar", { name: "Formatting" }).getByRole("button", { name: "Hide keyboard" }).click();
+  await banner.getByRole("button", { name: "Compare" }).click(); const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("region", { name: "Your version" })).toContainText("text from THIS phone"); await expect(sheet.getByRole("region", { name: "Other session's version" })).toContainText("text from the OTHER session");
+  await expectNoHorizontalOverflow(page);
+  await sheet.getByRole("button", { name: "Keep both" }).click(); await expect(page.getByText("Both kept")).toBeVisible(); await expect(banner).toBeHidden();
+  await expect(ed).toContainText("text from the OTHER session"); await saved(page);
+  const copies = await sql`select id, plain_text from pages where title = ${title + " (conflict copy)"}`; expect(copies.length).toBe(1); expect(copies[0].plain_text).toContain("text from THIS phone"); made.push(copies[0].id);
+  // second round: "Keep mine" overwrites, and the other copy goes to the history
+  const cur = await serverPage(page, p.id); await apiCall(page, "PATCH", `/api/pages/${p.id}`, { content: docOf(para("OTHER again")), baseVersion: cur.version });
+  await ed.click(); await page.keyboard.press("Control+End"); await page.keyboard.type(" MINE again"); await expect(banner).toBeVisible({ timeout: 15_000 });
+  await banner.getByRole("button", { name: "Keep mine" }).click(); await expect(page.getByText("Your version was kept")).toBeVisible(); await saved(page);
+  expect((await serverPage(page, p.id)).plainText).toContain("MINE again");
+  const hist = await sql`select content::text as c, reason from page_versions where page_id = ${p.id}`; expect(hist.some((h) => h.c.includes("OTHER again") && /conflict/.test(h.reason))).toBe(true);
+});
+
+test("search: filters, highlighted excerpt, jump to the exact block, back keeps the results", async ({ page }, t) => {
+  const word = `zyq${Date.now().toString(36)}`; const p = await newPage(page, uniq(t, "E2E-search"), docOf(para("intro paragraph"), { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Section two" }] }, ...Array.from({ length: 30 }, (_, i) => para(`filler line ${i}`)), para(`the needle ${word} sits far down the page`)));
+  await page.goto(`/p/${p.id}`); await expect(page.locator(".ProseMirror").first()).toContainText(word); // opening assigns block ids and saves them
+  await page.locator(".ProseMirror").first().click(); await page.keyboard.press("Control+End"); await page.keyboard.type(" ."); await saved(page);
+  await expect.poll(async () => (await sql`select count(*)::int as n from chunks where page_id = ${p.id} and content like ${"%" + word + "%"}`)[0].n, { timeout: 45_000, message: "worker indexed the page" }).toBeGreaterThan(0);
+  await page.getByRole("toolbar", { name: "Formatting" }).getByRole("button", { name: "Hide keyboard" }).click();
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Search" }).click();
+  await page.getByLabel("Search everything").fill(word); const hit = page.getByRole("listitem").filter({ hasText: word }).first(); await expect(hit).toBeVisible({ timeout: 20_000 });
+  await expect(hit.locator("mark")).toHaveText(word); await expectNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: /^Filters/ }).click(); const f = page.getByRole("dialog"); await f.getByRole("button", { name: "Files" }).click(); await f.getByRole("button", { name: "Show results" }).click();
+  await expect(page.getByText(`Nothing for “${word}”`)).toBeVisible(); await expect(page.getByRole("button", { name: "Filters, 1 active" })).toBeVisible();
+  await page.reload(); await expect(page.getByRole("button", { name: "Filters, 1 active" }), "filters persist").toBeVisible(); await expect(page.getByLabel("Search everything"), "query persists in the URL").toHaveValue(word);
+  await page.getByRole("button", { name: "Reset filters" }).click(); await expect(hit).toBeVisible();
+  await hit.getByRole("link").click(); await expect(page).toHaveURL(new RegExp(`/p/${p.id}\\?hl=.*#block-`));
+  const block = page.locator(".ProseMirror p", { hasText: word }); await expect(block).toBeInViewport(); expect(await block.evaluate((el) => el.getAnimations().length), "the paragraph is flashed").toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Back" }).click(); await expect(page).toHaveURL(/\/search\?q=/); await expect(page.getByLabel("Search everything")).toHaveValue(word); await expect(hit).toBeVisible();
+});
+
+test("every main screen fits the phone: no horizontal overflow, states render", async ({ page }) => {
+  for (const path of ["/", "/inbox", "/search", "/tasks", "/archive", "/trash", "/research", "/graph", "/backlinks", "/ai/agents", "/ai/models", "/ai/compare", "/settings", "/settings#appearance", "/settings#data", "/settings#ai", "/settings#index", "/settings#jobs", "/settings#tasks"]) {
+    await page.goto(path); await page.waitForLoadState("networkidle").catch(() => {}); await page.waitForTimeout(300);
+    await test.step(path, async () => { await expectNoHorizontalOverflow(page); await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible(); await expect(page.locator("main")).not.toContainText(/Application error|couldn.t load/i); });
+  }
+});
+
+test("lock this device: session revoked server-side, local drafts erased", async ({ browser }, t) => {
+  const vp = t.project.use.viewport!; const ctx = await browser.newContext({ viewport: vp, hasTouch: true, isMobile: true, storageState: { cookies: [], origins: [] } }); const page = await ctx.newPage(); await withSavedPasskey(page);
+  await page.goto("/login"); await page.getByRole("button", { name: /Continue with/ }).click(); await expect(page).toHaveURL(/:\d+\/$/);
+  await page.evaluate(() => new Promise<void>((res) => { const r = indexedDB.open("note-local", 1); r.onupgradeneeded = () => { r.result.createObjectStore("drafts", { keyPath: "pageId" }); r.result.createObjectStore("outbox", { keyPath: "id" }); }; r.onsuccess = () => { const tx = r.result.transaction("drafts", "readwrite"); tx.objectStore("drafts").put({ pageId: "x", baseVersion: 1, patch: { title: "private draft" }, updatedAt: Date.now() }); tx.oncomplete = () => res(); }; }));
+  page.on("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "More" }).click(); await page.getByRole("dialog").getByRole("button", { name: "Lock this device" }).click();
+  await expect(page).toHaveURL(/\/login$/); expect((await page.request.get("/api/tree")).status()).toBe(401);
+  const left = await page.evaluate(() => new Promise((res) => { const r = indexedDB.open("note-local"); r.onsuccess = () => { try { const g = r.result.transaction("drafts").objectStore("drafts").count(); g.onsuccess = () => res(g.result); } catch { res(0); } }; })); expect(left, "drafts erased on lock").toBe(0);
+  await ctx.close(); await sql`delete from login_attempts`;
+});

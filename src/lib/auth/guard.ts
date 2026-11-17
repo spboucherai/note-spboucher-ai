@@ -7,7 +7,8 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 
-export class HttpError extends Error { constructor(public status: number, message: string, public code?: string, public extra?: Record<string, unknown>) { super(message); } }
+import { HttpError } from "@/lib/errors";
+export { HttpError };
 
 /** For route handlers: 401 without a valid session. Also enforces same-origin on mutating requests. */
 export async function requireUser(req?: Request): Promise<SessionUser> {

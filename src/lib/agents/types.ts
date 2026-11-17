@@ -1,23 +1,40 @@
-/** Controlled agent framework — shared types. Agents never write directly (except a single draft page); everything else is a proposal awaiting human approval. */
-export type Scope = "read:pages" | "read:search" | "write:pages" | "write:tasks" | "write:links" | "write:properties";
-export const ALL_SCOPES: Scope[] = ["read:pages", "read:search", "write:pages", "write:tasks", "write:links", "write:properties"];
-export const READ_SCOPES: Scope[] = ["read:pages", "read:search"];
-export const SCOPE_LABELS: Record<Scope, string> = {
-  "read:pages": "Read pages", "read:search": "Search the workspace",
-  "write:pages": "Create draft pages (under “AI drafts”)", "write:tasks": "Tasks (proposals)", "write:links": "Links (proposals)", "write:properties": "Page properties (proposals)",
-};
+/**
+ * Bounded agents — shared types (no imports: safe for client components).
+ * An agent is one task from a FIXED catalogue. It can only read what its scope lists, through a fixed tool allow-list (no shell, no
+ * network, no search), and it can only PROPOSE: nothing is written to the workspace until the owner approves a proposal, and every
+ * applied proposal can be undone.
+ */
+export type AgentId = "sort_inbox" | "suggest_tags" | "plan_from_page" | "check_references";
+export type Scope = "read:inbox" | "read:page" | "read:untagged" | "read:tags" | "read:references" | "propose:triage" | "propose:tags" | "propose:page" | "propose:tasks";
+/** Hard caps of one run. Reaching any of them ends the run; the timeout marks it failed. */
+export interface RunLimits { maxToolCalls: number; maxTurns: number; maxTokens: number; maxCostUsd: number; timeoutMs: number; maxProposals: number }
+export interface AgentDef {
+  id: AgentId; name: string; icon: string; description: string;
+  /** Fixed instruction given to the model — the owner does not type a prompt. */
+  task: string; system: string; tools: string[]; scopes: Scope[];
+  /** Shown to the owner before launch. */
+  reads: string[]; proposes: string[]; never: string[];
+  page: "required" | "optional" | "none"; limits: RunLimits;
+}
+/** What the catalogue exposes to the browser (no prompts). */
+export type AgentInfo = Pick<AgentDef, "id" | "name" | "icon" | "description" | "tools" | "scopes" | "reads" | "proposes" | "never" | "page" | "limits">;
 
-export type AgentId = "research_assistant" | "document_organizer" | "graph_curator" | "writing_assistant" | "database_analyst" | "planning_assistant";
-export interface AgentDef { id: AgentId; name: string; description: string; icon: string; system: string; tools: string[]; defaultScopes: Scope[]; allowedScopes: Scope[] }
+export type ProposalKind = "inbox_triage" | "tags" | "new_page" | "page_edit" | "task";
+export type ProposalStatus = "proposed" | "applied" | "rejected" | "failed" | "undone";
+/** One side of the before → after preview. Built by the server from the real data, never from the model's description of it. */
+export interface Preview { label: string; lines: string[]; markdown?: string }
+export interface ProposalBase {
+  idx: number; tool: string; kind: ProposalKind; rationale: string; title: string; destructive: boolean; status: ProposalStatus;
+  pageId: string | null; before: Preview | null; after: Preview;
+  at: string; decidedAt?: string; appliedAt?: string; undoneAt?: string; error?: string; result?: Record<string, unknown>; undo?: Record<string, unknown>;
+}
+export interface TriageProposal extends ProposalBase { kind: "inbox_triage"; payload: { pageId: string; action: "keep" | "archive" | "trash"; section: string | null; tags: string[] } }
+export interface TagsProposal extends ProposalBase { kind: "tags"; payload: { pageId: string; add: string[] } }
+export interface NewPageProposal extends ProposalBase { kind: "new_page"; payload: { parentId: string | null; title: string; markdown: string } }
+export interface PageEditProposal extends ProposalBase { kind: "page_edit"; payload: { pageId: string; mode: "append"; markdown: string; baseVersion: number } }
+export interface TaskProposal extends ProposalBase { kind: "task"; payload: { title: string; priority: "low" | "medium" | "high"; dueAt: string | null; pageId: string | null } }
+export type Proposal = TriageProposal | TagsProposal | NewPageProposal | PageEditProposal | TaskProposal;
 
-export type ProposalKind = "page_edit" | "task" | "link" | "property";
-export interface ProposalBase { idx: number; tool: string; kind: ProposalKind; scope: Scope; scopeGranted: boolean; rationale: string; status: "proposed" | "approved" | "rejected" | "applied" | "failed"; at: string; decidedAt?: string; appliedAt?: string; error?: string; result?: unknown }
-export interface PageEditProposal extends ProposalBase { kind: "page_edit"; payload: { pageId: string; pageTitle: string; mode: "append" | "replace"; markdown: string; currentMarkdown: string } }
-export interface TaskProposal extends ProposalBase { kind: "task"; payload: { title: string; priority: "low" | "medium" | "high"; dueAt: string | null; pageId: string | null; pageTitle: string | null; project: string | null } }
-export interface LinkProposal extends ProposalBase { kind: "link"; payload: { fromPageId: string; fromTitle: string; toPageId: string; toTitle: string; relation: string; confidence: number | null } }
-export interface PropertyProposal extends ProposalBase { kind: "property"; payload: { pageId: string; pageTitle: string; key: string; value: unknown; previous: unknown } }
-export type Proposal = PageEditProposal | TaskProposal | LinkProposal | PropertyProposal;
-
-export interface ToolStep { tool: string; input: unknown; output?: unknown; at: string; ms?: number; error?: string; proposalIdx?: number }
-export interface RunLimits { maxToolCalls: number; maxTokens: number; maxCostUsd: number; maxTurns: number }
-export const DEFAULT_LIMITS: RunLimits = { maxToolCalls: 12, maxTokens: 200_000, maxCostUsd: 1.5, maxTurns: 14 };
+/** One line of the execution log. `input`/`output` hold ids, counts and enum values only — never note text. */
+export interface ToolStep { tool: string; input: Record<string, unknown>; output: Record<string, unknown>; at: string; ms?: number; error?: string; proposalIdx?: number }
+export const LIVE_STATUSES = ["pending", "running"];

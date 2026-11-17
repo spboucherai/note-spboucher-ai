@@ -1,11 +1,11 @@
 "use client";
 /** Palette of common equation templates; inserts a $$…$$ block into the page editor via the note:insert-markdown event. */
 import { useState } from "react";
-import { Sigma, Search } from "lucide-react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/primitives";
+import { Copy, Search, Sigma } from "lucide-react";
+import { Dialog, DialogTrigger, SheetContent } from "@/components/ui/primitives";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { insertMarkdown, copy } from "./ui";
+import { FIELD, IconBtn, insertMarkdown, copy } from "./ui";
 import { cn } from "@/lib/utils";
 
 export const LATEX_SNIPPETS: { id: string; group: string; label: string; latex: string }[] = [
@@ -31,23 +31,26 @@ export const LATEX_SNIPPETS: { id: string; group: string; label: string; latex: 
   { id: "lim", group: "Sums & integrals", label: "Asymptotic normality", latex: "\\sqrt{n}\\left(\\hat\\theta - \\theta_0\\right) \\xrightarrow{d} \\mathcal{N}\\left(0, \\Sigma\\right)" },
   { id: "matrix", group: "Sums & integrals", label: "Matrix", latex: "\\Sigma = \\begin{pmatrix} \\sigma_{11} & \\sigma_{12} \\\\ \\sigma_{21} & \\sigma_{22} \\end{pmatrix}" },
 ];
-export function insertLatexBlock(latex: string) { insertMarkdown(`$$\n${latex}\n$$`); toast("Equation inserted"); }
+export function insertLatexBlock(latex: string) { insertMarkdown(`$$\n${latex}\n$$`); toast("Equation inserted at the end of the page"); }
 
+/** Opens in a sheet (bottom sheet on phones): search, 48 px rows, "copy" always visible (no hover-only action). */
 export function LatexSnippets({ compact }: { compact?: boolean }) {
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(""); const [open, setOpen] = useState(false);
   const list = LATEX_SNIPPETS.filter((s) => !q || `${s.group} ${s.label} ${s.latex}`.toLowerCase().includes(q.toLowerCase()));
   const groups = [...new Set(list.map((s) => s.group))];
   return (
-    <Popover>
-      <PopoverTrigger asChild><button className={cn("flex h-8 items-center gap-1 rounded-md border border-line bg-bg-elev px-2 text-[12px] font-medium hover:bg-bg-sunk", compact && "h-7")} title="Insert a LaTeX equation template"><Sigma className="size-3.5" /><span className={compact ? "hidden sm:inline" : ""}>LaTeX</span></button></PopoverTrigger>
-      <PopoverContent className="w-[min(92vw,26rem)] p-2" align="end">
-        <div className="relative mb-2"><Search className="absolute left-2 top-2 size-3.5 text-fg-faint" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="h-8 pl-7 text-[13px]" autoFocus /></div>
-        <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
-          {groups.map((g) => <div key={g}><div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-fg-faint">{g}</div><div className="space-y-0.5">{list.filter((s) => s.group === g).map((s) => <div key={s.id} className="group flex items-center gap-1"><button onClick={() => insertLatexBlock(s.latex)} className="flex min-h-10 min-w-0 flex-1 flex-col items-start rounded-md px-2 py-1 text-left hover:bg-bg-sunk"><span className="text-[13px]">{s.label}</span><span className="w-full truncate font-mono text-[11px] text-fg-faint">{s.latex}</span></button><button className="shrink-0 rounded px-1.5 py-1 text-[11px] text-fg-faint opacity-0 hover:bg-bg-sunk hover:text-fg group-hover:opacity-100 focus:opacity-100" onClick={() => copy(s.latex, "LaTeX copied")}>copy</button></div>)}</div></div>)}
-          {!list.length && <div className="p-3 text-center text-[13px] text-fg-muted">No template matches.</div>}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><button type="button" className={cn("flex h-11 items-center gap-1 rounded-md border border-line bg-bg-elev px-3 text-[13px] font-medium hover:bg-bg-sunk md:h-8 md:px-2 md:text-[12px]", compact && "md:h-7")} aria-label="LaTeX equation templates"><Sigma className="size-4 md:size-3.5" /><span>LaTeX</span></button></DialogTrigger>
+      <SheetContent title="LaTeX templates" description="Tap a template to insert it as a $$…$$ block at the end of the page; tap the equation in the editor to edit it.">
+        <div className="relative mb-2"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-faint" aria-hidden /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates" aria-label="Search templates" type="search" enterKeyHint="search" className={cn(FIELD, "pl-9")} /></div>
+        <div className="space-y-3">
+          {groups.map((g) => <div key={g}><div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-fg-faint">{g}</div><ul className="divide-y divide-line rounded-lg border border-line">{list.filter((s) => s.group === g).map((s) => <li key={s.id} className="flex items-center">
+            <button type="button" onClick={() => { insertLatexBlock(s.latex); setOpen(false); }} className="flex min-h-12 min-w-0 flex-1 flex-col items-start justify-center px-3 py-1.5 text-left hover:bg-bg-sunk"><span className="text-[14px]">{s.label}</span><span className="w-full truncate font-mono text-[11.5px] text-fg-faint">{s.latex}</span></button>
+            <IconBtn label={`Copy the LaTeX of ${s.label}`} onClick={() => copy(s.latex, "LaTeX copied")}><Copy /></IconBtn>
+          </li>)}</ul></div>)}
+          {!list.length && <div className="p-4 text-center text-[13px] text-fg-muted">No template matches “{q}”. <button type="button" className="text-accent underline-offset-2 hover:underline" onClick={() => setQ("")}>Clear the search</button></div>}
         </div>
-        <div className="mt-2 border-t border-line pt-2 text-[11px] text-fg-faint">Inserts a $$…$$ block at the end of the page; click the equation in the editor to edit its LaTeX.</div>
-      </PopoverContent>
-    </Popover>
+      </SheetContent>
+    </Dialog>
   );
 }

@@ -1,8 +1,18 @@
-import { handler } from "@/lib/api";
-import { hybridSearch, quickSearch } from "@/lib/search";
+import { handler, HttpError } from "@/lib/api";
+import { hybridSearch, quickSearch, type SearchFilters } from "@/lib/search";
+const KINDS = ["page", "entry", "file", "reference"] as const;
+/**
+ * GET ?q=&mode=quick|hybrid&limit=&semantic=0|1&kinds=page,entry,file,reference&section=&since=YYYY-MM-DD&until=YYYY-MM-DD&archived=1&group=1
+ * (legacy `types=page,attachment` still accepted). `semantic=1` sends the query text to the embedding provider; `semantic=0` stays local.
+ */
 export const GET = handler(async ({ req, ws }) => {
-  const u = new URL(req.url); const q = u.searchParams.get("q") ?? ""; const mode = u.searchParams.get("mode") ?? "quick";
-  if (mode === "quick") return Response.json(await quickSearch(ws.id, q, Number(u.searchParams.get("limit") ?? 10)));
-  const hits = await hybridSearch(ws.id, q, { limit: Number(u.searchParams.get("limit") ?? 20), sourceTypes: u.searchParams.get("types")?.split(",").filter(Boolean), semantic: u.searchParams.get("semantic") !== "0" });
-  return Response.json(hits);
+  const u = new URL(req.url); const q = (u.searchParams.get("q") ?? "").slice(0, 500); const mode = u.searchParams.get("mode") ?? "quick";
+  const limit = Math.min(60, Math.max(1, Number(u.searchParams.get("limit") ?? (mode === "quick" ? 10 : 20)) || 10));
+  if (mode === "quick") return Response.json(await quickSearch(ws.id, q, limit));
+  if (q.trim().length < 2) return Response.json([]);
+  const date = (v: string | null, end = false) => { if (!v) return undefined; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new HttpError(400, "Dates must be YYYY-MM-DD"); return new Date(`${v}T${end ? "23:59:59.999" : "00:00:00"}Z`); };
+  const kinds = (u.searchParams.get("kinds") ?? "").split(",").filter((k): k is (typeof KINDS)[number] => (KINDS as readonly string[]).includes(k));
+  const section = u.searchParams.get("section"); if (section && !["notes", "documents", "projects", "research", "databases"].includes(section)) throw new HttpError(400, "Unknown space");
+  const f: SearchFilters = { limit, semantic: u.searchParams.get("semantic") !== "0", sourceTypes: u.searchParams.get("types")?.split(",").filter(Boolean), kinds: kinds.length ? kinds : undefined, section: section || undefined, since: date(u.searchParams.get("since")), until: date(u.searchParams.get("until"), true), includeArchived: u.searchParams.get("archived") === "1", group: u.searchParams.get("group") === "1" };
+  return Response.json(await hybridSearch(ws.id, q, f));
 });

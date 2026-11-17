@@ -13,7 +13,7 @@ import { costUsd } from "@/lib/ai/catalog";
 import { hybridSearch } from "@/lib/search";
 import { approxTokens } from "@/lib/search/chunk";
 import { toMarkdown, type PMNode } from "@/lib/editor/text";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 import type { TaskClass, AIUsage } from "@/lib/ai/types";
 import { listReferences, type ReferenceRow } from "./references";
 import { shortCite, lastName } from "./bibtex";

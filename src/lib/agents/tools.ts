@@ -1,151 +1,197 @@
 /**
- * Agent tools — server-side, zod-validated, scope-gated. Read tools execute immediately; `propose_*` tools only record a proposal
- * (nothing is written until the owner approves it); `create_page_draft` is the single direct write and only targets a new page
- * under the "AI drafts" parent. Agents have no shell and no network: this file is the complete surface they can touch.
+ * Agent tools — the complete surface an agent can touch. Server-side, zod-validated, allow-listed per agent.
+ *  - Read tools only return what the agent's scope allows: `read_page` refuses any page that a listing tool (or the context page) did not
+ *    put in `ctx.readable` for this run. There is no search tool, no network tool and no shell.
+ *  - `propose_*` tools write NOTHING: they append a proposal (with a server-built before → after preview) to the run.
+ *  - `logInput` / `logOutput` reduce what goes into the execution log to ids, counts and enum values — never note text.
  */
 import { z } from "zod";
-import { and, asc, desc, eq, ilike, isNull, sql as dsql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, notExists, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { hybridSearch } from "@/lib/search/index";
-import { toMarkdown, docText, wordCount, type PMNode } from "@/lib/editor/text";
-import { markdownToDoc } from "@/lib/editor/markdown-client";
-import { enqueue, QUEUES } from "@/lib/jobs";
+import { toMarkdown, type PMNode } from "@/lib/editor/text";
 import type { ToolDef } from "@/lib/ai/types";
-import type { Proposal, Scope } from "./types";
+import type { Preview, Proposal, RunLimits } from "./types";
 
-export interface ToolContext { workspaceId: string; executionId: string; scopes: Set<Scope>; model: string; accessed: Set<string>; proposals: Proposal[]; drafts: number; contextPageId: string | null }
+export interface ToolContext { workspaceId: string; executionId: string; contextPageId: string | null; readable: Set<string>; accessed: Set<string>; proposals: Proposal[]; limits: RunLimits }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface ToolSpec { name: string; description: string; scope: Scope; proposal: boolean; input: z.ZodTypeAny; run: (input: any, ctx: ToolContext) => Promise<unknown> }
+export interface ToolSpec { name: string; description: string; proposal: boolean; input: z.ZodTypeAny; run: (input: any, ctx: ToolContext) => Promise<Record<string, unknown>> }
 
-const DRAFT_PARENT_TITLE = "AI drafts";
 const nowIso = () => new Date().toISOString();
 const uuid = z.string().uuid();
-const pageCols = { id: schema.pages.id, title: schema.pages.title, icon: schema.pages.icon, section: schema.pages.section, type: schema.pages.type, parentId: schema.pages.parentId, updatedAt: schema.pages.updatedAt, wordCount: schema.pages.wordCount, properties: schema.pages.properties };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SECTIONS = ["notes", "documents", "projects", "research"] as const;
+const cleanTags = (names: string[]) => [...new Set(names.map((n) => n.trim().replace(/^#/, "").toLowerCase().slice(0, 40)).filter(Boolean))];
+const tagLine = (t: string[]) => `Tags: ${t.length ? t.map((x) => `#${x}`).join(" ") : "none"}`;
+
+/** Log-safe view of a tool input/output: uuids, numbers, booleans and short enum-like strings survive; any other text becomes its length. */
+export function logSafe(v: unknown, depth = 0): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!v || typeof v !== "object" || Array.isArray(v)) return out;
+  for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+    if (x == null || typeof x === "number" || typeof x === "boolean") out[k] = x;
+    else if (typeof x === "string") out[k] = UUID_RE.test(x) || (ENUM_KEYS.has(k) && x.length <= 24) ? x : `${x.length} chars`;
+    else if (Array.isArray(x)) out[k] = x.every((i) => typeof i === "string" && UUID_RE.test(i)) && x.length <= 40 ? x : `${x.length} items`;
+    else if (depth < 1) out[k] = logSafe(x, depth + 1);
+  }
+  return out;
+}
+const ENUM_KEYS = new Set(["action", "section", "priority", "mode", "error", "kind", "status"]);
 
 async function loadPage(ctx: ToolContext, id: string) {
   const [p] = await db.select().from(schema.pages).where(and(eq(schema.pages.id, id), eq(schema.pages.workspaceId, ctx.workspaceId), isNull(schema.pages.deletedAt)));
   return p ?? null;
 }
-function addProposal(ctx: ToolContext, p: Omit<Proposal, "idx" | "at" | "status" | "scopeGranted">): Proposal {
-  const full = { ...p, idx: ctx.proposals.length, at: nowIso(), status: "proposed", scopeGranted: ctx.scopes.has(p.scope) } as Proposal;
-  ctx.proposals.push(full); return full;
+async function tagsOf(pageIds: string[]): Promise<Map<string, string[]>> {
+  const m = new Map<string, string[]>(); if (!pageIds.length) return m;
+  const rows = await db.select({ pageId: schema.pageTags.pageId, name: schema.tags.name }).from(schema.pageTags).innerJoin(schema.tags, eq(schema.tags.id, schema.pageTags.tagId)).where(inArray(schema.pageTags.pageId, pageIds));
+  for (const r of rows) m.set(r.pageId, [...(m.get(r.pageId) ?? []), r.name].sort());
+  return m;
+}
+type NewProposal = { [K in Proposal["kind"]]: Omit<Extract<Proposal, { kind: K }>, "idx" | "at" | "status"> }[Proposal["kind"]];
+function addProposal(ctx: ToolContext, p: NewProposal): Record<string, unknown> {
+  if (ctx.proposals.length >= ctx.limits.maxProposals) return { error: `Proposal limit reached (${ctx.limits.maxProposals}). Stop proposing and write your summary.` };
+  const full = { ...p, idx: ctx.proposals.length, at: nowIso(), status: "proposed" } as Proposal;
+  ctx.proposals.push(full);
+  return { recorded: true, proposal: full.idx, note: "Recorded for the owner's review. Nothing was changed." };
 }
 
-const search_workspace: ToolSpec = {
-  name: "search_workspace", scope: "read:search", proposal: false,
-  description: "Hybrid (semantic + keyword) search over the user's notes, documents and database rows. Returns the best matching passages with their page ids. Use it first to find relevant pages, then read_page for the full text.",
-  input: z.object({ query: z.string().min(1).max(500).describe("Natural-language query or keywords"), limit: z.number().int().min(1).max(20).optional().describe("Max passages (default 8)") }),
-  async run(i: { query: string; limit?: number }, ctx) {
-    const hits = await hybridSearch(ctx.workspaceId, i.query, { limit: i.limit ?? 8 });
-    for (const h of hits) if (h.pageId) ctx.accessed.add(h.pageId);
-    return { count: hits.length, hits: hits.map((h) => ({ pageId: h.pageId, title: h.title, heading: h.heading, sourceType: h.sourceType, excerpt: h.content.slice(0, 700), score: Number(h.score.toFixed(4)) })) };
+// ---------- read tools
+const list_inbox: ToolSpec = {
+  name: "list_inbox", proposal: false, description: "List the items waiting in the inbox (id, title, kind, a short excerpt, current tags). At most 25, newest first.",
+  input: z.object({}),
+  async run(_i, ctx) {
+    const P = schema.pages;
+    const rows = await db.select({ id: P.id, title: P.title, kind: P.captureKind, section: P.section, words: P.wordCount, excerpt: dsql<string>`left(${P.plainText}, 400)` }).from(P).where(and(eq(P.workspaceId, ctx.workspaceId), isNotNull(P.inboxAt), isNull(P.deletedAt), eq(P.archived, false))).orderBy(desc(P.inboxAt)).limit(25);
+    const tags = await tagsOf(rows.map((r) => r.id));
+    for (const r of rows) { ctx.readable.add(r.id); ctx.accessed.add(r.id); }
+    return { count: rows.length, items: rows.map((r) => ({ pageId: r.id, title: r.title, kind: r.kind ?? "note", words: r.words, excerpt: r.excerpt, tags: tags.get(r.id) ?? [] })) };
+  },
+};
+const list_tags: ToolSpec = {
+  name: "list_tags", proposal: false, description: "List the names of the owner's existing tags (reuse them before inventing new ones).",
+  input: z.object({}),
+  async run(_i, ctx) { const rows = await db.select({ name: schema.tags.name }).from(schema.tags).where(eq(schema.tags.workspaceId, ctx.workspaceId)).orderBy(schema.tags.name).limit(300); return { count: rows.length, tags: rows.map((r) => r.name) }; },
+};
+const list_candidate_pages: ToolSpec = {
+  name: "list_candidate_pages", proposal: false, description: "List the pages this run may tag: the context page when one was chosen, otherwise the 12 most recently edited pages that have no tag.",
+  input: z.object({}),
+  async run(_i, ctx) {
+    const P = schema.pages; const cols = { id: P.id, title: P.title, section: P.section, words: P.wordCount, excerpt: dsql<string>`left(${P.plainText}, 300)` };
+    const rows = ctx.contextPageId
+      ? await db.select(cols).from(P).where(and(eq(P.id, ctx.contextPageId), eq(P.workspaceId, ctx.workspaceId), isNull(P.deletedAt)))
+      : await db.select(cols).from(P).where(and(eq(P.workspaceId, ctx.workspaceId), isNull(P.deletedAt), isNull(P.databaseId), eq(P.archived, false), eq(P.type, "page"), dsql`${P.wordCount} > 20`, notExists(db.select({ x: dsql`1` }).from(schema.pageTags).where(eq(schema.pageTags.pageId, P.id))))).orderBy(desc(P.updatedAt)).limit(12);
+    const tags = await tagsOf(rows.map((r) => r.id));
+    for (const r of rows) { ctx.readable.add(r.id); ctx.accessed.add(r.id); }
+    return { count: rows.length, pages: rows.map((r) => ({ pageId: r.id, title: r.title, section: r.section, words: r.words, excerpt: r.excerpt, tags: tags.get(r.id) ?? [] })) };
   },
 };
 const read_page: ToolSpec = {
-  name: "read_page", scope: "read:pages", proposal: false,
-  description: "Read one page (full content as Markdown, plus its properties). Content is capped; pass `offset` to continue reading a long page.",
-  input: z.object({ pageId: uuid, offset: z.number().int().min(0).optional().describe("Character offset to start from (default 0)"), maxChars: z.number().int().min(500).max(40_000).optional().describe("Characters to return (default 16000)") }),
+  name: "read_page", proposal: false, description: "Read one page of this run's scope as Markdown (the context page, or a page returned by a list tool). Long pages are capped; pass `offset` to continue.",
+  input: z.object({ pageId: uuid, offset: z.number().int().min(0).optional(), maxChars: z.number().int().min(500).max(24_000).optional() }),
   async run(i: { pageId: string; offset?: number; maxChars?: number }, ctx) {
+    if (!ctx.readable.has(i.pageId)) return { error: "This page is outside the scope of this run" };
     const p = await loadPage(ctx, i.pageId); if (!p) return { error: "Page not found" };
     ctx.accessed.add(p.id);
-    const md = toMarkdown(p.content as PMNode); const off = i.offset ?? 0; const max = i.maxChars ?? 16_000;
-    return { id: p.id, title: p.title, section: p.section, type: p.type, parentId: p.parentId, updatedAt: p.updatedAt, wordCount: p.wordCount, properties: p.properties, totalChars: md.length, offset: off, truncated: md.length > off + max, markdown: md.slice(off, off + max) };
+    const md = toMarkdown(p.content as PMNode); const off = i.offset ?? 0; const max = i.maxChars ?? 12_000;
+    return { pageId: p.id, title: p.title, section: p.section, words: p.wordCount, totalChars: md.length, offset: off, truncated: md.length > off + max, markdown: md.slice(off, off + max) };
   },
 };
-const list_pages: ToolSpec = {
-  name: "list_pages", scope: "read:pages", proposal: false,
-  description: "List pages (id, title, section, type, parent, word count, last update). Filter by section, parent page or a title fragment. Database rows are excluded unless `databaseId` is given.",
-  input: z.object({ section: z.enum(["notes", "documents", "databases", "projects", "research"]).optional(), parentId: uuid.optional(), databaseId: uuid.optional().describe("List the row pages of this database"), titleContains: z.string().max(200).optional(), limit: z.number().int().min(1).max(100).optional().describe("Default 40") }),
-  async run(i: { section?: string; parentId?: string; databaseId?: string; titleContains?: string; limit?: number }, ctx) {
-    const where = [eq(schema.pages.workspaceId, ctx.workspaceId), isNull(schema.pages.deletedAt)];
-    if (i.databaseId) where.push(eq(schema.pages.databaseId, i.databaseId)); else where.push(isNull(schema.pages.databaseId));
-    if (i.section) where.push(eq(schema.pages.section, i.section)); if (i.parentId) where.push(eq(schema.pages.parentId, i.parentId)); if (i.titleContains) where.push(ilike(schema.pages.title, `%${i.titleContains.replace(/[%_]/g, "")}%`));
-    const rows = await db.select(pageCols).from(schema.pages).where(and(...where)).orderBy(desc(schema.pages.updatedAt), asc(schema.pages.position)).limit(i.limit ?? 40);
-    return { count: rows.length, pages: rows.map((r) => ({ ...r, properties: Object.keys(r.properties ?? {}).length ? r.properties : undefined })) };
+/** Deterministic checks — the model reports them, it does not decide them. No network: a DOI is only checked for its format and its stored status. */
+export function referenceIssues(r: { title: string; authors: string[] | null; year: number | null; journal: string | null; doi: string | null; url: string | null; entryType: string; verified: string }): string[] {
+  const out: string[] = [];
+  if (!r.title?.trim() || r.title.trim().toLowerCase() === "untitled") out.push("missing title");
+  if (!r.authors?.length) out.push("missing authors");
+  if (!r.year) out.push("missing year");
+  if (r.entryType === "article" && !r.journal?.trim()) out.push("missing journal");
+  if (!r.doi?.trim()) { if (!r.url?.trim()) out.push("no DOI and no URL"); }
+  else if (!/^10\.\d{4,9}\/\S+$/.test(r.doi.trim())) out.push("DOI is malformed");
+  else if (r.verified !== "doi_verified") out.push("DOI never verified against Crossref (use Verify in References)");
+  if (r.verified === "ai_suggested") out.push("entry was suggested by AI and never confirmed");
+  return out;
+}
+const list_references: ToolSpec = {
+  name: "list_references", proposal: false, description: "List the references that have a detected problem (missing fields, malformed or unverified DOI), with the problems found. At most 30.",
+  input: z.object({}),
+  async run(_i, ctx) {
+    const R = schema.researchReferences;
+    const rows = await db.select({ id: R.id, citeKey: R.citeKey, entryType: R.entryType, title: R.title, authors: R.authors, year: R.year, journal: R.journal, doi: R.doi, url: R.url, verified: R.verified }).from(R).where(and(eq(R.workspaceId, ctx.workspaceId), isNull(R.deletedAt))).orderBy(desc(R.updatedAt)).limit(500);
+    const flagged = rows.map((r) => ({ r, issues: referenceIssues(r) })).filter((x) => x.issues.length);
+    return { total: rows.length, flaggedCount: flagged.length, shown: Math.min(30, flagged.length), flagged: flagged.slice(0, 30).map(({ r, issues }) => ({ referenceId: r.id, citeKey: r.citeKey, title: r.title.slice(0, 160), year: r.year, issues })) };
   },
 };
-const propose_page_edit: ToolSpec = {
-  name: "propose_page_edit", scope: "write:pages", proposal: true,
-  description: "Propose an edit to an existing page. NOTHING is written: the owner reviews the proposal and approves or rejects it. `mode: append` adds the Markdown at the end of the page; `mode: replace` replaces the whole page body (use it only for small pages you have fully read).",
-  input: z.object({ pageId: uuid, mode: z.enum(["append", "replace"]), markdown: z.string().min(1).max(60_000).describe("The content to append / the new body, in Markdown"), rationale: z.string().min(1).max(1000).describe("One or two sentences explaining why") }),
-  async run(i: { pageId: string; mode: "append" | "replace"; markdown: string; rationale: string }, ctx) {
+
+// ---------- proposal tools (never write)
+const rationale = z.string().min(1).max(400).describe("One short sentence explaining why");
+const propose_inbox_triage: ToolSpec = {
+  name: "propose_inbox_triage", proposal: true, description: "Propose what to do with ONE inbox item: keep it (filed in a section), archive it, or move it to the trash; optionally add up to 3 tags. Nothing changes until the owner approves.",
+  input: z.object({ pageId: uuid, action: z.enum(["keep", "archive", "trash"]), section: z.enum(SECTIONS).optional().describe("Required for keep"), tags: z.array(z.string().min(1).max(40)).max(3).optional(), rationale }),
+  async run(i: { pageId: string; action: "keep" | "archive" | "trash"; section?: (typeof SECTIONS)[number]; tags?: string[]; rationale: string }, ctx) {
+    if (!ctx.readable.has(i.pageId)) return { error: "This page is outside the scope of this run" };
+    const p = await loadPage(ctx, i.pageId); if (!p || !p.inboxAt) return { error: "This item is not in the inbox" };
+    if (ctx.proposals.some((x) => x.kind === "inbox_triage" && x.payload.pageId === p.id)) return { error: "Already proposed for this item" };
+    const cur = (await tagsOf([p.id])).get(p.id) ?? []; const add = i.action === "trash" ? [] : cleanTags(i.tags ?? []).filter((t) => !cur.includes(t)); const section = i.action === "keep" ? i.section ?? "notes" : null;
+    const before: Preview = { label: "Now", lines: ["In the inbox", tagLine(cur)] };
+    const after: Preview = { label: "After", lines: [i.action === "keep" ? `Filed in “${section}”, out of the inbox` : i.action === "archive" ? "Archived: out of the inbox, still searchable" : "Moved to the trash (can be restored from the trash)", ...(i.action === "trash" ? [] : [tagLine([...cur, ...add].sort())])] };
+    return addProposal(ctx, { tool: "propose_inbox_triage", kind: "inbox_triage", rationale: i.rationale, title: p.title, destructive: i.action === "trash", pageId: p.id, before, after, payload: { pageId: p.id, action: i.action, section, tags: add } });
+  },
+};
+const propose_tags: ToolSpec = {
+  name: "propose_tags", proposal: true, description: "Propose tags to ADD to one page of this run's scope (existing tags are kept). Nothing changes until the owner approves.",
+  input: z.object({ pageId: uuid, tags: z.array(z.string().min(1).max(40)).min(1).max(4), rationale }),
+  async run(i: { pageId: string; tags: string[]; rationale: string }, ctx) {
+    if (!ctx.readable.has(i.pageId)) return { error: "This page is outside the scope of this run" };
     const p = await loadPage(ctx, i.pageId); if (!p) return { error: "Page not found" };
-    const current = toMarkdown(p.content as PMNode);
-    const pr = addProposal(ctx, { tool: "propose_page_edit", kind: "page_edit", scope: "write:pages", rationale: i.rationale, payload: { pageId: p.id, pageTitle: p.title, mode: i.mode, markdown: i.markdown, currentMarkdown: current.slice(0, 12_000) } } as any);
-    return { recorded: true, proposal: pr.idx, note: "Pending owner approval. Do not assume the edit was applied." };
+    if (ctx.proposals.some((x) => x.kind === "tags" && x.payload.pageId === p.id)) return { error: "Already proposed for this page" };
+    const cur = (await tagsOf([p.id])).get(p.id) ?? []; const add = cleanTags(i.tags).filter((t) => !cur.includes(t));
+    if (!add.length) return { error: "The page already has these tags" };
+    return addProposal(ctx, { tool: "propose_tags", kind: "tags", rationale: i.rationale, title: p.title, destructive: false, pageId: p.id, before: { label: "Now", lines: [tagLine(cur)] }, after: { label: "After", lines: [tagLine([...cur, ...add].sort()), `Added: ${add.map((t) => `#${t}`).join(" ")}`] }, payload: { pageId: p.id, add } });
+  },
+};
+const propose_new_page: ToolSpec = {
+  name: "propose_new_page", proposal: true, description: "Propose ONE new page (Markdown body) created under the context page. Nothing is created until the owner approves.",
+  input: z.object({ title: z.string().min(1).max(160), markdown: z.string().min(1).max(20_000), rationale }),
+  async run(i: { title: string; markdown: string; rationale: string }, ctx) {
+    const parent = ctx.contextPageId ? await loadPage(ctx, ctx.contextPageId) : null; if (!parent) return { error: "No context page for this run" };
+    if (ctx.proposals.some((x) => x.kind === "new_page")) return { error: "Only one new page per run" };
+    return addProposal(ctx, { tool: "propose_new_page", kind: "new_page", rationale: i.rationale, title: i.title.trim(), destructive: false, pageId: parent.id, before: { label: "Now", lines: ["This page does not exist"] }, after: { label: "After", lines: [`New page “${i.title.trim()}” under “${parent.title}”`], markdown: i.markdown }, payload: { parentId: parent.id, title: i.title.trim(), markdown: i.markdown } });
+  },
+};
+const propose_page_append: ToolSpec = {
+  name: "propose_page_append", proposal: true, description: "Propose Markdown to ADD AT THE END of the context page (existing content is never replaced). Nothing changes until the owner approves.",
+  input: z.object({ markdown: z.string().min(1).max(12_000), rationale }),
+  async run(i: { markdown: string; rationale: string }, ctx) {
+    const p = ctx.contextPageId ? await loadPage(ctx, ctx.contextPageId) : null; if (!p) return { error: "No context page for this run" };
+    if (ctx.proposals.some((x) => x.kind === "page_edit")) return { error: "Only one addition per run" };
+    const md = toMarkdown(p.content as PMNode).trim();
+    return addProposal(ctx, { tool: "propose_page_append", kind: "page_edit", rationale: i.rationale, title: p.title, destructive: false, pageId: p.id, before: { label: "End of the page now", lines: md ? [] : ["The page is empty"], markdown: md ? (md.length > 500 ? "…" + md.slice(-500) : md) : undefined }, after: { label: "Added at the end", lines: ["Everything above stays as it is"], markdown: i.markdown }, payload: { pageId: p.id, mode: "append", markdown: i.markdown, baseVersion: p.version } });
   },
 };
 const propose_task: ToolSpec = {
-  name: "propose_task", scope: "write:tasks", proposal: true,
-  description: "Propose a new task (to-do) for the owner. Nothing is created until approved.",
-  input: z.object({ title: z.string().min(1).max(300), priority: z.enum(["low", "medium", "high"]).optional(), dueAt: z.string().optional().describe("ISO date (YYYY-MM-DD) if a deadline is implied"), pageId: uuid.optional().describe("Page the task relates to"), project: z.string().max(120).optional(), rationale: z.string().min(1).max(1000) }),
-  async run(i: { title: string; priority?: "low" | "medium" | "high"; dueAt?: string; pageId?: string; project?: string; rationale: string }, ctx) {
-    let pageTitle: string | null = null;
-    if (i.pageId) { const p = await loadPage(ctx, i.pageId); if (!p) return { error: "Page not found" }; pageTitle = p.title; }
-    const due = i.dueAt && !Number.isNaN(Date.parse(i.dueAt)) ? new Date(i.dueAt).toISOString() : null;
-    const pr = addProposal(ctx, { tool: "propose_task", kind: "task", scope: "write:tasks", rationale: i.rationale, payload: { title: i.title, priority: i.priority ?? "medium", dueAt: due, pageId: i.pageId ?? null, pageTitle, project: i.project ?? null } } as any);
-    return { recorded: true, proposal: pr.idx, note: "Pending owner approval." };
-  },
-};
-const propose_link: ToolSpec = {
-  name: "propose_link", scope: "write:links", proposal: true,
-  description: "Propose a link (knowledge-graph edge) between two pages that are related but not yet connected. Nothing is created until approved.",
-  input: z.object({ fromPageId: uuid, toPageId: uuid, relation: z.string().max(60).optional().describe("Short relation label, e.g. 'builds on', 'contradicts', 'same topic'"), confidence: z.number().min(0).max(1).optional(), rationale: z.string().min(1).max(1000) }),
-  async run(i: { fromPageId: string; toPageId: string; relation?: string; confidence?: number; rationale: string }, ctx) {
-    if (i.fromPageId === i.toPageId) return { error: "A page cannot link to itself" };
-    const [a, b] = await Promise.all([loadPage(ctx, i.fromPageId), loadPage(ctx, i.toPageId)]); if (!a || !b) return { error: "Page not found" };
-    const [existing] = await db.select({ id: schema.links.id }).from(schema.links).where(and(eq(schema.links.fromPageId, a.id), eq(schema.links.toPageId, b.id))).limit(1);
-    if (existing) return { error: "These pages are already linked" };
-    const pr = addProposal(ctx, { tool: "propose_link", kind: "link", scope: "write:links", rationale: i.rationale, payload: { fromPageId: a.id, fromTitle: a.title, toPageId: b.id, toTitle: b.title, relation: i.relation ?? "related", confidence: i.confidence ?? null } } as any);
-    return { recorded: true, proposal: pr.idx, note: "Pending owner approval." };
-  },
-};
-const propose_property_update: ToolSpec = {
-  name: "propose_property_update", scope: "write:properties", proposal: true,
-  description: "Propose setting one property (metadata key/value) on a page, e.g. status, tags, topic, year. Nothing is written until approved.",
-  input: z.object({ pageId: uuid, key: z.string().min(1).max(80), value: z.union([z.string().max(2000), z.number(), z.boolean(), z.null(), z.array(z.string().max(200)).max(50)]), rationale: z.string().min(1).max(1000) }),
-  async run(i: { pageId: string; key: string; value: unknown; rationale: string }, ctx) {
-    const p = await loadPage(ctx, i.pageId); if (!p) return { error: "Page not found" };
-    const pr = addProposal(ctx, { tool: "propose_property_update", kind: "property", scope: "write:properties", rationale: i.rationale, payload: { pageId: p.id, pageTitle: p.title, key: i.key, value: i.value, previous: (p.properties as any)?.[i.key] ?? null } } as any);
-    return { recorded: true, proposal: pr.idx, note: "Pending owner approval." };
-  },
-};
-const create_page_draft: ToolSpec = {
-  name: "create_page_draft", scope: "write:pages", proposal: false,
-  description: "Create ONE new draft page (Markdown body) under the owner's “AI drafts” page. This is the only direct write available; it never touches existing pages. Allowed once per run.",
-  input: z.object({ title: z.string().min(1).max(200), markdown: z.string().min(1).max(80_000), icon: z.string().max(8).optional() }),
-  async run(i: { title: string; markdown: string; icon?: string }, ctx) {
-    if (ctx.drafts >= 1) return { error: "Only one draft page per run. Use propose_page_edit for anything else." };
-    let [parent] = await db.select({ id: schema.pages.id }).from(schema.pages).where(and(eq(schema.pages.workspaceId, ctx.workspaceId), eq(schema.pages.title, DRAFT_PARENT_TITLE), isNull(schema.pages.parentId), isNull(schema.pages.deletedAt))).limit(1);
-    if (!parent) [parent] = await db.insert(schema.pages).values({ workspaceId: ctx.workspaceId, title: DRAFT_PARENT_TITLE, icon: "🤖", section: "notes", content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Pages created by agents land here for review." }] }] }, plainText: "Pages created by agents land here for review.", position: 1e6 }).returning({ id: schema.pages.id });
-    const content: PMNode = { type: "doc", content: markdownToDoc(i.markdown) }; const plain = docText(content);
-    const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.pages).where(eq(schema.pages.parentId, parent.id));
-    const [p] = await db.insert(schema.pages).values({ workspaceId: ctx.workspaceId, parentId: parent.id, section: "notes", title: i.title.trim(), icon: i.icon ?? "✍️", content, plainText: plain, wordCount: wordCount(plain), position: Number(max) + 1, properties: { ai_draft: true, agent_execution: ctx.executionId, model: ctx.model } }).returning({ id: schema.pages.id, title: schema.pages.title });
-    ctx.drafts += 1; ctx.accessed.add(p.id);
-    await enqueue(QUEUES.index, { sourceType: "page", sourceId: p.id, workspaceId: ctx.workspaceId }, { singletonKey: `page:${p.id}`, singletonSeconds: 20 });
-    return { created: true, pageId: p.id, title: p.title, url: `/p/${p.id}`, parent: DRAFT_PARENT_TITLE };
+  name: "propose_task", proposal: true, description: "Propose a new task for the owner. Nothing is created until approved.",
+  input: z.object({ title: z.string().min(1).max(300), priority: z.enum(["low", "medium", "high"]).optional(), dueAt: z.string().max(40).optional().describe("ISO date (YYYY-MM-DD) only if a deadline is known"), rationale }),
+  async run(i: { title: string; priority?: "low" | "medium" | "high"; dueAt?: string; rationale: string }, ctx) {
+    const due = i.dueAt && !Number.isNaN(Date.parse(i.dueAt)) ? new Date(i.dueAt).toISOString() : null; const title = i.title.trim();
+    if (ctx.proposals.some((x) => x.kind === "task" && x.payload.title === title)) return { error: "Already proposed" };
+    return addProposal(ctx, { tool: "propose_task", kind: "task", rationale: i.rationale, title, destructive: false, pageId: null, before: { label: "Now", lines: ["This task does not exist"] }, after: { label: "After", lines: [`New task: ${title}`, `Priority: ${i.priority ?? "medium"}`, `Due: ${due ? due.slice(0, 10) : "no date"}`] }, payload: { title, priority: i.priority ?? "medium", dueAt: due, pageId: null } });
   },
 };
 
-export const TOOLS: Record<string, ToolSpec> = Object.fromEntries([search_workspace, read_page, list_pages, propose_page_edit, propose_task, propose_link, propose_property_update, create_page_draft].map((t) => [t.name, t]));
-
-/** Tools offered to the model for a run: read tools need their read scope; proposal tools are always offered (they never write); create_page_draft needs write:pages. */
-export function availableTools(names: string[], scopes: Set<Scope>): ToolSpec[] {
-  return names.map((n) => TOOLS[n]).filter((t): t is ToolSpec => Boolean(t) && (t.proposal || scopes.has(t.scope)));
-}
+/** Allow-list: an agent definition can only name tools that exist here. */
+export const TOOLS: Record<string, ToolSpec> = Object.fromEntries([list_inbox, list_tags, list_candidate_pages, read_page, list_references, propose_inbox_triage, propose_tags, propose_new_page, propose_page_append, propose_task].map((t) => [t.name, t]));
+export const toolsFor = (names: string[]): ToolSpec[] => names.map((n) => TOOLS[n]).filter((t): t is ToolSpec => Boolean(t));
 export function toolDefs(tools: ToolSpec[]): ToolDef[] {
   return tools.map((t) => { const js = z.toJSONSchema(t.input, { target: "draft-7" }) as Record<string, unknown>; delete js.$schema; return { name: t.name, description: t.description, parameters: js }; });
 }
-/** Validate + execute one tool call. Never throws: errors are returned as data for the model. */
-export async function executeTool(tools: ToolSpec[], name: string, args: unknown, ctx: ToolContext): Promise<{ output: unknown; error?: string; proposalIdx?: number }> {
+/** Validate + execute one tool call. Never throws: errors are returned as data for the model. `log` is the log-safe record of the call. */
+export async function executeTool(tools: ToolSpec[], name: string, args: unknown, ctx: ToolContext): Promise<{ output: Record<string, unknown>; log: { input: Record<string, unknown>; output: Record<string, unknown> }; error?: string; proposalIdx?: number }> {
   const t = tools.find((x) => x.name === name);
-  if (!t) return { output: { error: `Tool "${name}" is not available in this run` }, error: "unavailable" };
+  if (!t) return { output: { error: `Tool "${name}" is not available in this run` }, log: { input: {}, output: { error: "unavailable" } }, error: "unavailable" };
   const parsed = t.input.safeParse(args ?? {});
-  if (!parsed.success) { const msg = parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; "); return { output: { error: `Invalid input — ${msg}` }, error: "invalid input" }; }
+  if (!parsed.success) { const msg = parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; "); return { output: { error: `Invalid input — ${msg}` }, log: { input: logSafe(args), output: { error: "invalid input" } }, error: "invalid input" }; }
   try {
     const before = ctx.proposals.length;
     const output = await t.run(parsed.data, ctx);
-    const err = output && typeof output === "object" && "error" in (output as any) ? String((output as any).error) : undefined;
-    return { output, error: err, proposalIdx: ctx.proposals.length > before ? ctx.proposals.length - 1 : undefined };
-  } catch (e: any) { return { output: { error: String(e?.message ?? e).slice(0, 300) }, error: "exception" }; }
+    const err = typeof output.error === "string" ? output.error : undefined;
+    return { output, log: { input: logSafe(parsed.data), output: err ? { error: err.slice(0, 80) } : logSafe(output) }, error: err ? err.slice(0, 80) : undefined, proposalIdx: ctx.proposals.length > before ? ctx.proposals.length - 1 : undefined };
+  } catch { return { output: { error: "The tool failed" }, log: { input: logSafe(parsed.data), output: { error: "exception" } }, error: "exception" }; }
 }

@@ -2,6 +2,7 @@ import { handler, uuid, HttpError } from "@/lib/api";
 import { getPage, snapshot, unappliedVersion, updatePage } from "@/lib/pages/service";
 import { assertDoc } from "@/lib/editor/validate";
 import { docText, wordCount, type PMNode } from "@/lib/editor/text";
+import { sameJson } from "@/lib/same-json";
 /**
  * Last-second save when a tab is hidden or closed (fetch keepalive / sendBeacon; same cookie + same-origin check; body = PATCH payload).
  * It can never overwrite silently: with a stale `baseVersion` the page is left untouched and the unsaved copy is kept in the version
@@ -18,6 +19,8 @@ export const POST = handler(async ({ req, ws, params }) => {
   catch (e) {
     if (!(e instanceof HttpError) || e.code !== "conflict") throw e;
     const cur = await getPage(ws.id, id); const content = (allowed.content ?? cur.content) as PMNode;
+    // Same text already on the server (an earlier copy of this very save got through): nothing to preserve, nothing to report.
+    if (sameJson(content, cur.content) && (allowed.title === undefined || (String(allowed.title).trim() || "Untitled") === cur.title)) return Response.json({ ok: true, version: cur.version, duplicate: true });
     await snapshot({ id, version: unappliedVersion(), title: (allowed.title as string | undefined)?.trim() || cur.title, content, properties: cur.properties, wordCount: wordCount(docText(content)) }, "unsynced copy from a closed tab (not applied)");
     return Response.json({ ok: false, code: "conflict", preserved: true }, { status: 409 });
   }

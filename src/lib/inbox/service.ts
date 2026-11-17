@@ -4,7 +4,7 @@
  */
 import { and, desc, eq, inArray, isNotNull, isNull, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 import { createPage, getPage, softDeletePage, restorePage } from "@/lib/pages/service";
 import { createRow, deleteRows, ensureDatabase } from "@/lib/databases/service";
 import { addByDoi, createReference, deleteReference } from "@/lib/research/references";
@@ -76,11 +76,10 @@ export async function triage(wsId: string, pageId: string, a: TriageAction) {
     created.rowId = row.id; created.databaseId = d.id; set.archived = true; summary = `Added to ${d.name}`;
   } else if (a.action === "reference") {
     const text = `${page.title}\n${page.plainText}`; const doi = text.match(/\b10\.\d{4,9}\/[^\s"<>]+/)?.[0]?.replace(/[.,;)]+$/, ""); const url = firstUrl(page.content as PMNode);
-    let ref: { id: string; createdAt: Date } | null = null;
-    if (doi) { try { ref = await addByDoi(wsId, doi, null); } catch { ref = null; /* Crossref unreachable or unknown DOI: fall back to a plain reference */ } }
+    let ref: { id: string } | null = null; let existed = false;
+    if (doi) { try { const r = await addByDoi(wsId, doi, null); ref = r.reference; existed = r.duplicate; } catch { ref = null; /* Crossref unreachable or unknown DOI: fall back to a plain reference */ } }
     const viaDoi = Boolean(ref); if (!ref) ref = await createReference(wsId, { title: page.title, url: url ?? null, entryType: url ? "misc" : "article", pageId: null, doi: doi ?? null });
-    // addByDoi returns the existing row when the DOI is already stored: undo must not delete a reference this action did not create.
-    const existed = Date.now() - new Date(ref.createdAt).getTime() > 10_000;
+    // an already stored DOI returns the existing row: undo must not delete a reference this action did not create
     if (existed) created.existingReferenceId = ref.id; else created.referenceId = ref.id;
     set.archived = true; summary = existed ? "Already in your references" : viaDoi ? "Reference added from DOI" : "Reference added";
   } else if (a.action === "archive") { set.archived = true; summary = "Archived"; }

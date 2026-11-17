@@ -1,31 +1,47 @@
 import { z } from "zod";
-import { handler, parseBody } from "@/lib/api";
+import { handler, parseBody, HttpError } from "@/lib/api";
 import { db, schema } from "@/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import { audit } from "@/lib/audit";
-import { AGENTS, AGENT_BY_ID } from "@/lib/agents/definitions";
-import { TOOLS } from "@/lib/agents/tools";
-import { ALL_SCOPES, SCOPE_LABELS, DEFAULT_LIMITS, type Scope } from "@/lib/agents/types";
-import { parseMeta } from "@/lib/agents/runner";
+import { route } from "@/lib/ai/router";
+import { providerConfigured } from "@/lib/ai/catalog";
+import { budgetStatus, budgetMessage } from "@/lib/ai/usage";
+import { AGENTS, AGENT_BY_ID, agentInfo } from "@/lib/agents/definitions";
+import { reapStale } from "@/lib/agents/runner";
 
-const summary = { id: schema.aiExecutions.id, agent: schema.aiExecutions.agent, task: schema.aiExecutions.task, model: schema.aiExecutions.model, status: schema.aiExecutions.status, scopes: schema.aiExecutions.scopes, outcome: schema.aiExecutions.outcome, error: schema.aiExecutions.error, costUsd: schema.aiExecutions.costUsd, tokensIn: schema.aiExecutions.tokensIn, tokensOut: schema.aiExecutions.tokensOut, createdAt: schema.aiExecutions.createdAt, startedAt: schema.aiExecutions.startedAt, finishedAt: schema.aiExecutions.finishedAt, proposedChanges: schema.aiExecutions.proposedChanges, toolsInvoked: schema.aiExecutions.toolsInvoked };
+const E = schema.aiExecutions;
+const summary = { id: E.id, agent: E.agent, model: E.model, status: E.status, outcome: E.outcome, error: E.error, costUsd: E.costUsd, tokensIn: E.tokensIn, tokensOut: E.tokensOut, createdAt: E.createdAt, startedAt: E.startedAt, finishedAt: E.finishedAt, proposedChanges: E.proposedChanges, toolsInvoked: E.toolsInvoked };
+async function agentRoute() { try { const d = await route({ task: "agent", tools: true }); return { provider: d.provider, model: d.model.id }; } catch { return null; } }
 
-/** GET → agents (definitions) + last executions. */
+/** GET → the fixed catalogue (scope, caps), where a run would be sent, and the last executions. Calls no provider. */
 export const GET = handler(async ({ req, ws }) => {
-  const limit = Math.min(200, Number(new URL(req.url).searchParams.get("limit") ?? 60));
-  const rows = await db.select(summary).from(schema.aiExecutions).where(eq(schema.aiExecutions.workspaceId, ws.id)).orderBy(desc(schema.aiExecutions.createdAt)).limit(limit);
-  const executions = rows.map((r) => ({ ...r, proposals: (r.proposedChanges ?? []).length, pendingProposals: ((r.proposedChanges ?? []) as any[]).filter((p) => p.status === "proposed").length, toolCalls: ((r.toolsInvoked ?? []) as any[]).filter((s) => s.tool !== "model").length, contextPageId: r.status === "pending" ? parseMeta(r.outcome).pageId ?? null : null, proposedChanges: undefined, toolsInvoked: undefined, outcome: r.status === "pending" ? null : r.outcome }));
-  return Response.json({ agents: AGENTS.map((a) => ({ id: a.id, name: a.name, icon: a.icon, description: a.description, tools: a.tools.map((t) => ({ name: t, scope: TOOLS[t]?.scope, proposal: TOOLS[t]?.proposal ?? false })), defaultScopes: a.defaultScopes, allowedScopes: a.allowedScopes })), scopes: ALL_SCOPES.map((s) => ({ id: s, label: SCOPE_LABELS[s], write: s.startsWith("write:") })), limits: DEFAULT_LIMITS, executions });
+  await reapStale(ws.id);
+  const limit = Math.min(100, Math.max(1, Number(new URL(req.url).searchParams.get("limit") ?? 40) || 40));
+  const rows = await db.select(summary).from(E).where(eq(E.workspaceId, ws.id)).orderBy(desc(E.createdAt)).limit(limit);
+  const executions = rows.map(({ proposedChanges, toolsInvoked, ...r }) => { const props = (proposedChanges ?? []) as { status?: string }[]; return { ...r, outcome: r.status === "pending" ? null : r.outcome, proposals: props.length, pendingProposals: props.filter((p) => p.status === "proposed").length, toolCalls: ((toolsInvoked ?? []) as { tool: string }[]).filter((s) => s.tool !== "model" && s.tool !== "context_page").length }; });
+  const configured = providerConfigured("openai") || providerConfigured("anthropic"); const budget = await budgetStatus();
+  return Response.json({ agents: AGENTS.map(agentInfo), configured, target: configured ? await agentRoute() : null, budgetNote: budgetMessage(budget), executions });
 });
-/** POST { agent, task, scopes, pageId?, model? } → creates the execution (pending) and enqueues it. */
+/**
+ * POST { agent, pageId?, confirmCost: true } → creates the execution (pending) and queues it. The task text is fixed by the catalogue.
+ * `confirmCost` proves the owner saw the scope and the cost warning. One run at a time per workspace.
+ */
 export const POST = handler(async ({ req, ws, user }) => {
-  const b = await parseBody(req, z.object({ agent: z.string(), task: z.string().min(3).max(20_000), scopes: z.array(z.enum(ALL_SCOPES as [Scope, ...Scope[]])).default([]), pageId: z.string().uuid().nullable().optional(), model: z.string().max(100).nullable().optional() }));
-  const def = AGENT_BY_ID[b.agent]; if (!def) return Response.json({ error: "Unknown agent" }, { status: 400 });
-  const scopes = [...new Set(b.scopes.filter((s) => def.allowedScopes.includes(s)))];
-  if (b.pageId) { const [p] = await db.select({ id: schema.pages.id }).from(schema.pages).where(and(eq(schema.pages.id, b.pageId), eq(schema.pages.workspaceId, ws.id))); if (!p) return Response.json({ error: "Context page not found" }, { status: 404 }); }
-  const [row] = await db.insert(schema.aiExecutions).values({ workspaceId: ws.id, agent: def.id, task: b.task, scopes, model: b.model ?? null, status: "pending", outcome: b.pageId ? JSON.stringify({ pageId: b.pageId }) : null }).returning();
-  const job = await enqueue(QUEUES.agent, { executionId: row.id, workspaceId: ws.id }, { retryLimit: 1, expireInSeconds: 60 * 30 });
-  await audit(user.id, "agent.run", { type: "execution", id: row.id }, { agent: def.id, scopes, pageId: b.pageId ?? null, job });
-  return Response.json({ ...row, job }, { status: 201 });
+  const b = await parseBody(req, z.object({ agent: z.string().max(40), pageId: z.string().uuid().nullable().optional(), confirmCost: z.boolean().optional() }));
+  const def = AGENT_BY_ID[b.agent]; if (!def) throw new HttpError(400, "Unknown agent task", "unknown_agent");
+  if (!(providerConfigured("openai") || providerConfigured("anthropic"))) throw new HttpError(503, "AI is not configured on this server: no provider API key is set.", "not_configured");
+  const target = await agentRoute(); if (!target) throw new HttpError(503, "No enabled model supports tool use: agents are not configured.", "not_configured");
+  if (!b.confirmCost) throw new HttpError(409, "Confirm the scope and the cost limit before starting", "confirm_required");
+  const pageId = def.page === "none" ? null : b.pageId ?? null;
+  if (def.page === "required" && !pageId) throw new HttpError(400, "Choose a page for this task", "page_required");
+  if (pageId) { const [p] = await db.select({ id: schema.pages.id }).from(schema.pages).where(and(eq(schema.pages.id, pageId), eq(schema.pages.workspaceId, ws.id), isNull(schema.pages.deletedAt))); if (!p) throw new HttpError(404, "Page not found"); }
+  await reapStale(ws.id);
+  const [live] = await db.select({ id: E.id }).from(E).where(and(eq(E.workspaceId, ws.id), inArray(E.status, ["pending", "running"]))).limit(1);
+  if (live) throw new HttpError(409, "Another agent run is in progress. Wait for it to finish or cancel it.", "already_running", { id: live.id });
+  const [row] = await db.insert(E).values({ workspaceId: ws.id, agent: def.id, task: def.name, scopes: def.scopes, model: null, status: "pending", outcome: pageId ? JSON.stringify({ pageId }) : null }).returning({ id: E.id, status: E.status });
+  const job = await enqueue(QUEUES.agent, { executionId: row.id, workspaceId: ws.id }, { singletonKey: `agent:${row.id}` });
+  if (!job) { await db.update(E).set({ status: "failed", error: "The job queue is unreachable: the run was not started and nothing was sent.", outcome: "failed", finishedAt: new Date() }).where(eq(E.id, row.id)); throw new HttpError(503, "The job queue is unreachable: the run was not started.", "queue_unavailable"); }
+  await audit(user.id, "agent.run", { type: "execution", id: row.id }, { agent: def.id, pageId });
+  return Response.json({ id: row.id, status: row.status }, { status: 201 });
 });

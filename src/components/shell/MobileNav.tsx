@@ -29,13 +29,15 @@ export function MobileHeader({ tree }: { tree: TreeNode[] }) {
   const pathname = usePathname(); const r = useRouter(); const ui = useUI();
   const page = pathname.startsWith("/p/") ? tree.find((n) => n.id === pathname.slice(3)) : null;
   const parent = page?.parentId ? tree.find((n) => n.id === page.parentId) : null;
-  const label = page ? (parent ? parent.title || "Untitled" : ({ notes: "Notes", documents: "Documents", projects: "Projects", research: "Research", databases: "Databases" } as Record<string, string>)[page.section] ?? "Page") : pathname.startsWith("/p/") ? "Page" : ROUTE_LABEL[pathname.split("/").filter(Boolean).pop() ?? ""] ?? "Note";
+  const label = page ? (parent ? parent.title || "Untitled" : ({ notes: "Notes", documents: "Documents", projects: "Projects", research: "Research", databases: "Databases" } as Record<string, string>)[page.section] ?? "Back") : "Back";
+  const here = page || pathname.startsWith("/p/") ? "" : ROUTE_LABEL[pathname.split("/").filter(Boolean).pop() ?? ""] ?? "";
   const root = pathname === "/";
   // Back keeps the previous screen's state (search results, scroll): it is the browser's own history when there is one.
   const back = () => { if (window.history.length > 1 && document.referrer !== "" || (window as any).__noteNav > 0) r.back(); else r.push(parent ? `/p/${parent.id}` : "/"); };
   return (
-    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-line/70 bg-bg/90 px-1.5 backdrop-blur-md md:hidden safe-top" style={{ height: "calc(3rem + env(safe-area-inset-top))" }}>
+    <header className="relative flex h-12 shrink-0 items-center gap-1 border-b border-line/70 bg-bg/90 px-1.5 backdrop-blur-md md:hidden safe-top" style={{ height: "calc(3rem + env(safe-area-inset-top))" }}>
       {root ? <span className="flex items-center gap-2 px-2 text-[15px] font-semibold"><img src="/icons/icon.svg" alt="" className="size-6 rounded-md" />Note</span> : <button onClick={back} aria-label="Back" className="flex h-11 min-w-11 items-center gap-0.5 rounded-lg pr-2 text-[15px] text-accent active:bg-bg-sunk"><ChevronLeft className="size-6" /><span className="max-w-[9rem] truncate">{label}</span></button>}
+      {!root && here && <span className="pointer-events-none absolute inset-x-0 text-center text-[15px] font-semibold" aria-hidden>{here}</span>}
       <span className="flex-1" />
       <SyncPill />
       <button onClick={() => ui.toggleAI()} aria-label="AI assistant" aria-pressed={ui.aiOpen} className={cn("grid size-11 place-items-center rounded-lg", ui.aiOpen ? "text-ai" : "text-fg-muted")}><Sparkles className="size-5" /></button>
@@ -65,7 +67,7 @@ export function MobileNav({ tree }: { tree: TreeNode[] }) {
         <Link href="/search" aria-current={on("/search") ? "page" : undefined} className={cn(item, on("/search") && "text-accent")}><Search />Search{on("/search") && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-accent" />}</Link>
         <div className="flex flex-1 items-center justify-center"><button onClick={() => ui.set({ captureOpen: true })} aria-label="Quick capture" className="grid size-12 place-items-center rounded-2xl bg-accent text-accent-fg shadow-pop transition-transform active:scale-95"><Plus className="size-6" /></button></div>
         <Link href="/inbox" aria-current={on("/inbox") ? "page" : undefined} aria-label={inbox?.count ? `Inbox, ${inbox.count} to sort` : "Inbox"} className={cn(item, on("/inbox") && "text-accent")}><span className="relative"><Inbox />{inbox?.count ? <span aria-hidden className="absolute -right-2.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-accent-fg">{inbox.count > 99 ? "99+" : inbox.count}</span> : null}</span>Inbox{on("/inbox") && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-accent" />}</Link>
-        <button onClick={() => ui.set({ drawerOpen: true })} aria-haspopup="dialog" aria-expanded={ui.drawerOpen} className={cn(item, ui.drawerOpen && "text-accent")}><MenuIcon />More</button>
+        <button id="mobile-more" onClick={() => ui.set({ drawerOpen: true })} aria-haspopup="dialog" aria-expanded={ui.drawerOpen} className={cn(item, ui.drawerOpen && "text-accent")}><MenuIcon />More</button>
       </nav>
       <MobileDrawer tree={tree} />
     </>
@@ -95,7 +97,7 @@ function MobileDrawer({ tree }: { tree: TreeNode[] }) {
     <DialogP.Root open={open} onOpenChange={(o) => ui.set({ drawerOpen: o })}>
       <DialogP.Portal>
         <DialogP.Overlay className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[1px] md:hidden" />
-        <DialogP.Content ref={panel} aria-describedby={undefined} onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} className="drawer fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-[22rem] flex-col bg-bg-side shadow-pop outline-none md:hidden">
+        <DialogP.Content ref={panel} aria-describedby={undefined} onCloseAutoFocus={(e) => { e.preventDefault(); document.getElementById("mobile-more")?.focus({ preventScroll: true }); }} onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} className="drawer fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-[22rem] flex-col bg-bg-side shadow-pop outline-none md:hidden">
           <div className="flex shrink-0 items-center gap-2 px-3 pb-1 safe-top" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}>
             {space ? <button onClick={() => setSpace(null)} className="flex h-11 items-center gap-1 rounded-lg pr-3 text-[15px] text-accent"><ChevronLeft className="size-5" />All</button> : <DialogP.Title className="flex items-center gap-2 px-2 text-[16px] font-semibold"><img src="/icons/icon.svg" alt="" className="size-7 rounded-lg" />Note</DialogP.Title>}
             {space && <DialogP.Title className="min-w-0 flex-1 truncate text-center text-[15px] font-semibold">{SPACES.find((s) => s.id === space)?.label}</DialogP.Title>}

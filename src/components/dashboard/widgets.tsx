@@ -100,11 +100,11 @@ export function ActiveProjects({ data }: WidgetProps) {
 // ---------- research activity
 export function ResearchActivity({ data }: WidgetProps) {
   const c = data.research.counts;
-  const Stat = ({ icon, n, label }: { icon: React.ReactNode; n: number; label: string }) => <div className="flex flex-1 items-center gap-2 rounded-lg border border-line bg-bg px-3 py-2"><span className="text-fg-faint [&_svg]:size-4">{icon}</span><div><div className="text-base font-semibold leading-5 tabular-nums">{n}</div><div className="text-[11px] text-fg-muted">{label}</div></div></div>;
+  const Stat = ({ icon, n, label }: { icon: React.ReactNode; n: number; label: string }) => <div className="flex min-w-0 flex-1 basis-[30%] items-center gap-2 rounded-lg border border-line bg-bg px-2.5 py-2"><span className="shrink-0 text-fg-faint [&_svg]:size-4">{icon}</span><div className="min-w-0"><div className="text-base font-semibold leading-5 tabular-nums">{n}</div><div className="truncate text-[11px] text-fg-muted">{label}</div></div></div>;
   return (
     <div className="flex flex-1 flex-col gap-2">
       <div className="flex gap-2"><Stat icon={<FlaskConical />} n={c.researchPages} label="research pages" /><Stat icon={<Beaker />} n={c.experiments} label="experiments" /><Stat icon={<BookMarked />} n={c.references} label="references" /></div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
         <div><div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Recent research</div>{data.research.pages.length ? data.research.pages.map((p) => <PageRow key={p.id} p={p} />) : <EmptyLine>No research page yet.</EmptyLine>}</div>
         <div><div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Experiments</div>{data.research.experiments.length ? data.research.experiments.map((e) => <Link key={e.id} href={e.pageId ? `/p/${e.pageId}` : "#"} className="flex min-h-10 items-center gap-2 rounded-md px-2 py-1.5 text-[13px] hover:bg-bg-sunk"><span className="min-w-0 flex-1 truncate">{e.name}</span><Badge tone={e.status === "running" ? "accent" : e.status === "done" || e.status === "completed" ? "success" : "neutral"}>{e.status}</Badge></Link>) : <EmptyLine>No experiment logged.</EmptyLine>}</div>
       </div>

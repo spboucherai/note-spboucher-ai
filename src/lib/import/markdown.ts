@@ -4,7 +4,8 @@
  */
 import { markdownToDoc } from "@/lib/editor/markdown-client";
 import type { PMNode } from "@/lib/editor/text";
-import { createPage, updatePage, type ImportCtx, type Page } from "./pages";
+import { docText } from "@/lib/editor/text";
+import { createPage, updatePage, findDuplicatePage, getPageById, type ImportCtx, type Page } from "./pages";
 
 export interface FrontMatter { data: Record<string, unknown>; body: string }
 const yamlValue = (raw: string): unknown => {
@@ -119,11 +120,38 @@ export async function mdToDoc(ctx: ImportCtx, md: string, opts: MdOptions = {}):
 }
 const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
 
-/** Full Markdown file → page (front-matter + Notion header aware). `existingId` updates a page created in a first pass. */
-export async function importMarkdown(ctx: ImportCtx, src: string, opts: MdOptions & { filename?: string; parentId?: string | null; existingId?: string; section?: string } = {}): Promise<Page> {
+/** Relative (archive-local) targets of a Markdown body: images and links that are neither URLs nor anchors. Used by the import preview. */
+export function relativeRefs(md: string): { images: string[]; links: string[] } {
+  const images: string[] = []; const links: string[] = []; const rel = (s: string) => !/^([a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(s);
+  const body = md.replace(/\r\n/g, "\n").split(/(^```[\s\S]*?^```$)/m).filter((_s, i) => i % 2 === 0).join("\n");
+  for (const m of body.matchAll(IMG_RE)) if (rel(m[2])) images.push(safeDecode(m[2]));
+  for (const m of body.replace(IMG_RE, " ").matchAll(/\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) if (rel(m[1])) links.push(safeDecode(m[1].replace(/#.*$/, "")));
+  return { images, links };
+}
+/** Plain text the imported page would hold — computed without touching the database or storing files (duplicate detection, preview). */
+export function previewText(md: string): string {
+  const parts = md.replace(/\r\n/g, "\n").split(/(^```[\s\S]*?^```$)/m);
+  const pre = parts.map((seg, i) => (i % 2 ? seg : seg.replace(IMG_RE, " ").replace(WIKI_RE, (_m, t: string, a?: string) => a?.trim() ?? t.trim()))).join("");
+  return docText({ type: "doc", content: markdownToDoc(pre) });
+}
+/** Title, properties and body of a Markdown file, exactly as importMarkdown reads them. */
+export function readMarkdown(src: string, filename?: string) {
   const { data, body } = parseFrontMatter(src);
   const nh = parseNotionHeader(body);
-  const title = String(data.title ?? nh.title ?? (opts.filename ?? "Untitled").replace(/\.(md|markdown|txt)$/i, "")).trim() || "Untitled";
+  const title = String(data.title ?? nh.title ?? (filename ?? "Untitled").replace(/^.*[\\/]/, "").replace(/\.(md|markdown|txt)$/i, "")).trim() || "Untitled";
+  return { data, nh, title, body: nh.body };
+}
+
+/**
+ * Full Markdown file → page (front-matter + Notion header aware). `existingId` updates a page created in a first pass.
+ * With ctx.duplicates = "skip", a page with the same title and text is not created again: the existing page is returned.
+ */
+export async function importMarkdown(ctx: ImportCtx, src: string, opts: MdOptions & { filename?: string; parentId?: string | null; existingId?: string; section?: string; key?: string } = {}): Promise<Page> {
+  const { data, nh, title } = readMarkdown(src, opts.filename);
+  if (!opts.existingId && !(opts.key && ctx.ledger?.has(`page:${opts.key}`))) {
+    const dup = findDuplicatePage(ctx, title, previewText(nh.body));
+    if (dup) { const p = await getPageById(ctx, dup.id); if (p) { ctx.stats.duplicates++; ctx.stats.skipped.push(`“${p.title}” already exists with the same content — not imported again`); return p; } }
+  }
   const props: Record<string, unknown> = { ...(typeof data.properties === "object" && data.properties ? (data.properties as Record<string, unknown>) : {}), ...nh.props };
   for (const [k, v] of Object.entries(data)) if (!["title", "id", "icon", "tags", "properties", "created", "updated", "type", "section", "database", "cover"].includes(k)) props[k] = v;
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : typeof data.tags === "string" ? data.tags.split(/[,;]\s*/).filter(Boolean) : typeof nh.props.Tags === "string" ? nh.props.Tags.split(/,\s*/).filter(Boolean) : [];
@@ -133,5 +161,5 @@ export async function importMarkdown(ctx: ImportCtx, src: string, opts: MdOption
   const dates = { createdAt: data.created ? new Date(String(data.created)) : undefined, updatedAt: data.updated ? new Date(String(data.updated)) : undefined };
   const valid = (d?: Date) => (d && !isNaN(d.getTime()) ? d : undefined);
   if (opts.existingId) return updatePage(ctx, opts.existingId, { title, content: doc, icon, properties: props, updatedAt: valid(dates.updatedAt) });
-  return createPage(ctx, { title, parentId: opts.parentId ?? null, section: opts.section ?? (typeof data.section === "string" ? data.section : "notes"), content: doc, icon, properties: props, createdAt: valid(dates.createdAt), updatedAt: valid(dates.updatedAt) });
+  return createPage(ctx, { key: opts.key, title, parentId: opts.parentId ?? null, section: opts.section ?? (typeof data.section === "string" ? data.section : "notes"), content: doc, icon, properties: props, createdAt: valid(dates.createdAt), updatedAt: valid(dates.updatedAt) });
 }

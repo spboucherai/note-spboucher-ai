@@ -90,7 +90,7 @@ export function Dashboard({ displayName }: { displayName: string }) {
       {isError && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-[13px] text-danger">Could not load the dashboard: {(error as Error).message}</div>}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[repeat(6,minmax(0,1fr))]">
             {widgets.map((w) => <WidgetCard key={w.id} w={w} editing={editing} data={data} refresh={refresh} onRemove={() => setDraft((d) => (d ?? []).filter((x) => x.id !== w.id))} onResize={(size) => setDraft((d) => (d ?? []).map((x) => (x.id === w.id ? { ...x, size } : x)))} />)}
             {!widgets.length && data && <div className="col-span-full rounded-xl border border-dashed border-line-strong py-16 text-center text-[13px] text-fg-muted">{editing ? "Add widgets with the button above." : "Your dashboard is empty."} {!editing && <button className="text-accent hover:underline" onClick={start}>Customize</button>}</div>}
           </div>

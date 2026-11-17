@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, or, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 import { createPage, softDeletePage } from "@/lib/pages/service";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import type { Database, Property, PropertyType, PropertyConfig, View, ViewType, ViewConfig, RowOut, SelectOption, RelationRef } from "./types";

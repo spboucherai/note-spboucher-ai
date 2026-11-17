@@ -12,23 +12,24 @@ export type RowRow = typeof schema.databaseRows.$inferSelect;
 export type AttachmentRow = typeof schema.attachments.$inferSelect;
 export type ReferenceRow = typeof schema.researchReferences.$inferSelect;
 
+export class ExportNotFound extends Error {}
 export interface ExportSet {
   workspace: { id: string; name: string; slug: string; createdAt: Date };
   rootId: string | null;
   pages: PageRow[];
   databases: DatabaseRow[]; properties: PropertyRow[]; rows: RowRow[]; views: (typeof schema.databaseViews.$inferSelect)[];
-  attachments: AttachmentRow[]; references: ReferenceRow[]; tags: (typeof schema.tags.$inferSelect)[]; pageTags: { pageId: string; tagId: string }[]; tasks: (typeof schema.tasks.$inferSelect)[];
+  attachments: AttachmentRow[]; references: ReferenceRow[]; experiments: (typeof schema.experiments.$inferSelect)[]; tags: (typeof schema.tags.$inferSelect)[]; pageTags: { pageId: string; tagId: string }[]; tasks: (typeof schema.tasks.$inferSelect)[];
 }
 
 const chunked = async <T, R>(ids: T[], fn: (part: T[]) => Promise<R[]>, size = 500) => { const out: R[] = []; for (let i = 0; i < ids.length; i += size) out.push(...(await fn(ids.slice(i, i + size)))); return out; };
 
 export async function loadExportSet(wsId: string, rootId?: string | null): Promise<ExportSet> {
   const [ws] = await db.select({ id: schema.workspaces.id, name: schema.workspaces.name, slug: schema.workspaces.slug, createdAt: schema.workspaces.createdAt }).from(schema.workspaces).where(eq(schema.workspaces.id, wsId));
-  if (!ws) throw new Error("Workspace not found");
+  if (!ws) throw new ExportNotFound("Workspace not found");
   let pages: PageRow[];
   if (rootId) {
     const ids = (await db.execute(dsql`with recursive t as (select id from pages where id = ${rootId} and workspace_id = ${wsId} and deleted_at is null union all select p.id from pages p join t on (p.parent_id = t.id) where p.deleted_at is null) select id from t`)) as unknown as { id: string }[];
-    const idList = ids.map((r) => r.id); if (!idList.length) throw new Error("Page not found");
+    const idList = ids.map((r) => r.id); if (!idList.length) throw new ExportNotFound("Page not found (deleted or not in this workspace)");
     pages = await chunked(idList, (part) => db.select().from(schema.pages).where(inArray(schema.pages.id, part)));
     // row pages of databases hosted inside the subtree (their parent_id may be null)
     const dbs = await db.select({ id: schema.databases.id }).from(schema.databases).where(and(eq(schema.databases.workspaceId, wsId), isNull(schema.databases.deletedAt), inArray(schema.databases.pageId, idList)));
@@ -41,14 +42,19 @@ export async function loadExportSet(wsId: string, rootId?: string | null): Promi
   const rows = dbIds.length ? (await db.select().from(schema.databaseRows).where(and(inArray(schema.databaseRows.databaseId, dbIds), isNull(schema.databaseRows.deletedAt))).orderBy(asc(schema.databaseRows.position))) : [];
   const views = dbIds.length ? await db.select().from(schema.databaseViews).where(inArray(schema.databaseViews.databaseId, dbIds)).orderBy(asc(schema.databaseViews.position)) : [];
   const allAtt = await db.select().from(schema.attachments).where(and(eq(schema.attachments.workspaceId, wsId), isNull(schema.attachments.deletedAt)));
-  const attachments = rootId ? allAtt.filter((a) => a.pageId && pageSet.has(a.pageId)) : allAtt;
   const allRefs = await db.select().from(schema.researchReferences).where(and(eq(schema.researchReferences.workspaceId, wsId), isNull(schema.researchReferences.deletedAt)));
   const references = rootId ? allRefs.filter((r) => r.pageId && pageSet.has(r.pageId)) : allRefs;
+  // a subtree export also needs the files its pages point to even when the attachment row belongs to no page of the subtree
+  // (files stored by an import, images pasted elsewhere and reused, PDFs attached to its references)
+  let attachments = allAtt;
+  if (rootId) { const used = new Set<string>(); for (const p of pages) for (const m of JSON.stringify(p.content ?? {}).matchAll(/\/api\/files\/([0-9a-f-]{36})/g)) used.add(m[1]); for (const r of references) if (r.attachmentId) used.add(r.attachmentId); attachments = allAtt.filter((a) => (a.pageId && pageSet.has(a.pageId)) || used.has(a.id)); }
+  const allExps = await db.select().from(schema.experiments).where(eq(schema.experiments.workspaceId, wsId));
+  const experiments = rootId ? allExps.filter((e) => e.pageId && pageSet.has(e.pageId)) : allExps;
   const tags = await db.select().from(schema.tags).where(eq(schema.tags.workspaceId, wsId));
   const pageTags = pageIds.length ? await chunked(pageIds, (part) => db.select().from(schema.pageTags).where(inArray(schema.pageTags.pageId, part))) : [];
   const allTasks = await db.select().from(schema.tasks).where(and(eq(schema.tasks.workspaceId, wsId), isNull(schema.tasks.deletedAt)));
   const tasks = rootId ? allTasks.filter((t) => t.pageId && pageSet.has(t.pageId)) : allTasks;
-  return { workspace: ws, rootId: rootId ?? null, pages, databases, properties, rows, views, attachments, references, tags, pageTags, tasks };
+  return { workspace: ws, rootId: rootId ?? null, pages, databases, properties, rows, views, attachments, references, experiments, tags, pageTags, tasks };
 }
 
 /** Tag names per page (page_tags ∪ properties.tags). */

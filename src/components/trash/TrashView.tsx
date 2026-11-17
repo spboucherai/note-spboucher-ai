@@ -9,6 +9,7 @@ import { fmtDate, timeAgo } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge, Dialog, DialogContent, Empty, Spinner } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
+import { withFreshAuth } from "@/lib/client/passkey";
 
 interface TrashedPage { id: string; title: string; icon: string | null; section: string; type: string; deletedAt: string; wordCount: number; updatedAt: string }
 const AUTO_PURGE_DAYS = 30;
@@ -17,15 +18,17 @@ export function TrashView() {
   const qc = useQueryClient(); const r = useRouter();
   const [purged, setPurged] = useState<number | null>(null);
   const { data: items = [], isLoading, refetch } = useQuery({ queryKey: ["trash"], queryFn: () => api<TrashedPage[]>("/api/pages?view=trash&limit=100"), enabled: purged !== null, staleTime: 5_000 });
-  useEffect(() => { api("/api/trash", { method: "POST", json: { action: "purge-old", days: AUTO_PURGE_DAYS } }).then((res) => setPurged(res.purged ?? 0)).catch(() => setPurged(0)); }, []);
+  // Nothing is ever deleted by merely opening this screen: purging old items is an explicit, passkey-confirmed action.
+  useEffect(() => { setPurged(0); }, []);
+  async function purgeOld() { if (!window.confirm(`Delete forever everything trashed more than ${AUTO_PURGE_DAYS} days ago? This cannot be undone.`)) return; try { const res = await withFreshAuth(() => api("/api/trash", { method: "POST", json: { action: "purge-old", days: AUTO_PURGE_DAYS } })); setPurged(res.purged ?? 0); toast(res.purged ? `${res.purged} old item${res.purged === 1 ? "" : "s"} deleted forever` : "Nothing older than 30 days"); refresh(); } catch (e: any) { toast("Nothing was deleted", { description: e.message, tone: "danger" }); } }
   const [confirm, setConfirm] = useState<{ kind: "one"; page: TrashedPage } | { kind: "all" } | null>(null); const [busy, setBusy] = useState(false);
   const refresh = () => { qc.invalidateQueries({ queryKey: ["trash"] }); qc.invalidateQueries({ queryKey: ["tree"] }); qc.invalidateQueries({ queryKey: ["dashboard"] }); };
   async function restore(p: TrashedPage) { try { await api(`/api/pages/${p.id}?action=restore`, { method: "POST" }); toast("Restored", { description: p.title || "Untitled", tone: "success" }); refresh(); } catch (e: any) { toast("Restore failed", { description: e.message, tone: "danger" }); } }
   async function doConfirm() {
     if (!confirm) return; setBusy(true);
     try {
-      if (confirm.kind === "one") { await api(`/api/pages/${confirm.page.id}?purge=1`, { method: "DELETE" }); toast("Deleted forever", { description: confirm.page.title || "Untitled" }); }
-      else { const res = await api("/api/trash", { method: "DELETE" }); toast("Trash emptied", { description: `${res.purged} page${res.purged === 1 ? "" : "s"} deleted forever` }); }
+      if (confirm.kind === "one") { await withFreshAuth(() => api(`/api/pages/${confirm.page.id}?purge=1`, { method: "DELETE" })); toast("Deleted forever", { description: confirm.page.title || "Untitled" }); }
+      else { const res = await withFreshAuth(() => api("/api/trash", { method: "DELETE" })); toast("Trash emptied", { description: `${res.purged} page${res.purged === 1 ? "" : "s"} deleted forever` }); }
       setConfirm(null); refresh();
     } catch (e: any) { toast("Delete failed", { description: e.message, tone: "danger" }); } finally { setBusy(false); }
   }
@@ -33,7 +36,7 @@ export function TrashView() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1"><h1 className="text-2xl font-semibold tracking-tight">Trash</h1><p className="mt-0.5 text-[13px] text-fg-muted">Pages are deleted forever after {AUTO_PURGE_DAYS} days in the trash.{purged ? ` ${purged} old item${purged === 1 ? "" : "s"} just purged.` : ""}</p></div>
+        <div className="min-w-0 flex-1"><h1 className="text-2xl font-semibold tracking-tight">Trash</h1><p className="mt-0.5 text-[13px] leading-5 text-fg-muted">Trashed pages stay here until you delete them. Nothing is removed automatically. <button type="button" onClick={purgeOld} className="font-medium text-accent underline-offset-2 hover:underline">Delete items older than {AUTO_PURGE_DAYS} days…</button></p></div>
         <Button size="sm" variant="outline" className="text-danger hover:bg-danger/10" disabled={!items.length} onClick={() => setConfirm({ kind: "all" })}><Trash2 /> Empty trash</Button>
       </div>
       {isLoading || purged === null ? <div className="flex justify-center py-16"><Spinner /></div> : !items.length ? <Empty icon={<Trash2 />} title="Trash is empty" hint="Pages you move to the trash can be restored from here for 30 days." action={<Button size="sm" variant="outline" onClick={() => r.push("/")}>Back home</Button>} /> : (
@@ -44,7 +47,7 @@ export function TrashView() {
               <Link href={`/p/${p.id}`} className="flex min-w-0 items-center gap-2 text-[13.5px] hover:text-accent"><span className="w-5 shrink-0 text-center">{p.icon ?? (p.type === "database" ? "🗂" : p.type === "research" ? "🔬" : "📄")}</span><span className="truncate">{p.title || "Untitled"}</span></Link>
               <div className="flex items-center gap-2 text-[12px] text-fg-muted md:contents">
                 <span><Badge>{p.section}</Badge></span>
-                <span className="flex items-center gap-1 text-[12px] text-fg-muted" title={fmtDate(p.deletedAt, { dateStyle: "medium", timeStyle: "short" })}><Clock className="size-3 md:hidden" />{timeAgo(p.deletedAt)}<span className="text-fg-faint"> · {daysLeft(p.deletedAt)} d left</span></span>
+                <span className="flex items-center gap-1 text-[12px] text-fg-muted" title={fmtDate(p.deletedAt, { dateStyle: "medium", timeStyle: "short" })}><Clock className="size-3 md:hidden" />{timeAgo(p.deletedAt)}<span className="text-fg-faint"> · {daysLeft(p.deletedAt) > 0 ? `${daysLeft(p.deletedAt)} d before it counts as old` : "old"}</span></span>
                 <span className="text-[12px] tabular-nums text-fg-muted md:text-right">{p.wordCount} w</span>
               </div>
               <div className="flex items-center gap-1 md:justify-end"><Button size="sm" variant="ghost" onClick={() => restore(p)}><RotateCcw /> Restore</Button><Button size="sm" variant="ghost" className="text-danger hover:text-danger" onClick={() => setConfirm({ kind: "one", page: p })}><Trash2 /> Delete</Button></div>

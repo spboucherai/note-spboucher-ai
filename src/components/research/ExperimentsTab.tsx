@@ -1,48 +1,87 @@
 "use client";
+/** Experiments of a page: cards; each one opens a form sheet (draft kept until saved). */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FlaskConical, Plus, Trash2, ChevronDown, ChevronRight, Database, GitBranch } from "lucide-react";
+import { ChevronRight, Database, FlaskConical, GitBranch, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/client/api";
-import { Button } from "@/components/ui/button";
+import { useOnline } from "@/lib/client/hooks";
 import { Input, Textarea } from "@/components/ui/input";
-import { Badge, Spinner, Empty } from "@/components/ui/primitives";
+import { Badge, Dialog, Empty, SheetContent, Spinner } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
-import { Field, Select, KVEditor, EXP_TONE } from "./ui";
+import { AREA, ErrorBox, EXP_TONE, FIELD, Field, KVEditor, ListSkeleton, Select, TButton, errText } from "./ui";
 import { timeAgo, cn } from "@/lib/utils";
 
 const STATUSES = ["planned", "running", "done", "failed"];
+type Exp = any;
 export const expKey = (pageId: string) => ["research-experiments", pageId];
 export function ExperimentsTab({ pageId }: { pageId: string }) {
-  const qc = useQueryClient(); const [name, setName] = useState(""); const [open, setOpen] = useState<Record<string, boolean>>({});
-  const { data: exps = [], isLoading } = useQuery<any[]>({ queryKey: expKey(pageId), queryFn: () => api(`/api/research/experiments?pageId=${pageId}`) });
+  const qc = useQueryClient(); const online = useOnline();
+  const [name, setName] = useState(""); const [creating, setCreating] = useState(false); const [openId, setOpenId] = useState<string | null>(null);
+  const q = useQuery<Exp[]>({ queryKey: expKey(pageId), queryFn: () => api(`/api/research/experiments?pageId=${pageId}`) });
+  const exps = q.data ?? [];
   const refresh = () => { qc.invalidateQueries({ queryKey: expKey(pageId) }); qc.invalidateQueries({ queryKey: ["research-overview"] }); };
-  async function create() { const n = name.trim(); if (!n) return; const e = await api("/api/research/experiments", { method: "POST", json: { pageId, name: n } }); setName(""); setOpen((o) => ({ ...o, [e.id]: true })); refresh(); }
-  async function patch(id: string, json: any) { try { await api(`/api/research/experiments/${id}`, { method: "PATCH", json }); refresh(); } catch (e: any) { toast("Save failed", { description: e.message, tone: "danger" }); } }
-  async function del(e: any) { if (!confirm(`Delete experiment “${e.name}”?`)) return; await api(`/api/research/experiments/${e.id}`, { method: "DELETE" }); refresh(); }
+  async function create() {
+    const n = name.trim(); if (!n || creating) return; setCreating(true);
+    try { const e = await api("/api/research/experiments", { method: "POST", json: { pageId, name: n } }); setName(""); refresh(); setOpenId(e.id); }
+    catch (e) { toast("Could not create the experiment", { description: `${errText(e)} The name is still in the field.`, tone: "danger", action: { label: "Retry", run: create } }); } finally { setCreating(false); }
+  }
+  const current = exps.find((e) => e.id === openId) ?? null;
   return (
-    <div>
-      <div className="flex items-center gap-1.5"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New experiment name (e.g. Baseline hedonic, 2015–2024)" className="h-8 text-[13px]" onKeyDown={(e) => { if (e.key === "Enter") create(); }} /><Button size="sm" onClick={create} disabled={!name.trim()}><Plus /> Add</Button></div>
-      {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : !exps.length ? <Empty icon={<FlaskConical />} title="No experiments" hint="Track each estimation or simulation run: parameters, metrics, dataset and code repository." /> : (
-        <div className="mt-3 space-y-2">{exps.map((e) => { const isOpen = open[e.id] ?? false; return (
-          <div key={e.id} className="rounded-lg border border-line bg-bg-elev">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <button className="grid size-6 place-items-center rounded text-fg-faint hover:bg-bg-sunk" onClick={() => setOpen((o) => ({ ...o, [e.id]: !isOpen }))} aria-label="Toggle">{isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}</button>
-              <input defaultValue={e.name} className="min-w-0 flex-1 bg-transparent text-[13px] font-medium outline-none" onBlur={(ev) => { if (ev.target.value.trim() && ev.target.value !== e.name) patch(e.id, { name: ev.target.value.trim() }); }} />
-              <Select value={e.status} onChange={(ev) => patch(e.id, { status: ev.target.value })} className="h-7 text-[12px]">{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</Select>
-              <Badge tone={EXP_TONE[e.status] ?? "neutral"} className="hidden sm:inline-flex">{e.status}</Badge>
-              <button className="grid size-8 place-items-center rounded-md text-fg-faint hover:bg-bg-sunk hover:text-danger" onClick={() => del(e)} aria-label="Delete"><Trash2 className="size-4" /></button>
-            </div>
-            {!isOpen && <div className="flex flex-wrap gap-x-3 gap-y-0.5 px-3 pb-2 pl-11 text-[11px] text-fg-faint">{Object.entries(e.metrics ?? {}).slice(0, 6).map(([k, v]) => <span key={k}><span className="font-mono">{k}</span>={String(v)}</span>)}{!Object.keys(e.metrics ?? {}).length && <span>{Object.keys(e.params ?? {}).length} params · no metrics yet</span>}<span>· updated {timeAgo(e.updatedAt)}</span></div>}
-            {isOpen && <div className={cn("grid gap-3 border-t border-line p-3 sm:grid-cols-2")}>
-              <Field label="Parameters"><KVEditor value={e.params ?? {}} onChange={(v) => patch(e.id, { params: v })} placeholderKey="alpha" placeholderValue="0.05" /></Field>
-              <Field label="Metrics"><KVEditor value={e.metrics ?? {}} onChange={(v) => patch(e.id, { metrics: v })} placeholderKey="rmse" placeholderValue="0.123" /></Field>
-              <Field label={<span className="flex items-center gap-1"><Database className="size-3" /> Dataset</span>}><Input defaultValue={e.datasetRef ?? ""} placeholder="path, DOI or URL" className="h-8 text-[12px]" onBlur={(ev) => { if ((ev.target.value || null) !== (e.datasetRef ?? null)) patch(e.id, { datasetRef: ev.target.value || null }); }} /></Field>
-              <Field label={<span className="flex items-center gap-1"><GitBranch className="size-3" /> Repository</span>}><Input defaultValue={e.repoUrl ?? ""} placeholder="https://…" className="h-8 text-[12px]" onBlur={(ev) => { if ((ev.target.value || null) !== (e.repoUrl ?? null)) patch(e.id, { repoUrl: ev.target.value || null }); }} /></Field>
-              <Field label="Notes" className="sm:col-span-2"><Textarea defaultValue={e.notes ?? ""} className="min-h-[60px] text-[13px]" onBlur={(ev) => { if ((ev.target.value || null) !== (e.notes ?? null)) patch(e.id, { notes: ev.target.value || null }); }} /></Field>
-              <div className="text-[11px] text-fg-faint sm:col-span-2">Created {timeAgo(e.createdAt)}{e.startedAt ? ` · started ${timeAgo(e.startedAt)}` : ""}{e.finishedAt ? ` · finished ${timeAgo(e.finishedAt)}` : ""}</div>
-            </div>}
-          </div>); })}</div>
+    <div className="min-w-0">
+      <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); void create(); }}>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New experiment (e.g. Baseline hedonic 2015–2024)" aria-label="New experiment name" enterKeyHint="done" className={cn(FIELD, "min-w-0 flex-1")} />
+        <TButton type="submit" disabled={!name.trim() || creating || !online}>{creating ? <Spinner className="size-3.5 border-t-white" /> : <Plus />} Add</TButton>
+      </form>
+      {q.isLoading ? <ListSkeleton /> : q.isError ? <ErrorBox title="Could not load the experiments" message={errText(q.error)} onRetry={() => q.refetch()} /> : !exps.length ? (
+        <Empty icon={<FlaskConical />} title="No experiments yet" hint="Track each estimation or simulation run: parameters, metrics, dataset and code repository. Type a name above to start." />
+      ) : (
+        <ul className="mt-3 space-y-2">{exps.map((e) => { const metrics = Object.entries(e.metrics ?? {}); return (
+          <li key={e.id}><button type="button" onClick={() => setOpenId(e.id)} className="flex min-h-16 w-full items-center gap-2 rounded-lg border border-line bg-bg-elev p-3 text-left hover:bg-bg-sunk">
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 break-words text-[14px] font-medium leading-snug">{e.name}</span><Badge tone={EXP_TONE[e.status] ?? "neutral"}>{e.status}</Badge></span>
+              <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-fg-muted">{metrics.slice(0, 4).map(([k, v]) => <span key={k} className="max-w-full truncate"><span className="font-mono">{k}</span> = {String(v)}</span>)}{metrics.length > 4 && <span>+{metrics.length - 4} more</span>}{!metrics.length && <span>{Object.keys(e.params ?? {}).length} parameter(s) · no metrics yet</span>}<span>· updated {timeAgo(e.updatedAt)}</span></span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-fg-faint" aria-hidden />
+          </button></li>); })}</ul>
       )}
+      <Dialog open={current !== null} onOpenChange={(o) => { if (!o) setOpenId(null); }}><SheetContent title="Experiment" className="sm:w-[min(40rem,calc(100vw-2rem))]">{current && <ExpForm key={current.id} e={current} pageId={pageId} onSaved={refresh} onClose={() => setOpenId(null)} />}</SheetContent></Dialog>
     </div>
+  );
+}
+
+function ExpForm({ e, pageId, onSaved, onClose }: { e: Exp; pageId: string; onSaved: () => void; onClose: () => void }) {
+  const online = useOnline();
+  const [v, setV] = useState({ name: e.name as string, status: e.status as string, params: (e.params ?? {}) as Record<string, unknown>, metrics: (e.metrics ?? {}) as Record<string, unknown>, datasetRef: (e.datasetRef ?? "") as string, repoUrl: (e.repoUrl ?? "") as string, notes: (e.notes ?? "") as string });
+  const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
+  const dirty = JSON.stringify(v) !== JSON.stringify({ name: e.name, status: e.status, params: e.params ?? {}, metrics: e.metrics ?? {}, datasetRef: e.datasetRef ?? "", repoUrl: e.repoUrl ?? "", notes: e.notes ?? "" });
+  async function save() {
+    if (busy || !v.name.trim()) return; setBusy(true); setError(null);
+    try { await api(`/api/research/experiments/${e.id}`, { method: "PATCH", json: { name: v.name.trim(), status: v.status, params: v.params, metrics: v.metrics, datasetRef: v.datasetRef.trim() || null, repoUrl: v.repoUrl.trim() || null, notes: v.notes.trim() || null } }); onSaved(); toast("Experiment saved", { tone: "success" }); onClose(); }
+    catch (err) { setError(errText(err)); } finally { setBusy(false); }
+  }
+  async function del() {
+    try {
+      await api(`/api/research/experiments/${e.id}`, { method: "DELETE" }); onSaved(); onClose();
+      // an experiment is deleted for good on the server: Undo creates it again from the copy held here
+      toast(`Experiment “${e.name}” deleted`, { action: { label: "Undo", run: async () => { try { await api("/api/research/experiments", { method: "POST", json: { pageId, name: e.name, status: e.status, params: e.params ?? {}, metrics: e.metrics ?? {}, datasetRef: e.datasetRef ?? null, repoUrl: e.repoUrl ?? null, notes: e.notes ?? null } }); onSaved(); toast("Experiment restored", { tone: "success" }); } catch (err) { toast("Could not restore the experiment", { description: errText(err), tone: "danger" }); } } } });
+    } catch (err) { toast("Could not delete", { description: errText(err), tone: "danger" }); }
+  }
+  return (
+    <form className="grid gap-3 sm:grid-cols-2" onSubmit={(ev) => { ev.preventDefault(); void save(); }}>
+      <Field label="Name" className="sm:col-span-2"><Input value={v.name} onChange={(ev) => setV({ ...v, name: ev.target.value })} className={FIELD} required /></Field>
+      <Field label="Status"><Select value={v.status} onChange={(ev) => setV({ ...v, status: ev.target.value })}>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</Select></Field>
+      <div className="self-end text-[12px] text-fg-muted">Created {timeAgo(e.createdAt)}{e.startedAt ? ` · started ${timeAgo(e.startedAt)}` : ""}{e.finishedAt ? ` · finished ${timeAgo(e.finishedAt)}` : ""}</div>
+      <Field label="Parameters" className="sm:col-span-2"><KVEditor value={v.params} onChange={(p) => setV({ ...v, params: p })} placeholderKey="alpha" placeholderValue="0.05" /></Field>
+      <Field label="Metrics" className="sm:col-span-2"><KVEditor value={v.metrics} onChange={(m) => setV({ ...v, metrics: m })} placeholderKey="rmse" placeholderValue="0.123" /></Field>
+      <Field label={<span className="flex items-center gap-1"><Database className="size-3" /> Dataset</span>}><Input value={v.datasetRef} onChange={(ev) => setV({ ...v, datasetRef: ev.target.value })} placeholder="path, DOI or URL" autoCapitalize="none" className={FIELD} /></Field>
+      <Field label={<span className="flex items-center gap-1"><GitBranch className="size-3" /> Repository</span>} hint={/^https?:\/\//.test(v.repoUrl) ? <a href={v.repoUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline-offset-2 hover:underline">Open the repository</a> : undefined}><Input value={v.repoUrl} onChange={(ev) => setV({ ...v, repoUrl: ev.target.value })} placeholder="https://…" inputMode="url" autoCapitalize="none" className={FIELD} /></Field>
+      <Field label="Notes" className="sm:col-span-2"><Textarea value={v.notes} onChange={(ev) => setV({ ...v, notes: ev.target.value })} className={cn(AREA, "min-h-[88px]")} /></Field>
+      {error && <div className="sm:col-span-2"><ErrorBox className="mt-0" title="Not saved — your changes are still here" message={error} onRetry={save} /></div>}
+      {!online && <p className="text-[12px] text-fg-muted sm:col-span-2">You are offline. Keep this sheet open; save when the connection is back.</p>}
+      <div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+        <TButton type="button" variant="ghost" className="text-danger hover:text-danger" onClick={del}><Trash2 /> Delete</TButton>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row"><TButton type="button" variant="ghost" onClick={onClose}>{dirty ? "Discard changes" : "Close"}</TButton><TButton type="submit" disabled={busy || !dirty || !v.name.trim() || !online}>{busy ? <Spinner className="size-3.5 border-t-white" /> : null} Save</TButton></div>
+      </div>
+    </form>
   );
 }

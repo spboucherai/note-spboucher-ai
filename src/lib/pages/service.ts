@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gt, inArray, isNull, sql as dsql, ne } from "drizzl
 import { db, schema } from "@/db";
 import { docText, wordCount, extractPageRefs, emptyDoc, type PMNode } from "@/lib/editor/text";
 import { enqueue, QUEUES } from "@/lib/jobs";
-import { HttpError } from "@/lib/auth/guard";
+import { HttpError } from "@/lib/errors";
 /** Postgres array literal for parameterised any()/all() */
 const pgArr = (a: string[]) => `{${a.map((x) => `"${x.replace(/"/g, "")}"`).join(",")}}`;
 
@@ -102,7 +102,7 @@ async function afterContentChange(p: Page) {
     }
   }
   await db.delete(schema.knowledgeEdges).where(and(eq(schema.knowledgeEdges.fromId, p.id), eq(schema.knowledgeEdges.kind, "link"), refs.length ? dsql`to_id <> all(${pgArr(refs)}::uuid[])` : dsql`true`));
-  await enqueue(QUEUES.index, { sourceType: "page", sourceId: p.id, workspaceId: p.workspaceId }, { singletonKey: `page:${p.id}`, singletonSeconds: 20 });
+  await enqueue(QUEUES.index, { sourceType: "page", sourceId: p.id, workspaceId: p.workspaceId }, { singletonKey: `page:${p.id}`, singletonSeconds: 20, singletonNextSlot: true }); // at most one indexing per page per 20 s, and an edit inside that window is indexed in the next one — never dropped
 }
 export async function softDeletePage(workspaceId: string, id: string) {
   const ids = await descendants(workspaceId, id); ids.push(id);

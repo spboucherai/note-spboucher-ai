@@ -129,7 +129,7 @@
     "bench:run": "tsx benchmarks/scripts/bench.ts",
     "bench:report": "tsx benchmarks/scripts/report.ts",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/unit/*.test.ts",
+    "test": "tsx --test --test-force-exit --test-concurrency=1 tests/unit/*.test.ts",
     "test:e2e": "playwright test"
   }
 }

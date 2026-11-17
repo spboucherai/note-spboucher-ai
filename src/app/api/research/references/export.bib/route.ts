@@ -1,12 +1,16 @@
-import { handler } from "@/lib/api";
-import { exportBibtex } from "@/lib/research/references";
+import { and, eq } from "drizzle-orm";
+import { handler, uuid, HttpError } from "@/lib/api";
+import { listReferences } from "@/lib/research/references";
+import { bibFile } from "@/lib/research/bibtex";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { audit } from "@/lib/audit";
 /** GET ?pageId=<id> → references.bib of that page; without pageId → whole library. ?inline=1 returns text without attachment header. */
-export const GET = handler(async ({ req, ws }) => {
-  const u = new URL(req.url); const pageId = u.searchParams.get("pageId"); const inline = u.searchParams.get("inline") === "1";
-  const bib = await exportBibtex(ws.id, pageId || null);
+export const GET = handler(async ({ req, ws, user }) => {
+  const u = new URL(req.url); const raw = u.searchParams.get("pageId"); const inline = u.searchParams.get("inline") === "1";
+  const pageId = raw ? uuid.safeParse(raw) : null; if (pageId && !pageId.success) throw new HttpError(400, "Invalid pageId");
+  const refs = await listReferences(ws.id, { pageId: pageId?.data ?? null });
   let name = "library";
-  if (pageId) { const [p] = await db.select({ title: schema.pages.title }).from(schema.pages).where(eq(schema.pages.id, pageId)); name = (p?.title ?? "references").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60) || "references"; }
-  return new Response(bib, { headers: { "content-type": "application/x-bibtex; charset=utf-8", ...(inline ? {} : { "content-disposition": `attachment; filename="${name}.bib"` }) } });
+  if (pageId?.data) { const [p] = await db.select({ title: schema.pages.title }).from(schema.pages).where(and(eq(schema.pages.id, pageId.data), eq(schema.pages.workspaceId, ws.id))); name = (p?.title ?? "references").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60) || "references"; }
+  await audit(user.id, "export", pageId?.data ? { type: "page", id: pageId.data } : { type: "workspace", id: ws.id }, { format: "bib", references: refs.length });
+  return new Response(bibFile(refs), { headers: { "content-type": "application/x-bibtex; charset=utf-8", "x-export-count": String(refs.length), ...(inline ? {} : { "content-disposition": `attachment; filename="${name}.bib"` }) } });
 });
