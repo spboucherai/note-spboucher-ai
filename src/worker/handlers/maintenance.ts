@@ -13,5 +13,8 @@ export async function handleMaintenance() {
   // a backup still "running" after 6 h did not finish (worker killed, node rebooted): say so instead of leaving it pending forever
   const stalled = (await db.update(schema.backupJobs).set({ status: "failed", error: "stalled: no completion after 6 h (worker restarted?)", finishedAt: new Date() }).where(and(eq(schema.backupJobs.status, "running"), lt(schema.backupJobs.startedAt, new Date(Date.now() - 6 * 3600_000)))).returning({ id: schema.backupJobs.id })).length;
   const actions = (await db.delete(schema.inboxActions).where(lt(schema.inboxActions.createdAt, new Date(Date.now() - 90 * 86_400_000))).returning({ id: schema.inboxActions.id })).length;
-  return { idempotencyKeys: idem, challenges: chal, loginAttempts: attempts, sessions, stalledBackups: stalled, inboxActions: actions };
+  // index rows of pages/files that no longer exist (purged): technical leftovers, never content the owner still has
+  const orphans = (await db.execute(dsql`delete from chunks c where (c.source_type = 'page' and not exists (select 1 from pages p where p.id = c.source_id)) or (c.source_type = 'attachment' and not exists (select 1 from attachments a where a.id = c.source_id)) returning c.id`) as unknown as unknown[]).length;
+  await db.execute(dsql`delete from index_state s where (s.source_type = 'page' and not exists (select 1 from pages p where p.id = s.source_id)) or (s.source_type = 'attachment' and not exists (select 1 from attachments a where a.id = s.source_id))`);
+  return { orphanChunks: orphans, idempotencyKeys: idem, challenges: chal, loginAttempts: attempts, sessions, stalledBackups: stalled, inboxActions: actions };
 }

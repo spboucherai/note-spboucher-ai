@@ -64,3 +64,24 @@ export function toMarkdown(doc: PMNode | null | undefined): string {
   return (doc.content ?? []).map((n) => block(n)).join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
 export const emptyDoc = (): PMNode => ({ type: "doc", content: [{ type: "paragraph" }] });
+
+/** Same block types as the editor's BlockId extension (src/components/editor/extensions/nodes.ts). */
+const ID_TYPES = new Set(["paragraph", "heading", "blockquote", "codeBlock", "bulletList", "orderedList", "taskList", "table", "callout", "details", "aiBlock", "blockMath", "image", "fileBlock"]);
+const rid = () => { const a = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-"; let o = ""; const b = new Uint8Array(10); globalThis.crypto.getRandomValues(b); for (const x of b) o += a[x & 63]; return o; };
+/**
+ * Give every block a stable id when it lacks one (content created by a capture, an import, an agent or the API never went through the
+ * editor, which is what normally assigns them). Search results and citations link to these ids, so they must exist before indexing.
+ * Returns the same object when nothing was missing.
+ */
+export function ensureBlockIds<T extends PMNode | null | undefined>(doc: T): { doc: T; changed: boolean } {
+  if (!doc || typeof doc !== "object") return { doc, changed: false };
+  const seen = new Set<string>(); let changed = false;
+  const walk = (n: PMNode): PMNode => {
+    let out = n;
+    if (ID_TYPES.has(n.type)) { const id = n.attrs?.id; if (typeof id !== "string" || !id || seen.has(id)) { const nid = rid(); seen.add(nid); out = { ...n, attrs: { ...(n.attrs ?? {}), id: nid } }; changed = true; } else seen.add(id); }
+    if (n.content?.length) { const kids = n.content.map(walk); if (kids.some((k, i) => k !== n.content![i])) out = { ...out, content: kids }; }
+    return out;
+  };
+  const next = walk(doc as PMNode);
+  return { doc: (changed ? next : doc) as T, changed };
+}

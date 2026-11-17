@@ -25,6 +25,11 @@ Set-up of a scratch environment on the node: a git worktree outside `~/apps`, it
 - `mobile.spec.ts` — the phone journeys at **360×740, 375×667 and 430×932** (touch, iPhone user agent): quick capture, formatted editing with the editing bar, photo/PDF upload, network loss and return (draft kept, replay without duplicate), conflict between two sessions and its resolution, search and jump to a block, database on a phone, property change, inbox triage + undo, export, lock; after each screen: no horizontal overflow of the document or of the scroll container, primary action visible, bottom bar not over the content.
 - `desktop.spec.ts` — idempotency of API mutations (same key → one page), request ids, cache headers, service-worker cache contents.
 
+## Helper scripts (manual, same scratch instance)
+`node tests/e2e/shots.mjs [width]` and `shots2.mjs` take screenshots of every screen and print any horizontal overflow; `overflow.mjs <path>` names the elements that stick out; `debug.mjs <path>` prints console errors; `live-ai.mjs` asks one grounded and one ungrounded question through the assistant with the real providers (a fraction of a cent) — last run 2026-11-17: grounded answer with a citation to the right paragraph ($0.001), ungrounded question refused with no provider call.
+
+Not exercised with a real model: a complete agent run (tool loop, caps, timeout). The review / approve / undo path is tested with a seeded proposal; run one agent by hand after deploying (Agents → Suggest tags on a page) and check its log.
+
 ## What automation does NOT prove (do these by hand on a real iPhone and Android phone after deploying)
 Chromium emulation reproduces viewport, touch and user agent — not iOS Safari. Check on the device:
 1. Face ID / Touch ID sheet for sign-in and for a step-up; the "passcode" fallback; a synced passkey on a second Apple device; Chrome on Android with fingerprint.

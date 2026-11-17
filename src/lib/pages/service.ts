@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gt, inArray, isNull, sql as dsql, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { docText, wordCount, extractPageRefs, emptyDoc, type PMNode } from "@/lib/editor/text";
+import { docText, wordCount, extractPageRefs, emptyDoc, ensureBlockIds, type PMNode } from "@/lib/editor/text";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import { HttpError } from "@/lib/errors";
 /** Postgres array literal for parameterised any()/all() */
@@ -19,7 +19,7 @@ export async function listTree(workspaceId: string) {
 }
 export async function createPage(workspaceId: string, input: { title?: string; parentId?: string | null; section?: string; type?: string; content?: PMNode; icon?: string | null; properties?: Record<string, unknown>; databaseId?: string | null; inboxAt?: Date | null; captureKind?: string | null }) {
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), input.parentId ? eq(schema.pages.parentId, input.parentId) : isNull(schema.pages.parentId)));
-  const content = input.content ?? emptyDoc(); const plain = docText(content);
+  const content = ensureBlockIds(input.content ?? emptyDoc()).doc; const plain = docText(content);
   const [p] = await db.insert(schema.pages).values({ workspaceId, title: input.title?.trim() || "Untitled", parentId: input.parentId ?? null, section: input.section ?? "notes", type: input.type ?? "page", content, plainText: plain, wordCount: wordCount(plain), icon: input.icon ?? null, properties: input.properties ?? {}, databaseId: input.databaseId ?? null, position: Number(max) + 1, inboxAt: input.inboxAt ?? null, captureKind: input.captureKind ?? null }).returning();
   await afterContentChange(p);
   return p;
@@ -40,7 +40,7 @@ export async function updatePage(workspaceId: string, id: string, patch: PagePat
   const versioned = VERSIONED.some((k) => patch[k] !== undefined);
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.title !== undefined) set.title = patch.title.trim() || "Untitled";
-  if (patch.content !== undefined) { const plain = docText(patch.content); set.content = patch.content; set.plainText = plain; set.wordCount = wordCount(plain); }
+  if (patch.content !== undefined) { const withIds = ensureBlockIds(patch.content).doc; const plain = docText(withIds); set.content = withIds; set.plainText = plain; set.wordCount = wordCount(plain); }
   for (const k of ["icon", "cover", "properties", "parentId", "section", "position", "pinned", "archived", "type", "inboxAt"] as const) if (patch[k] !== undefined) set[k] = patch[k];
   if (versioned) set.version = dsql`${schema.pages.version} + 1`;
   const expect = versioned && opts.baseVersion !== undefined ? opts.baseVersion : null;
@@ -115,7 +115,11 @@ export async function restorePage(workspaceId: string, id: string) {
   await db.update(schema.pages).set({ deletedAt: null }).where(inArray(schema.pages.id, ids));
   for (const pid of ids) await enqueue(QUEUES.index, { sourceType: "page", sourceId: pid, workspaceId });
 }
-export async function purgePage(workspaceId: string, id: string) { await db.delete(schema.pages).where(and(eq(schema.pages.id, id), eq(schema.pages.workspaceId, workspaceId))); }
+export async function purgePage(workspaceId: string, id: string) {
+  const ids = [...(await descendants(workspaceId, id, true)), id];
+  await db.delete(schema.chunks).where(and(eq(schema.chunks.sourceType, "page"), inArray(schema.chunks.sourceId, ids)));
+  await db.delete(schema.pages).where(and(eq(schema.pages.id, id), eq(schema.pages.workspaceId, workspaceId)));
+}
 export async function descendants(workspaceId: string, id: string, includeDeleted = false): Promise<string[]> {
   const rows = await db.execute(dsql`with recursive t as (select id from pages where parent_id = ${id} and workspace_id = ${workspaceId} ${includeDeleted ? dsql`` : dsql`and deleted_at is null`} union all select p.id from pages p join t on p.parent_id = t.id ${includeDeleted ? dsql`` : dsql`where p.deleted_at is null`}) select id from t`);
   return (rows as any[]).map((r) => r.id);

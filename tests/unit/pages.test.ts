@@ -32,7 +32,7 @@ test("a save with the current base version passes and bumps the version", async 
 test("a stale save is refused with the server copy and writes nothing", async () => {
   const p = await mk("unit · stale"); await updatePage(ws, p.id, { content: doc("from session A") }, { baseVersion: p.version });
   let err: any; try { await updatePage(ws, p.id, { content: doc("from session B") }, { baseVersion: p.version }); } catch (e) { err = e; }
-  assert.equal(err?.status, 409); assert.equal(err?.code, "conflict"); assert.equal(err.extra.server.version, p.version + 1); assert.deepEqual(err.extra.server.content, doc("from session A"));
+  assert.equal(err?.status, 409); assert.equal(err?.code, "conflict"); assert.equal(err.extra.server.version, p.version + 1); assert.equal(err.extra.server.content.content[0].content[0].text, "from session A"); assert.ok(err.extra.server.content.content[0].attrs.id, "blocks get a stable id on the server");
   assert.equal((await getPage(ws, p.id)).plainText, "from session A");
 });
 test("two simultaneous saves on the same base: exactly one wins", async () => {
