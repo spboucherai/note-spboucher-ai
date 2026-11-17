@@ -10,7 +10,7 @@
  */
 const DB = "note-local", VERSION = 1, RETENTION_MS = 30 * 86_400_000;
 export interface Draft { pageId: string; baseVersion: number; patch: Record<string, unknown>; updatedAt: number }
-export interface OutboxItem { id: string; kind: "capture"; body: Record<string, unknown>; createdAt: number; attempts: number; lastError?: string }
+export interface OutboxItem { id: string; kind: "capture"; body: { kind: string; text?: string; url?: string }; files?: File[]; uploadedIds?: string[]; createdAt: number; attempts: number; lastError?: string }
 
 let dbp: Promise<IDBDatabase> | null = null;
 function open(): Promise<IDBDatabase> {

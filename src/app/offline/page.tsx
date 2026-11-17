@@ -1,2 +1,4 @@
+import { OfflineScreen } from "@/components/auth/OfflineScreen";
 export const metadata = { title: "Offline" };
-export default function Offline() { return <main className="grid min-h-dvh place-items-center bg-bg-sunk p-6 text-center"><div><div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-fg text-bg text-xl font-semibold">N</div><h1 className="text-lg font-semibold">You're offline</h1><p className="mt-1 text-sm text-fg-muted">Note SPBoucher AI needs a connection to load your workspace. Pending edits are kept locally and will be saved when you're back online.</p><a href="/" className="mt-4 inline-block rounded-md bg-accent px-3 py-1.5 text-sm text-accent-fg">Retry</a></div></main>; }
+/** Static, public, contains nothing personal: this is the only page the service worker keeps. */
+export default function Offline() { return <OfflineScreen />; }

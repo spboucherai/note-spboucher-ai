@@ -1,0 +1,118 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, ApiError } from "./api";
+import { deleteDraft, getDraft, putDraft } from "./offline";
+
+/**
+ * Autosave engine for one page.
+ *  - edits are merged into one pending patch, sent 800 ms after the last keystroke, one request at a time;
+ *  - every save carries the server version it was based on; the server refuses a stale base (409) instead of overwriting;
+ *  - the pending patch is mirrored to IndexedDB at once, so a killed tab, a dead battery or a lost network cannot lose text —
+ *    it is replayed on the next visit (or shown as a conflict if the page moved meanwhile);
+ *  - when the tab is hidden a keepalive request is attempted too; it uses the same version check;
+ *  - states: saved · saving · offline (will retry by itself) · error (retry button) · conflict (user decides, both copies are kept).
+ */
+export type SyncStatus = "saved" | "saving" | "offline" | "error" | "conflict";
+export interface ServerCopy { version: number; title: string; content: any; properties?: Record<string, unknown>; updatedAt: string }
+export interface Conflict { server: ServerCopy; mine: { title?: string; content?: any } }
+type Patch = Record<string, unknown>;
+const VERSIONED = ["title", "content", "properties"];
+const BEACON_MAX = 60_000; // keepalive bodies above ~64 KB are rejected by browsers; the IndexedDB draft covers larger notes
+
+export function usePageSync(page: { id: string; version: number; title: string; content: any; updatedAt: string }, hooks: { applyRemote: (copy: ServerCopy) => void; current: () => { title: string; content: any }; onSaved?: (patch: Patch) => void; onDraftRestored?: () => void }) {
+  const [status, setStatus] = useState<SyncStatus>("saved"); const [error, setError] = useState<string | null>(null); const [conflict, setConflict] = useState<Conflict | null>(null);
+  const [savedAt, setSavedAt] = useState<string>(page.updatedAt);
+  const version = useRef(page.version); const pending = useRef<Patch | null>(null); const inflight = useRef(false); const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backoff = useRef(0); const blocked = useRef(false); const hooksRef = useRef(hooks); hooksRef.current = hooks; const alive = useRef(true);
+
+  const persist = useCallback(() => { if (pending.current) putDraft({ pageId: page.id, baseVersion: version.current, patch: pending.current, updatedAt: Date.now() }); }, [page.id]);
+  const raiseConflict = useCallback((server: ServerCopy, patch: Patch | null) => {
+    blocked.current = true; const cur = hooksRef.current.current();
+    setConflict({ server, mine: { title: (patch?.title as string | undefined) ?? cur.title, content: patch?.content ?? cur.content } }); setStatus("conflict");
+  }, []);
+
+  const flush = useCallback(async () => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    if (!pending.current || inflight.current || blocked.current) return;
+    const patch = pending.current; pending.current = null; inflight.current = true; if (alive.current) setStatus("saving");
+    const versioned = VERSIONED.some((k) => k in patch);
+    try {
+      const r = await api<{ version: number; updatedAt: string }>(`/api/pages/${page.id}`, { method: "PATCH", json: versioned ? { ...patch, baseVersion: version.current } : patch, timeoutMs: 20_000 });
+      version.current = r.version; backoff.current = 0; hooksRef.current.onSaved?.(patch);
+      if (!pending.current) { await deleteDraft(page.id); if (alive.current) { setStatus("saved"); setError(null); setSavedAt(r.updatedAt); } } else persist();
+    } catch (e) {
+      const err = e as ApiError; pending.current = { ...patch, ...(pending.current ?? {}) }; persist();
+      if (err.status === 409 && err.code === "conflict" && err.body?.server) raiseConflict(err.body.server, pending.current);
+      else if (err.status === 401) { /* redirected to sign-in; the draft stays on the device */ }
+      else if (err.status === 0 || err.status >= 500) { if (alive.current) { setStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : err.status === 0 ? "offline" : "error"); setError(err.message); } backoff.current = Math.min(30_000, backoff.current ? backoff.current * 2 : 3000); timer.current = setTimeout(flush, backoff.current); }
+      else { blocked.current = true; if (alive.current) { setStatus("error"); setError(err.message); } } // 4xx: retrying the same body cannot succeed; keep the draft and let the user act
+    } finally { inflight.current = false; if (pending.current && !blocked.current && !timer.current) timer.current = setTimeout(flush, 400); }
+  }, [page.id, persist, raiseConflict]);
+
+  const queue = useCallback((patch: Patch) => {
+    pending.current = { ...(pending.current ?? {}), ...patch }; persist();
+    if (blocked.current) return; // conflict or hard error on screen: keep collecting locally
+    setStatus((s) => (s === "offline" ? "offline" : "saving"));
+    if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(flush, 800);
+  }, [flush, persist]);
+
+  const retry = useCallback(() => { if (conflict) return; blocked.current = false; backoff.current = 0; if (pending.current) flush(); else setStatus("saved"); }, [conflict, flush]);
+
+  /** Settle a conflict. The server keeps both copies in the history whatever the choice. */
+  const resolve = useCallback(async (choice: "mine" | "theirs" | "both"): Promise<{ copyId: string | null }> => {
+    if (!conflict) return { copyId: null };
+    const cur = hooksRef.current.current(); const mine = { title: (pending.current?.title as string | undefined) ?? cur.title, content: pending.current?.content ?? cur.content };
+    try {
+      const r = await api<ServerCopy & { copyId: string | null }>(`/api/pages/${page.id}/resolve`, { method: "POST", json: { choice, serverVersion: conflict.server.version, mine } });
+      version.current = r.version; pending.current = null; await deleteDraft(page.id); blocked.current = false;
+      if (choice !== "mine") hooksRef.current.applyRemote(r);
+      setConflict(null); setStatus("saved"); setError(null); setSavedAt(r.updatedAt); return { copyId: r.copyId };
+    } catch (e) {
+      const err = e as ApiError; if (err.status === 409 && err.body?.server) { setConflict({ server: err.body.server, mine }); throw new Error("The note changed again — review the new version."); }
+      throw e;
+    }
+  }, [conflict, page.id]);
+
+  // Draft left by a previous visit (crash, offline, closed tab): replay it, or show a conflict when the page moved on.
+  useEffect(() => {
+    alive.current = true; let cancelled = false;
+    (async () => {
+      const d = await getDraft(page.id); if (!d || cancelled) return;
+      const same = (d.patch.content === undefined || JSON.stringify(d.patch.content) === JSON.stringify(page.content)) && (d.patch.title === undefined || d.patch.title === page.title) && d.patch.properties === undefined && Object.keys(d.patch).every((k) => VERSIONED.includes(k));
+      if (same) { await deleteDraft(page.id); return; }
+      pending.current = { ...d.patch, ...(pending.current ?? {}) };
+      if (d.baseVersion === page.version) { hooksRef.current.applyRemote({ version: page.version, title: (d.patch.title as string) ?? page.title, content: d.patch.content ?? page.content, updatedAt: page.updatedAt }); hooksRef.current.onDraftRestored?.(); setStatus("saving"); flush(); }
+      else raiseConflict({ version: page.version, title: page.title, content: page.content, updatedAt: page.updatedAt }, d.patch);
+    })();
+    return () => { cancelled = true; alive.current = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page.id]);
+
+  // Network back, tab hidden / closed, tab visible again (another session may have written meanwhile).
+  useEffect(() => {
+    const online = () => { if (!blocked.current) { backoff.current = 0; if (pending.current) flush(); else setStatus((s) => (s === "offline" ? "saved" : s)); } };
+    const offline = () => { if (pending.current || inflight.current) setStatus("offline"); };
+    const lastChance = () => {
+      if (!pending.current || blocked.current) return; persist();
+      const body = JSON.stringify({ ...pending.current, baseVersion: version.current });
+      if (body.length <= BEACON_MAX) { try { fetch(`/api/pages/${page.id}/beacon`, { method: "POST", body, keepalive: true, headers: { "content-type": "application/json" }, credentials: "same-origin" }).then(async (r) => { if (r.ok) { const j = await r.json().catch(() => null); if (j?.version && alive.current && !inflight.current) { /* the visible tab will re-check below */ } } }).catch(() => {}); } catch { /* the draft is on the device */ } }
+    };
+    const check = async () => {
+      if (document.visibilityState !== "visible" || inflight.current || blocked.current) return;
+      try {
+        const head = await api<{ version: number }>(`/api/pages/${page.id}?head=1`, { timeoutMs: 8000 });
+        if (head.version === version.current) return;
+        const full = await api<ServerCopy>(`/api/pages/${page.id}`);
+        if (pending.current) { // our keepalive save may be the one that moved the version: compare before crying conflict
+          const p = pending.current; const mineEqualsServer = (p.content === undefined || JSON.stringify(p.content) === JSON.stringify(full.content)) && (p.title === undefined || p.title === full.title) && p.properties === undefined;
+          if (mineEqualsServer) { version.current = full.version; pending.current = null; await deleteDraft(page.id); setStatus("saved"); setSavedAt(full.updatedAt); } else raiseConflict(full, p);
+        } else { version.current = full.version; hooksRef.current.applyRemote(full); setSavedAt(full.updatedAt); window.dispatchEvent(new CustomEvent("note:remote-update")); }
+      } catch { /* offline or signed out: handled elsewhere */ }
+    };
+    const vis = () => { if (document.visibilityState === "hidden") lastChance(); else check(); };
+    window.addEventListener("online", online); window.addEventListener("offline", offline); window.addEventListener("pagehide", lastChance); document.addEventListener("visibilitychange", vis); window.addEventListener("focus", check);
+    return () => { window.removeEventListener("online", online); window.removeEventListener("offline", offline); window.removeEventListener("pagehide", lastChance); document.removeEventListener("visibilitychange", vis); window.removeEventListener("focus", check); if (timer.current) clearTimeout(timer.current); if (pending.current && !blocked.current) flush(); };
+  }, [flush, page.id, persist, raiseConflict]);
+
+  return { status, error, conflict, savedAt, queue, flush, retry, resolve, hasPending: () => Boolean(pending.current) || inflight.current };
+}

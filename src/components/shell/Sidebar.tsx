@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard } from "lucide-react";
+import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard, CheckSquare, Archive } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TreeNode, ShellUser } from "./types";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
   }
   async function quickCapture() {
     const t = capture.trim(); if (!t || capturing) return; setCapturing(true);
-    try { const [first, ...rest] = t.split("\n"); await api("/api/pages", { method: "POST", json: { title: first.slice(0, 200), section: "notes", ...(rest.length ? { content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: rest.join("\n") }] }] } } : {}) } }); qc.invalidateQueries({ queryKey: ["tree"] }); setCapture(""); toast("Captured to Notes", { tone: "success" }); }
+    try { await api("/api/capture", { method: "POST", json: { kind: /^(https?:\/\/|www\.)\S+$/i.test(t) ? "link" : "note", text: t } }); qc.invalidateQueries({ queryKey: ["inbox"] }); qc.invalidateQueries({ queryKey: ["inbox-count"] }); setCapture(""); toast("Captured to inbox", { tone: "success" }); }
     catch (e: any) { toast("Capture failed", { description: e.message, tone: "danger" }); } finally { setCapturing(false); }
   }
   async function trash(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "DELETE" }); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash", { description: n.title }); if (pathname === `/p/${n.id}`) r.push("/"); }
@@ -83,7 +83,8 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
       <div className="mt-2 space-y-px px-2">
         <Nav href="/" icon={<Home />} label="Home" />
         <Nav icon={<Sparkles />} label="Ask AI" kbd="⌘/" onClick={() => { ui.openAI(); onNavigate?.(); }} />
-        <Nav href="/inbox" icon={<Inbox />} label="Tasks" />
+        <Nav href="/inbox" icon={<Inbox />} label="Inbox" />
+        <Nav href="/tasks" icon={<CheckSquare />} label="Tasks" />
         <Nav href="/graph" icon={<Share2 />} label="Graph" />
       </div>
       <div className="mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-4" role="tree" aria-label="Pages">
@@ -107,6 +108,7 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
         <Nav href="/ai/compare" icon={<Columns3 />} label="Compare models" />
       </div>
       <div className="flex items-center gap-0.5 border-t border-line px-2 py-2 safe-bottom">
+        <Link href="/archive" onClick={onNavigate} aria-label="Archive" title="Archive" data-active={pathname === "/archive"} className="side-item size-8 justify-center px-0"><Archive /></Link>
         <Link href="/trash" onClick={onNavigate} aria-label="Trash" title="Trash" data-active={pathname === "/trash"} className="side-item size-8 justify-center px-0"><Trash2 /></Link>
         <Link href="/settings" onClick={onNavigate} aria-label="Settings" title="Settings" data-active={pathname.startsWith("/settings")} className="side-item size-8 justify-center px-0"><Settings /></Link>
         <button onClick={() => window.dispatchEvent(new CustomEvent("note:shortcuts"))} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (⌘?)" className="side-item size-8 justify-center px-0"><Keyboard /></button>

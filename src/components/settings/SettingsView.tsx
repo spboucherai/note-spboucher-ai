@@ -19,7 +19,7 @@ const TABS = [{ id: "profile", label: "Profile", icon: <User /> }, { id: "securi
 
 export function SettingsView({ version }: { version: string }) {
   const [tab, setTab] = useState("profile");
-  useEffect(() => { const h = window.location.hash.slice(1); if (TABS.some((t) => t.id === h)) setTab(h); }, []);
+  useEffect(() => { const read = () => { const h = window.location.hash.slice(1); if (TABS.some((t) => t.id === h)) setTab(h); }; read(); window.addEventListener("hashchange", read); return () => window.removeEventListener("hashchange", read); }, []);
   const { data: profile, refetch, isLoading } = useQuery({ queryKey: ["settings"], queryFn: () => api<SettingsProfile>("/api/settings") });
   useEffect(() => { if (profile) applyPrefs(profile.preferences as any); }, [profile]);
   const refresh = () => { refetch(); };
@@ -27,7 +27,7 @@ export function SettingsView({ version }: { version: string }) {
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <h1 className="mb-4 text-2xl font-semibold tracking-tight">Settings</h1>
       <Tabs value={tab} onValueChange={(v) => { setTab(v); history.replaceState(null, "", `#${v}`); }}>
-        <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0"><TabsList className="h-9">{TABS.map((t) => <TabsTrigger key={t.id} value={t.id} className="h-8 gap-1.5 [&_svg]:size-4">{t.icon}<span className="hidden sm:inline">{t.label}</span></TabsTrigger>)}</TabsList></div>
+        <div className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0"><TabsList className="h-9">{TABS.map((t) => <TabsTrigger key={t.id} value={t.id} aria-label={t.label} className="h-8 gap-1.5 [&_svg]:size-4">{t.icon}<span className="hidden sm:inline">{t.label}</span></TabsTrigger>)}</TabsList></div>
         {isLoading || !profile ? <div className="flex justify-center py-16"><Spinner /></div> : <>
           <TabsContent value="profile"><ProfileSection profile={profile} refresh={refresh} /></TabsContent>
           <TabsContent value="security"><SecuritySection profile={profile} refresh={refresh} /></TabsContent>

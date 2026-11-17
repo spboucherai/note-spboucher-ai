@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, sql as dsql, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, sql as dsql, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { docText, wordCount, extractPageRefs, emptyDoc, type PMNode } from "@/lib/editor/text";
 import { enqueue, QUEUES } from "@/lib/jobs";
@@ -7,7 +7,7 @@ import { HttpError } from "@/lib/auth/guard";
 const pgArr = (a: string[]) => `{${a.map((x) => `"${x.replace(/"/g, "")}"`).join(",")}}`;
 
 export type Page = typeof schema.pages.$inferSelect;
-export const pageSummary = { id: schema.pages.id, parentId: schema.pages.parentId, databaseId: schema.pages.databaseId, type: schema.pages.type, section: schema.pages.section, title: schema.pages.title, icon: schema.pages.icon, cover: schema.pages.cover, position: schema.pages.position, pinned: schema.pages.pinned, archived: schema.pages.archived, wordCount: schema.pages.wordCount, updatedAt: schema.pages.updatedAt, createdAt: schema.pages.createdAt, lastOpenedAt: schema.pages.lastOpenedAt, properties: schema.pages.properties };
+export const pageSummary = { id: schema.pages.id, parentId: schema.pages.parentId, databaseId: schema.pages.databaseId, type: schema.pages.type, section: schema.pages.section, title: schema.pages.title, icon: schema.pages.icon, cover: schema.pages.cover, position: schema.pages.position, pinned: schema.pages.pinned, archived: schema.pages.archived, inboxAt: schema.pages.inboxAt, wordCount: schema.pages.wordCount, updatedAt: schema.pages.updatedAt, createdAt: schema.pages.createdAt, lastOpenedAt: schema.pages.lastOpenedAt, properties: schema.pages.properties };
 
 export async function getPage(workspaceId: string, id: string, opts: { includeDeleted?: boolean } = {}) {
   const [p] = await db.select().from(schema.pages).where(and(eq(schema.pages.id, id), eq(schema.pages.workspaceId, workspaceId), opts.includeDeleted ? undefined : isNull(schema.pages.deletedAt)));
@@ -15,34 +15,79 @@ export async function getPage(workspaceId: string, id: string, opts: { includeDe
   return p;
 }
 export async function listTree(workspaceId: string) {
-  return db.select(pageSummary).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), isNull(schema.pages.deletedAt), isNull(schema.pages.databaseId))).orderBy(asc(schema.pages.position), asc(schema.pages.createdAt));
+  return db.select(pageSummary).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), isNull(schema.pages.deletedAt), isNull(schema.pages.databaseId), eq(schema.pages.archived, false))).orderBy(asc(schema.pages.position), asc(schema.pages.createdAt));
 }
-export async function createPage(workspaceId: string, input: { title?: string; parentId?: string | null; section?: string; type?: string; content?: PMNode; icon?: string | null; properties?: Record<string, unknown>; databaseId?: string | null }) {
+export async function createPage(workspaceId: string, input: { title?: string; parentId?: string | null; section?: string; type?: string; content?: PMNode; icon?: string | null; properties?: Record<string, unknown>; databaseId?: string | null; inboxAt?: Date | null; captureKind?: string | null }) {
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), input.parentId ? eq(schema.pages.parentId, input.parentId) : isNull(schema.pages.parentId)));
   const content = input.content ?? emptyDoc(); const plain = docText(content);
-  const [p] = await db.insert(schema.pages).values({ workspaceId, title: input.title?.trim() || "Untitled", parentId: input.parentId ?? null, section: input.section ?? "notes", type: input.type ?? "page", content, plainText: plain, wordCount: wordCount(plain), icon: input.icon ?? null, properties: input.properties ?? {}, databaseId: input.databaseId ?? null, position: Number(max) + 1 }).returning();
+  const [p] = await db.insert(schema.pages).values({ workspaceId, title: input.title?.trim() || "Untitled", parentId: input.parentId ?? null, section: input.section ?? "notes", type: input.type ?? "page", content, plainText: plain, wordCount: wordCount(plain), icon: input.icon ?? null, properties: input.properties ?? {}, databaseId: input.databaseId ?? null, position: Number(max) + 1, inboxAt: input.inboxAt ?? null, captureKind: input.captureKind ?? null }).returning();
   await afterContentChange(p);
   return p;
 }
-export async function updatePage(workspaceId: string, id: string, patch: Partial<{ title: string; content: PMNode; icon: string | null; cover: string | null; properties: Record<string, unknown>; parentId: string | null; section: string; position: number; pinned: boolean; archived: boolean; type: string }>, opts: { versionReason?: string } = {}) {
+/** Fields whose change bumps `pages.version` and is protected by optimistic concurrency. */
+const VERSIONED = ["title", "content", "properties"] as const;
+export type PagePatch = Partial<{ title: string; content: PMNode; icon: string | null; cover: string | null; properties: Record<string, unknown>; parentId: string | null; section: string; position: number; pinned: boolean; archived: boolean; type: string; inboxAt: Date | null }>;
+export const conflictPayload = (p: Page) => ({ server: { version: p.version, title: p.title, content: p.content, properties: p.properties, updatedAt: p.updatedAt } });
+/**
+ * Update a page. When `opts.baseVersion` is given (every interactive save sends it), the write only happens if the row is still at that
+ * version: the check and the write are ONE statement, so two sessions can never silently overwrite each other — the loser gets
+ * HttpError 409 `conflict` carrying the current server copy, and nothing is written. Callers without a base version (imports, agents after
+ * approval, restore) keep "apply on top of whatever is there", but still bump the version so open editors notice.
+ */
+export async function updatePage(workspaceId: string, id: string, patch: PagePatch, opts: { versionReason?: string; baseVersion?: number } = {}) {
   const prev = await getPage(workspaceId, id);
-  const set: Partial<Page> = { updatedAt: new Date() };
-  if (patch.title !== undefined) set.title = patch.title.trim() || "Untitled";
-  if (patch.content !== undefined) { set.content = patch.content as any; set.plainText = docText(patch.content); set.wordCount = wordCount(set.plainText); set.version = prev.version + 1; }
-  for (const k of ["icon", "cover", "properties", "parentId", "section", "position", "pinned", "archived", "type"] as const) if (patch[k] !== undefined) (set as any)[k] = patch[k];
   if (patch.parentId !== undefined && patch.parentId === id) throw new HttpError(400, "A page cannot be its own parent");
-  const [p] = await db.update(schema.pages).set(set).where(eq(schema.pages.id, id)).returning();
+  const versioned = VERSIONED.some((k) => patch[k] !== undefined);
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.title !== undefined) set.title = patch.title.trim() || "Untitled";
+  if (patch.content !== undefined) { const plain = docText(patch.content); set.content = patch.content; set.plainText = plain; set.wordCount = wordCount(plain); }
+  for (const k of ["icon", "cover", "properties", "parentId", "section", "position", "pinned", "archived", "type", "inboxAt"] as const) if (patch[k] !== undefined) set[k] = patch[k];
+  if (versioned) set.version = dsql`${schema.pages.version} + 1`;
+  const expect = versioned && opts.baseVersion !== undefined ? opts.baseVersion : null;
+  if (expect !== null && prev.version !== expect) throw new HttpError(409, "This note was changed in another session", "conflict", conflictPayload(prev));
+  const [p] = await db.update(schema.pages).set(set as any).where(and(eq(schema.pages.id, id), eq(schema.pages.workspaceId, workspaceId), expect !== null ? eq(schema.pages.version, expect) : undefined)).returning();
+  if (!p) { const cur = await getPage(workspaceId, id); throw new HttpError(409, "This note was changed in another session", "conflict", conflictPayload(cur)); }
   // Versioning: snapshot the PREVIOUS state when content/title changed and (every 20 versions, or > 10 min since last snapshot, or explicit reason)
   if (patch.content !== undefined || patch.title !== undefined) {
-    const [last] = await db.select({ v: schema.pageVersions.version, at: schema.pageVersions.createdAt }).from(schema.pageVersions).where(eq(schema.pageVersions.pageId, id)).orderBy(desc(schema.pageVersions.version)).limit(1);
+    const [last] = await db.select({ v: schema.pageVersions.version, at: schema.pageVersions.createdAt }).from(schema.pageVersions).where(and(eq(schema.pageVersions.pageId, id), gt(schema.pageVersions.version, 0))).orderBy(desc(schema.pageVersions.version)).limit(1);
     const due = !last || opts.versionReason || prev.version - last.v >= 20 || Date.now() - last.at.getTime() > 10 * 60_000;
-    if (due) { await db.insert(schema.pageVersions).values({ pageId: id, version: prev.version, title: prev.title, content: prev.content, properties: prev.properties, reason: opts.versionReason ?? "autosave", wordCount: prev.wordCount }).onConflictDoNothing(); await pruneVersions(id); }
+    if (due) { await snapshot(prev, opts.versionReason ?? "autosave"); await pruneVersions(id); }
     await afterContentChange(p);
   }
   return p;
 }
+/** History entries for copies that were never the live state of the page (discarded side of a conflict, closed-tab leftovers) use negative, time-based numbers so they never collide with real versions. */
+export const unappliedVersion = () => -Math.floor(Date.now() / 1000);
+/** Keep a copy of a page state in the history (idempotent per version number). */
+export async function snapshot(p: Pick<Page, "id" | "version" | "title" | "content" | "properties" | "wordCount">, reason: string, version = p.version) {
+  await db.insert(schema.pageVersions).values({ pageId: p.id, version, title: p.title, content: p.content, properties: p.properties, reason: reason.slice(0, 100), wordCount: p.wordCount }).onConflictDoNothing();
+}
+/**
+ * Resolve a save conflict. BOTH copies always survive in the version history, whatever the choice:
+ *   mine   → the server copy is snapshotted, then replaced by the local copy;
+ *   theirs → the local copy is stored as a (non-applied) history entry, the page keeps the server copy;
+ *   both   → the local copy becomes a new sibling page "… (conflict copy)", the page keeps the server copy.
+ * `serverVersion` is the version the user was shown; if the page moved again meanwhile, a fresh 409 is returned instead of guessing.
+ */
+export async function resolveConflict(workspaceId: string, id: string, input: { choice: "mine" | "theirs" | "both"; serverVersion: number; mine: { title?: string; content?: PMNode } }) {
+  const cur = await getPage(workspaceId, id);
+  if (cur.version !== input.serverVersion) throw new HttpError(409, "The note changed again while you were deciding", "conflict", conflictPayload(cur));
+  const mineTitle = input.mine.title?.trim() || cur.title; const mineContent = input.mine.content ?? (cur.content as PMNode); const minePlain = docText(mineContent);
+  if (input.choice === "mine") {
+    await snapshot(cur, "conflict · other session's copy");
+    const p = await updatePage(workspaceId, id, { title: mineTitle, content: mineContent }, { baseVersion: cur.version, versionReason: "conflict · other session's copy" });
+    return { page: p, copyId: null as string | null };
+  }
+  if (input.choice === "theirs") {
+    await snapshot({ id, version: unappliedVersion(), title: mineTitle, content: mineContent, properties: cur.properties, wordCount: wordCount(minePlain) }, "conflict · this device's copy (not applied)");
+    await pruneVersions(id);
+    return { page: cur, copyId: null as string | null };
+  }
+  const copy = await createPage(workspaceId, { title: `${mineTitle} (conflict copy)`.slice(0, 500), parentId: cur.parentId, section: cur.section, type: cur.type === "page" ? "page" : cur.type, content: mineContent, icon: cur.icon, properties: {} });
+  return { page: cur, copyId: copy.id };
+}
 async function pruneVersions(pageId: string) {
-  const old = await db.select({ id: schema.pageVersions.id }).from(schema.pageVersions).where(eq(schema.pageVersions.pageId, pageId)).orderBy(desc(schema.pageVersions.version)).offset(200);
+  const old = await db.select({ id: schema.pageVersions.id }).from(schema.pageVersions).where(eq(schema.pageVersions.pageId, pageId)).orderBy(desc(schema.pageVersions.createdAt)).offset(200);
   if (old.length) await db.delete(schema.pageVersions).where(inArray(schema.pageVersions.id, old.map((o) => o.id)));
 }
 /** Links/backlinks + knowledge edges + async indexing. */

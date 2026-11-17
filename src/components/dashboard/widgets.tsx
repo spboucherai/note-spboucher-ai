@@ -89,7 +89,7 @@ export function TasksDue({ data, refresh }: WidgetProps) {
           {t.priority === "high" && <Badge tone="danger">high</Badge>}
           {due && <span className={cn("shrink-0 text-[11px]", overdue ? "font-medium text-danger" : isToday ? "text-accent" : "text-fg-faint")}>{overdue ? "overdue · " : ""}{fmtDate(due, { month: "short", day: "numeric" })}</span>}
         </div>); }) : <EmptyLine>Nothing due in the next 7 days.</EmptyLine>}
-      <More href="/inbox"><Inbox className="size-3.5" /> Open tasks inbox</More>
+      <More href="/tasks"><Inbox className="size-3.5" /> Open tasks</More>
     </div>
   );
 }

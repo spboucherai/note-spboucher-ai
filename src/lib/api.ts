@@ -30,7 +30,7 @@ export function handler(fn: (ctx: Ctx) => Promise<Response>, opts: { fresh?: boo
       const key = MUTATING.has(req.method) ? req.headers.get("idempotency-key") : null;
       res = key ? await idempotent(key, user.sessionId, req.method, path, () => fn({ req, user, ws, params, requestId })) : await fn({ req, user, ws, params, requestId });
     } catch (e) {
-      if (!(e instanceof HttpError)) log.error({ rid: requestId, sid, method: req.method, path, err: (e as Error)?.name, msg: String((e as Error)?.message ?? e).slice(0, 300), stack: (e as Error)?.stack?.split("\n").slice(1, 4).join(" | ") }, "handler error");
+      if (!(e instanceof HttpError)) log.error({ rid: requestId, sid, method: req.method, path, err: (e as Error)?.name, detail: String((e as Error)?.message ?? e).slice(0, 300), stack: (e as Error)?.stack?.split("\n").slice(1, 4).join(" | ") }, "handler error");
       res = jsonError(e, requestId);
     }
     try { res.headers.set("x-request-id", requestId); if (!res.headers.has("cache-control")) res.headers.set("cache-control", "private, no-store"); } catch { /* immutable headers (redirect) */ }

@@ -23,11 +23,11 @@ export function publicRoute(name: string, fn: (req: Request, requestId: string) 
 export function ceremonyError(e: unknown, requestId?: string): Response {
   if (e instanceof CeremonyError) {
     // Verification details stay in the server log; the browser gets a stable code and a neutral sentence.
-    if (e.code === "verification_failed") log.warn({ rid: requestId, code: e.code, msg: e.message.slice(0, 200) }, "webauthn verification failed");
+    if (e.code === "verification_failed") log.warn({ rid: requestId, code: e.code, detail: e.message.slice(0, 200) }, "webauthn verification failed");
     const msg = e.code === "verification_failed" || e.code === "unknown_credential" ? "This passkey could not be verified." : e.message;
     return Response.json({ error: msg, code: e.code }, { status: 400, headers: { "cache-control": "no-store" } });
   }
-  if (!(e instanceof HttpError)) log.error({ rid: requestId, err: (e as Error)?.name, msg: String((e as Error)?.message ?? e).slice(0, 300) }, "auth route error");
+  if (!(e instanceof HttpError)) log.error({ rid: requestId, err: (e as Error)?.name, detail: String((e as Error)?.message ?? e).slice(0, 300) }, "auth route error");
   return jsonError(e, requestId);
 }
 export const challengeCookie = (id: string) => `${CHALLENGE_COOKIE}=${id}; Path=/; Max-Age=${Math.floor(CHALLENGE_TTL_MS / 1000)}; HttpOnly; SameSite=Strict${cookieBase.secure ? "; Secure" : ""}`;

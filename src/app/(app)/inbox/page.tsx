@@ -1,4 +1,4 @@
 import { requireUserPage, getWorkspace } from "@/lib/auth/guard";
-import { TasksInbox } from "@/components/tasks/TasksInbox";
-export const metadata = { title: "Tasks" };
-export default async function InboxPage() { const u = await requireUserPage(); await getWorkspace(u.id); return <TasksInbox />; }
+import { InboxView } from "@/components/inbox/InboxView";
+export const metadata = { title: "Inbox" };
+export default async function InboxPage() { const u = await requireUserPage(); await getWorkspace(u.id); return <InboxView />; }

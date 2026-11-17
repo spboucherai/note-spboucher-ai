@@ -8,7 +8,7 @@ export const GET = handler(async ({ ws, params, req }) => {
   const id = uuid.parse(params.id); await getPage(ws.id, id, { includeDeleted: true });
   const v = new URL(req.url).searchParams.get("v");
   if (v) { const [row] = await db.select().from(schema.pageVersions).where(and(eq(schema.pageVersions.pageId, id), eq(schema.pageVersions.version, Number(v)))); return Response.json(row ?? null); }
-  return Response.json(await db.select({ id: schema.pageVersions.id, version: schema.pageVersions.version, title: schema.pageVersions.title, reason: schema.pageVersions.reason, createdAt: schema.pageVersions.createdAt, wordCount: schema.pageVersions.wordCount }).from(schema.pageVersions).where(eq(schema.pageVersions.pageId, id)).orderBy(desc(schema.pageVersions.version)).limit(200));
+  return Response.json(await db.select({ id: schema.pageVersions.id, version: schema.pageVersions.version, title: schema.pageVersions.title, reason: schema.pageVersions.reason, createdAt: schema.pageVersions.createdAt, wordCount: schema.pageVersions.wordCount }).from(schema.pageVersions).where(eq(schema.pageVersions.pageId, id)).orderBy(desc(schema.pageVersions.createdAt)).limit(200));
 });
 /** POST { version } → restore that snapshot (current state is saved as a version first). */
 export const POST = handler(async ({ ws, params, req, user }) => {
