@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { handler, parseBody } from "@/lib/api";
-import { createPage } from "@/lib/pages/service";
+import { createPage, findPageAnyState } from "@/lib/pages/service";
 import { db, schema } from "@/db";
 import { and, desc, eq, isNull, isNotNull, sql as dsql } from "drizzle-orm";
 import { audit } from "@/lib/audit";
@@ -22,8 +22,12 @@ export const GET = handler(async ({ req, ws }) => {
   return Response.json(await db.select(cols).from(schema.pages).where(and(...where)).orderBy(order).limit(limit));
 });
 export const POST = handler(async ({ req, ws, user }) => {
-  const b = await parseBody(req, z.object({ title: z.string().max(500).optional(), parentId: z.string().uuid().nullable().optional(), section: z.enum(["notes", "documents", "databases", "projects", "research"]).optional(), type: z.enum(["page", "database", "research"]).optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional(), properties: z.record(z.string(), z.unknown()).optional() }));
+  const b = await parseBody(req, z.object({ id: z.string().uuid().optional(), title: z.string().max(500).optional(), parentId: z.string().uuid().nullable().optional(), section: z.enum(["notes", "documents", "databases", "projects", "research"]).optional(), type: z.enum(["page", "database", "research"]).optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional(), properties: z.record(z.string(), z.unknown()).optional() }));
   if (b.content !== undefined) assertDoc(b.content);
+  // A native client creates notes offline under its own UUID and sends them later, possibly twice (retry after a lost answer): the
+  // second time the stored page is returned as it is — never a duplicate, never an overwrite.
+  if (b.id) { const existing = await findPageAnyState(ws.id, b.id); if (existing) return Response.json(existing, { status: 200, headers: { "x-existing": "1" } }); }
+  if (b.parentId && !(await findPageAnyState(ws.id, b.parentId))) b.parentId = null; // parent purged meanwhile: the note is kept, at the top level
   const p = await createPage(ws.id, b);
   await audit(user.id, "page.create", { type: "page", id: p.id }, { title: p.title });
   return Response.json(p, { status: 201 });

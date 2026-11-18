@@ -88,6 +88,7 @@ export const pages = pgTable("pages", {
   pinned: boolean().notNull().default(false), archived: boolean().notNull().default(false),
   version: integer().notNull().default(1), wordCount: integer("word_count").notNull().default(0),
   createdAt: created(), updatedAt: created(), lastOpenedAt: ts("last_opened_at"), deletedAt: ts("deleted_at"),
+  rev: bigint({ mode: "number" }).notNull().default(0), // 2.1: change sequence maintained by the trigger sync_bump_rev (native clients pull "everything after rev N")
   inboxAt: ts("inbox_at"), captureKind: text("capture_kind"), // v2: non-null inbox_at = waiting in the capture inbox; note | tasks | link | photo | file | audio
 }, (t) => [index("pages_inbox_idx").on(t.workspaceId, t.inboxAt), index("pages_ws_parent_idx").on(t.workspaceId, t.parentId), index("pages_tsv_idx").using("gin", t.tsv), index("pages_updated_idx").on(t.updatedAt), index("pages_db_idx").on(t.databaseId), index("pages_title_trgm_idx").using("gin", sql`${t.title} gin_trgm_ops`)]);
 export const pageVersions = pgTable("page_versions", {
@@ -131,7 +132,7 @@ export const attachments = pgTable("attachments", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }),
   filename: text().notNull(), mime: text().notNull(), size: bigint({ mode: "number" }).notNull(), sha256: text().notNull(), storagePath: text("storage_path").notNull(),
-  extractedText: text("extracted_text"), pageCount: integer("page_count"), meta: jsonb().default({}), createdAt: created(), deletedAt: ts("deleted_at"),
+  extractedText: text("extracted_text"), pageCount: integer("page_count"), meta: jsonb().default({}), createdAt: created(), deletedAt: ts("deleted_at"), rev: bigint({ mode: "number" }).notNull().default(0),
 }, (t) => [index("attachments_page_idx").on(t.pageId), index("attachments_sha_idx").on(t.sha256)]);
 export const tags = pgTable("tags", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
@@ -161,6 +162,12 @@ export const knowledgeEdges = pgTable("knowledge_edges", {
   status: text().notNull().default("accepted"), // suggested | accepted | rejected
   confidence: doublePrecision(), rationale: text(), model: text(), createdAt: created(), decidedAt: ts("decided_at"),
 }, (t) => [uniqueIndex("kedges_unique").on(t.fromId, t.toId, t.kind), index("kedges_ws_idx").on(t.workspaceId, t.status)]);
+
+/** Rows that no longer exist (permanent deletions), so that a native client that was offline learns about them. Written by triggers only. */
+export const syncTombstones = pgTable("sync_tombstones", {
+  id: uuid().notNull(), kind: text().notNull(), // page | attachment
+  workspaceId: uuid("workspace_id").notNull(), rev: bigint({ mode: "number" }).notNull(), deletedAt: ts("deleted_at").notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.kind, t.id] }), index("sync_tombstones_rev_idx").on(t.workspaceId, t.rev)]);
 
 // ---------- search
 export const chunks = pgTable("chunks", {

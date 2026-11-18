@@ -12,6 +12,7 @@ export function clientIp(h: Headers) { return (h.get("x-forwarded-for")?.split("
 /** Short human label for a session/passkey from the User-Agent (no fingerprinting, just "Safari · iPhone"). */
 export function deviceLabel(ua: string | null | undefined): string {
   const s = ua ?? ""; if (!s) return "Unknown device";
+  const native = s.match(/^SPNotes\/[\d.]+ \((Macintosh|iPhone|iPad)/); if (native) return `SP Notes · ${native[1] === "Macintosh" ? "Mac" : native[1]}`;
   const os = /iPhone/.test(s) ? "iPhone" : /iPad/.test(s) ? "iPad" : /Android/.test(s) ? "Android" : /Macintosh|Mac OS X/.test(s) ? "Mac" : /Windows/.test(s) ? "Windows" : /Linux/.test(s) ? "Linux" : "Device";
   const br = /Edg\//.test(s) ? "Edge" : /CriOS|Chrome\//.test(s) ? "Chrome" : /FxiOS|Firefox\//.test(s) ? "Firefox" : /Safari\//.test(s) ? "Safari" : "Browser";
   return `${br} · ${os}`;

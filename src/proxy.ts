@@ -8,7 +8,7 @@ import { resolveSession } from "@/lib/auth/sessions";
  * (requireUser / requireUserPage). Reachable without a session: health probe, the sign-in and enrollment ceremonies, PWA shell assets.
  * The pre-v2 entry points (/gate, /unlock/<key>, ?k=, /api/gate, /api/lock) no longer exist and answer 404.
  */
-const PUBLIC = [/^\/api\/health$/, /^\/api\/auth\/login\/(options|verify)$/, /^\/api\/auth\/enroll\/(options|verify)$/, /^\/api\/auth\/logout$/, /^\/login$/, /^\/enroll$/, /^\/offline$/, /^\/manifest\.webmanifest$/, /^\/sw\.js$/, /^\/icons\//, /^\/_next\//, /^\/favicon/];
+const PUBLIC = [/^\/\.well-known\/apple-app-site-association$/, /^\/api\/health$/, /^\/api\/auth\/login\/(options|verify)$/, /^\/api\/auth\/enroll\/(options|verify)$/, /^\/api\/auth\/logout$/, /^\/login$/, /^\/enroll$/, /^\/offline$/, /^\/manifest\.webmanifest$/, /^\/sw\.js$/, /^\/icons\//, /^\/_next\//, /^\/favicon/];
 const GONE = [/^\/gate(\/|$)/, /^\/unlock(\/|$)/, /^\/api\/gate$/, /^\/api\/lock$/];
 const ROBOTS = "User-agent: *\nDisallow: /\n";
 const noindex = (res: NextResponse) => { res.headers.set("X-Robots-Tag", "noindex, nofollow"); return res; };

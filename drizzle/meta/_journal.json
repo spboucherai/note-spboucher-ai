@@ -15,6 +15,13 @@
       "when": 1794934314619,
       "tag": "0001_v2_passkeys_inbox",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795046400000,
+      "tag": "0002_native_sync",
+      "breakpoints": true
     }
   ]
 }

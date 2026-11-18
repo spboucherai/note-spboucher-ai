@@ -7,6 +7,12 @@ import { HttpError } from "@/lib/errors";
 const pgArr = (a: string[]) => `{${a.map((x) => `"${x.replace(/"/g, "")}"`).join(",")}}`;
 
 export type Page = typeof schema.pages.$inferSelect;
+/** Client-chosen id (native apps create notes offline): the page already stored under that id, in any state, or null. */
+export async function findPageAnyState(workspaceId: string, id: string) {
+  const [p] = await db.select().from(schema.pages).where(eq(schema.pages.id, id));
+  if (p && p.workspaceId !== workspaceId) throw new HttpError(409, "This id is already in use", "id_taken");
+  return p ?? null;
+}
 export const pageSummary = { id: schema.pages.id, parentId: schema.pages.parentId, databaseId: schema.pages.databaseId, type: schema.pages.type, section: schema.pages.section, title: schema.pages.title, icon: schema.pages.icon, cover: schema.pages.cover, position: schema.pages.position, pinned: schema.pages.pinned, archived: schema.pages.archived, inboxAt: schema.pages.inboxAt, wordCount: schema.pages.wordCount, updatedAt: schema.pages.updatedAt, createdAt: schema.pages.createdAt, lastOpenedAt: schema.pages.lastOpenedAt, properties: schema.pages.properties };
 
 export async function getPage(workspaceId: string, id: string, opts: { includeDeleted?: boolean } = {}) {
@@ -17,10 +23,10 @@ export async function getPage(workspaceId: string, id: string, opts: { includeDe
 export async function listTree(workspaceId: string) {
   return db.select(pageSummary).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), isNull(schema.pages.deletedAt), isNull(schema.pages.databaseId), eq(schema.pages.archived, false))).orderBy(asc(schema.pages.position), asc(schema.pages.createdAt));
 }
-export async function createPage(workspaceId: string, input: { title?: string; parentId?: string | null; section?: string; type?: string; content?: PMNode; icon?: string | null; properties?: Record<string, unknown>; databaseId?: string | null; inboxAt?: Date | null; captureKind?: string | null }) {
+export async function createPage(workspaceId: string, input: { id?: string; title?: string; parentId?: string | null; section?: string; type?: string; content?: PMNode; icon?: string | null; properties?: Record<string, unknown>; databaseId?: string | null; inboxAt?: Date | null; captureKind?: string | null }) {
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), input.parentId ? eq(schema.pages.parentId, input.parentId) : isNull(schema.pages.parentId)));
   const content = ensureBlockIds(input.content ?? emptyDoc()).doc; const plain = docText(content);
-  const [p] = await db.insert(schema.pages).values({ workspaceId, title: input.title?.trim() || "Untitled", parentId: input.parentId ?? null, section: input.section ?? "notes", type: input.type ?? "page", content, plainText: plain, wordCount: wordCount(plain), icon: input.icon ?? null, properties: input.properties ?? {}, databaseId: input.databaseId ?? null, position: Number(max) + 1, inboxAt: input.inboxAt ?? null, captureKind: input.captureKind ?? null }).returning();
+  const [p] = await db.insert(schema.pages).values({ ...(input.id ? { id: input.id } : {}), workspaceId, title: input.title?.trim() || "Untitled", parentId: input.parentId ?? null, section: input.section ?? "notes", type: input.type ?? "page", content, plainText: plain, wordCount: wordCount(plain), icon: input.icon ?? null, properties: input.properties ?? {}, databaseId: input.databaseId ?? null, position: Number(max) + 1, inboxAt: input.inboxAt ?? null, captureKind: input.captureKind ?? null }).returning();
   await afterContentChange(p);
   return p;
 }
