@@ -21,14 +21,17 @@ import { Dialog, SheetContent, Skeleton } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import type { ChatMode, ChatPlan, Evidence, Sent, SourceRef } from "@/lib/ai/chat";
+// NEXT-K (Ask My Knowledge): scope selector, starter questions, the "insufficient evidence" wording
+import { SCOPES, evidenceNotice, scopeApplies, scopeAvailable, scopeBody, scopeUnavailableReason, starterQuestions, type AskScope } from "@/lib/client/knowledge";
+import { useEditorSelection } from "@/components/knowledge/useEditorSelection";
 
 type Img = { mime: string; dataBase64: string; name: string };
-interface Payload { clientId: string; message: string; mode: ChatMode; model: string | null; images: Img[]; confirmExpensive?: boolean }
+interface Payload { clientId: string; message: string; mode: ChatMode; model: string | null; images: Img[]; confirmExpensive?: boolean; scope?: AskScope; selection?: string | null; selectionBlockId?: string | null }
 interface Failure { message: string; code?: string; retryable: boolean; alternative?: { model: string; provider: string } | null }
 interface Msg {
   key: string; id?: string; role: "user" | "assistant"; content: string; mode?: ChatMode; model?: string | null; provider?: string | null; sources?: SourceRef[]; weak?: SourceRef[];
   costUsd?: number | null; latencyMs?: number | null; streaming?: boolean; stopped?: boolean; evidence?: Evidence; invalidCitations?: number[]; uncited?: boolean; replayed?: boolean; sent?: Sent | null;
-  budgetNote?: string | null; failure?: Failure; payload?: Payload; tasksCreated?: number;
+  budgetNote?: string | null; failure?: Failure; payload?: Payload; tasksCreated?: number; scope?: AskScope; scopePages?: number | null;
 }
 const MODES: { id: ChatMode; label: string; hint: string; icon: typeof Sparkles; page: boolean; sends: string; placeholder: string; preset?: string }[] = [
   { id: "notes", label: "Answer with my notes", hint: "Searches your workspace and answers only from what it finds, with citations.", icon: BookOpenText, page: false, sends: "your question + up to 8 excerpts found in your notes", placeholder: "Ask your notes…" },
@@ -57,6 +60,11 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
   const [modeOpen, setModeOpen] = useState(false); const [histOpen, setHistOpen] = useState(false); const [confirm, setConfirm] = useState<{ payload: Payload; reason: string; plan: ChatPlan } | null>(null); const [loadErr, setLoadErr] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null); const list = useRef<HTMLDivElement>(null); const ta = useRef<HTMLTextAreaElement>(null); const liveConv = useRef<string | null>(null); const stick = useRef(true);
   const def = MODE_BY_ID[mode]; const pageMissing = def.page && !pageId;
+  // NEXT-K: where the evidence may come from (all / this page / this project / the selection). `all` sends the 2.x request unchanged.
+  const [scope, setScope] = useState<AskScope>("all"); const { selection: picked, clear: clearPicked } = useEditorSelection(compact ? null : pageId);
+  const scopeCtx = { pageId: pageId ?? null, selection: picked?.text ?? null, selectionBlockId: picked?.blockId ?? null };
+  const scoped = SCOPES.some((x) => x.id !== "all" && scopeApplies(mode, x.id)); const activeScope: AskScope = scopeApplies(mode, scope) && scopeAvailable(scope, scopeCtx) ? scope : "all";
+  useEffect(() => { setScope("all"); }, [pageId]);
 
   const { data: convs = [], isLoading: convsLoading, isError: convsError, refetch: refetchConvs } = useQuery<{ id: string; title: string; updatedAt: string }[]>({ queryKey: ["convs", pageId ?? "all"], queryFn: () => api(`/api/ai/conversations${pageId ? `?pageId=${pageId}` : ""}`), staleTime: 10_000, enabled: histOpen });
   // Dry run on our own server (routing tables + page length): tells which provider/model would get what. No provider is contacted.
@@ -85,8 +93,8 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
       ? ms.map((m) => (m.key === `a:${p.clientId}` ? { key: m.key, role: "assistant" as const, content: "", streaming: true, mode: p.mode, payload: p } : m))
       : [...ms, { key: `u:${p.clientId}`, role: "user" as const, content: p.message, mode: p.mode }, { key: `a:${p.clientId}`, role: "assistant" as const, content: "", streaming: true, mode: p.mode, payload: p }]);
     const ac = new AbortController(); abort.current = ac; let finished = false;
-    await sse("/api/ai/chat", { conversationId: conv, clientId: p.clientId, message: p.message, mode: p.mode, pageId: pageId ?? null, model: p.model, confirmExpensive: p.confirmExpensive ?? false, images: p.images.map(({ mime, dataBase64 }) => ({ mime, dataBase64 })) }, (ev) => {
-      if (ev.type === "meta") { liveConv.current = ev.conversationId; setConv(ev.conversationId); patch(p.clientId, (m) => ({ ...m, model: ev.model, provider: ev.provider, sources: ev.sources, weak: ev.weak, evidence: ev.evidence, sent: ev.sent, budgetNote: ev.budgetNote, replayed: ev.replayed, content: "" })); }
+    await sse("/api/ai/chat", { conversationId: conv, clientId: p.clientId, message: p.message, mode: p.mode, pageId: pageId ?? null, model: p.model, confirmExpensive: p.confirmExpensive ?? false, images: p.images.map(({ mime, dataBase64 }) => ({ mime, dataBase64 })), ...scopeBody(p.mode, p.scope ?? "all", { pageId: pageId ?? null, selection: p.selection ?? null, selectionBlockId: p.selectionBlockId ?? null }) }, (ev) => {
+      if (ev.type === "meta") { liveConv.current = ev.conversationId; setConv(ev.conversationId); patch(p.clientId, (m) => ({ ...m, model: ev.model, provider: ev.provider, sources: ev.sources, weak: ev.weak, evidence: ev.evidence, sent: ev.sent, budgetNote: ev.budgetNote, replayed: ev.replayed, content: "", scope: ev.scope ?? "all", scopePages: ev.scopePages ?? null })); }
       else if (ev.type === "text") patch(p.clientId, (m) => ({ ...m, content: m.content + ev.delta }));
       else if (ev.type === "done") { finished = true; patch(p.clientId, (m) => ({ ...m, id: ev.messageId, streaming: false, content: ev.content, costUsd: ev.costUsd, latencyMs: ev.latencyMs, sources: ev.sources, evidence: ev.evidence, invalidCitations: ev.invalidCitations, uncited: ev.uncited, replayed: ev.replayed })); }
       else if (ev.type === "needs_confirmation") { finished = true; setMsgs((ms) => ms.filter((m) => m.key !== `a:${p.clientId}` && m.key !== `u:${p.clientId}`)); setConfirm({ payload: p, reason: ev.reason, plan: ev.plan }); }
@@ -97,7 +105,8 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
   }
   function send(text = input, m: ChatMode = mode) {
     const message = (text.trim() || MODE_BY_ID[m].preset || "").trim(); if (!message || busy || !online || notConfigured || (MODE_BY_ID[m].page && !pageId)) return;
-    const p: Payload = { clientId: newKey(), message, mode: m, model, images }; setInput(""); setImages([]); if (ta.current) ta.current.style.height = "auto";
+    const sc: AskScope = scopeApplies(m, scope) && scopeAvailable(scope, scopeCtx) ? scope : "all";
+    const p: Payload = { clientId: newKey(), message, mode: m, model, images, scope: sc, ...(sc === "selection" ? { selection: picked?.text ?? null, selectionBlockId: picked?.blockId ?? null } : {}) }; setInput(""); setImages([]); if (ta.current) ta.current.style.height = "auto";
     run(p);
   }
   function pickMode(id: ChatMode) {
@@ -164,6 +173,7 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
               <p><b>Nothing has been sent.</b> Opening this panel or a page never contacts an AI provider. When you press Send in “{def.label}”, the server sends {def.sends}{target ? <> to <b>{target}</b></> : " to the routed provider"}, plus the earlier messages of this conversation.</p>
               {disclosure.length > 0 && <p className="mt-1 text-fg-muted">Also: {disclosure.join("; ")}.</p>}
             </div>
+            {!compact && mode === "notes" && <div className="mt-4" data-testid="starter-questions"><div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-muted">Starter questions — pick one, then press Send</div><ul className="grid gap-1.5">{starterQuestions({ pageId, hasSelection: Boolean(picked) }).map((sq) => <li key={sq.text}><button type="button" onClick={() => { setScope(scopeAvailable(sq.scope, scopeCtx) ? sq.scope : "all"); setInput(sq.text); if (!isTouch) ta.current?.focus(); }} className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-line bg-bg-elev px-3 py-1.5 text-left text-[13.5px] hover:bg-bg-sunk md:min-h-9"><span className="min-w-0 flex-1">{sq.text}</span><span className="shrink-0 rounded-full bg-bg-sunk px-2 py-0.5 text-[11px] text-fg-muted">{SCOPES.find((x) => x.id === sq.scope)!.label}</span></button></li>)}</ul></div>}
           </div>
         )}
         {msgs.map((m) => m.role === "user" ? (
@@ -184,6 +194,10 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
           </div>
         )}
         {images.length > 0 && <div className="mb-1.5 flex flex-wrap gap-1.5">{images.map((im, i) => <span key={i} className="flex max-w-full items-center gap-1 rounded-lg border border-line pl-2 text-[12px]"><span className="truncate">{im.name}</span><button type="button" aria-label={`Remove ${im.name}`} className="grid size-9 shrink-0 place-items-center" onClick={() => setImages((s) => s.filter((_, j) => j !== i))}><X className="size-3.5" /></button></span>)}</div>}
+        {scoped && <div className="mb-1.5" data-testid="ask-scope" data-scope={activeScope}>
+          <div role="radiogroup" aria-label="Search in" className="flex items-center gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none]"><span className="shrink-0 pl-1 pr-0.5 text-[11.5px] text-fg-muted">Search in</span>{SCOPES.map((x) => { const applies = scopeApplies(mode, x.id); const ok = applies && scopeAvailable(x.id, scopeCtx); return <button key={x.id} type="button" role="radio" aria-checked={activeScope === x.id} aria-disabled={!ok} data-scope-option={x.id} title={ok ? x.hint : applies ? scopeUnavailableReason(x.id) : "Not available in this mode."} onClick={() => { if (ok) setScope(x.id); else toast(x.label, { description: applies ? scopeUnavailableReason(x.id) : "This scope is not available in this mode." }); }} className={cn("h-11 shrink-0 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium transition-colors md:h-7 md:px-2.5 md:text-[12px]", activeScope === x.id ? "border-ai bg-ai-soft/60 text-ai" : "border-line bg-bg-elev text-fg-muted hover:text-fg", !ok && "opacity-50")}>{x.label}</button>; })}</div>
+          {activeScope === "selection" && picked && <div className="mt-1 flex items-start gap-1.5 rounded-lg border border-line bg-bg-sunk/60 px-2 py-1.5 text-[12px] leading-4 text-fg-muted" data-testid="ask-selection"><span className="line-clamp-2 min-w-0 flex-1">“{picked.text.slice(0, 240)}{picked.text.length > 240 ? "…" : ""}”</span><button type="button" aria-label="Forget this selection" className="grid size-6 shrink-0 place-items-center rounded hover:bg-bg-hover" onClick={() => { clearPicked(); setScope("all"); }}><X className="size-3.5" /></button></div>}
+        </div>}
         <button type="button" onClick={() => setModeOpen(true)} aria-haspopup="dialog" className="mb-1.5 flex h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-line bg-bg-elev px-3 text-left text-[13.5px] font-medium hover:bg-bg-sunk md:h-9 md:text-[12.5px]"><def.icon className="size-4 shrink-0 text-ai" /><span className="min-w-0 flex-1 truncate">{def.label}</span><span className="shrink-0 text-[11.5px] font-normal text-fg-muted">Change</span><ChevronDown className="size-3.5 shrink-0 text-fg-faint" /></button>
         <div className="flex items-end gap-1 rounded-2xl border border-line bg-bg-elev p-1.5 shadow-card transition-colors focus-within:border-ai/50 focus-within:ring-4 focus-within:ring-ai/10">
           <label className={cn("grid shrink-0 cursor-pointer place-items-center rounded-lg text-fg-faint hover:bg-bg-sunk", "size-11 md:size-8")}><span className="sr-only">Attach an image</span><Paperclip className="size-[18px] md:size-4" /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(e) => { Array.from(e.target.files ?? []).forEach(addImage); e.target.value = ""; }} /></label>
@@ -224,7 +238,7 @@ function Answer({ m, busy, pageOpen, onInsert, onCite, onCopy, onSave, onTasks, 
   const iconBtn = cn("grid place-items-center rounded-md text-fg-muted hover:bg-bg-sunk hover:text-fg", tap);
   return (
     <div className="min-w-0">
-      {noEvidence && !m.streaming && <div role="status" className="mb-2 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-[12.5px] font-medium"><SearchX className="size-4 shrink-0 text-warning" />No supporting {m.mode === "draft" ? "reference" : "note"} found</div>}
+      {noEvidence && !m.streaming && (() => { const n = evidenceNotice(m.evidence, m.uncited, m.mode, m.scope ?? "all"); return <div role="status" data-testid="insufficient-evidence" data-evidence={m.evidence} className="mb-2 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-[12.5px] leading-5"><SearchX className="mt-0.5 size-4 shrink-0 text-warning" /><span><b className="font-semibold">{n?.title ?? "Insufficient evidence"}</b> — no supporting {m.mode === "draft" ? "reference" : "note"} found. {n?.detail}</span></div>; })()}
       {m.streaming && !text ? <div className="flex items-center gap-2 text-[13px] text-fg-muted" role="status"><span className="pulse-soft">▍</span>{m.model ? "Writing…" : m.mode === "summarise" || m.mode === "actions" || m.mode === "general" ? "Sending…" : "Searching your notes…"}</div>
         : <div className="chat-md min-w-0"><Markdown text={text} onCite={m.sources?.length ? (n) => { const s = m.sources?.find((x) => x.n === n); if (s) onCite(s); } : undefined} />{m.streaming && <span className="pulse-soft text-fg-faint">▍</span>}</div>}
       {(m.failure || m.stopped) && (
@@ -242,7 +256,7 @@ function Answer({ m, busy, pageOpen, onInsert, onCite, onCopy, onSave, onTasks, 
       {complete && Boolean(m.invalidCitations?.length) && <p role="status" className="mt-2 flex items-start gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-[12.5px] leading-5"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" /><span>{m.invalidCitations!.length} citation marker{m.invalidCitations!.length === 1 ? "" : "s"} ({m.invalidCitations!.map((n) => `[${n}]`).join(", ")}) pointed to a source that was not retrieved and {m.invalidCitations!.length === 1 ? "was" : "were"} removed.</span></p>}
       {complete && m.uncited && <p role="status" className="mt-2 flex items-start gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-[12.5px] leading-5"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" /><span>This answer cites none of the retrieved notes — treat it as unsupported.</span></p>}
       {complete && m.budgetNote && <p role="status" className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-[12.5px] leading-5">{m.budgetNote}</p>}
-      {!m.streaming && Boolean(m.sources?.length) && <div className="mt-3"><div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-faint">Sources — open the note at the cited block</div><ul className="flex flex-wrap gap-1.5">{m.sources!.map((s) => <li key={s.chunkId} className="max-w-full"><button type="button" onClick={() => onCite(s)} aria-label={`Source ${s.n}: ${s.title}${s.heading ? `, ${s.heading}` : ""}`} className="cite-chip min-h-11 md:min-h-0"><b>{s.n}</b><span className="min-w-0 truncate">{s.icon ? `${s.icon} ` : ""}{s.title}{s.heading ? ` › ${s.heading}` : ""}</span></button></li>)}</ul></div>}
+      {!m.streaming && Boolean(m.sources?.length) && <div className="mt-3"><div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-faint">Sources — open the note at the cited block</div><ul className="flex flex-wrap gap-1.5">{m.sources!.map((s) => <li key={s.chunkId} className="max-w-full"><button type="button" onClick={() => onCite(s)} aria-label={`Source ${s.n}: ${s.title}${s.heading ? `, ${s.heading}` : ""}`} title={(s as SourceRef & { quote?: string }).quote || s.excerpt} data-testid="cite-chip" data-block={s.blockId ?? ""} data-page={s.pageId ?? ""} className="cite-chip min-h-11 md:min-h-0"><b>{s.n}</b><span className="min-w-0 truncate">{s.icon ? `${s.icon} ` : ""}{s.title}{s.heading ? ` › ${s.heading}` : ""}</span></button></li>)}</ul></div>}
       {!m.streaming && noEvidence && (
         <div className="mt-2 text-[12.5px] leading-5">
           {Boolean(m.weak?.length) && <><div className="mb-1 text-fg-muted">Closest passages (below the relevance threshold, not used):</div><ul className="mb-2 flex flex-wrap gap-1.5">{m.weak!.map((s) => <li key={s.chunkId} className="max-w-full"><button type="button" onClick={() => onCite(s)} className="cite-chip min-h-11 md:min-h-0"><b>~</b><span className="min-w-0 truncate">{s.title}{s.heading ? ` › ${s.heading}` : ""}</span></button></li>)}</ul></>}
@@ -252,7 +266,7 @@ function Answer({ m, busy, pageOpen, onInsert, onCite, onCopy, onSave, onTasks, 
       {tasks.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{m.tasksCreated ? <span role="status" className="flex h-11 items-center gap-1.5 rounded-lg bg-success/10 px-3 text-[13px] font-medium text-success md:h-9"><ListTodo className="size-4" />{m.tasksCreated} task{m.tasksCreated === 1 ? "" : "s"} created</span> : <Button className="h-11 md:h-9" onClick={() => onTasks(m)}><ListTodo />Create {tasks.length} task{tasks.length === 1 ? "" : "s"}</Button>}{onInsert && pageOpen && <Button variant="outline" className="h-11 md:h-9" onClick={() => onInsert(tasks.map((t) => `- [ ] ${t}`).join("\n"))}><ArrowDownToLine />Insert as checklist</Button>}</div>}
       {complete && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-fg-faint">
-          <span className="min-w-0 [overflow-wrap:anywhere]">{who || "no provider called"}{m.latencyMs ? ` · ${(m.latencyMs / 1000).toFixed(1)} s` : ""}{usd(m.costUsd) ? ` · ${usd(m.costUsd)}` : who ? " · cost unknown" : ""}{sent && who ? ` · sent: ${sent}` : ""}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{m.scope && m.scope !== "all" ? `scope: ${SCOPES.find((x) => x.id === m.scope)?.label.toLowerCase()}${m.scopePages != null ? ` (${m.scopePages} page${m.scopePages === 1 ? "" : "s"})` : ""} · ` : ""}{who || "no provider called"}{m.latencyMs ? ` · ${(m.latencyMs / 1000).toFixed(1)} s` : ""}{usd(m.costUsd) ? ` · ${usd(m.costUsd)}` : who ? " · cost unknown" : ""}{sent && who ? ` · sent: ${sent}` : ""}</span>
           <span className="ml-auto flex shrink-0"><button type="button" className={iconBtn} aria-label="Copy answer" onClick={() => onCopy(text)}><Copy className="size-4" /></button>{onInsert && pageOpen && <button type="button" className={iconBtn} aria-label="Insert into the page" onClick={() => onInsert(text)}><ArrowDownToLine className="size-4" /></button>}<button type="button" className={iconBtn} aria-label="Save as a new note" onClick={() => onSave(m)}><FilePlus2 className="size-4" /></button></span>
         </div>
       )}

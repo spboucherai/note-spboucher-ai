@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard, CheckSquare, Archive, Shapes } from "lucide-react";
+import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard, CheckSquare, Archive, Shapes, MessagesSquare, History, Clock, HeartPulse, Sparkle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TreeNode, ShellUser } from "./types";
 import { cn } from "@/lib/utils";
@@ -64,8 +64,8 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
       </div>
     );
   };
-  const Nav = ({ href, icon, label, onClick, kbd }: { href?: string; icon: React.ReactNode; label: string; onClick?: () => void; kbd?: string }) => {
-    const active = Boolean(href && (href === "/" ? pathname === "/" : pathname.startsWith(href)));
+  const Nav = ({ href, icon, label, onClick, kbd, exact }: { href?: string; icon: React.ReactNode; label: string; onClick?: () => void; kbd?: string; /* NEXT-K: /ai must not light up on /ai/agents */ exact?: boolean }) => {
+    const active = Boolean(href && (href === "/" || exact ? pathname === href : pathname.startsWith(href)));
     const body = <>{icon}<span className="flex-1 truncate text-left">{label}</span>{kbd && <span className="text-micro text-fg-faint">{kbd}</span>}</>;
     return href ? <Link href={href} data-active={active} className="side-item" onClick={onNavigate}>{body}</Link> : <button data-active={false} className="side-item w-full" onClick={onClick}>{body}</button>;
   };
@@ -114,6 +114,13 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
           </div>); })}
         </Sec>
         <Sec id="intelligence" label="Intelligence">
+        {/* NEXT-K ▼ knowledge screens */}
+        <Nav href="/ai" exact icon={<MessagesSquare />} label="Ask My Knowledge" />
+        <Nav href="/timeline" icon={<History />} label="Timeline" />
+        <Nav href="/timemachine" icon={<Clock />} label="Time machine" />
+        <Nav href="/health" icon={<HeartPulse />} label="Knowledge health" />
+        <Nav href="/constellation" icon={<Sparkle />} label="Constellation · Labs" />
+        {/* NEXT-K ▲ */}
         <Nav href="/research" icon={<FlaskConical />} label="Research" />
         <Nav href="/backlinks" icon={<Link2 />} label="Backlinks" />
         <Nav href="/ai/agents" icon={<Bot />} label="Agents" />

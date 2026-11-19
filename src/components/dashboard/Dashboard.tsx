@@ -40,7 +40,7 @@ function WidgetCard({ w, editing, data, refresh, onRemove, onResize }: { w: Widg
   );
 }
 
-export function Dashboard({ displayName }: { displayName: string }) {
+export function Dashboard({ displayName, embedded }: { displayName: string; /** NEXT-K: shown under the Smart Daily Brief on Home — same widgets and customisation, without a second greeting */ embedded?: boolean }) {
   const qc = useQueryClient();
   const { data, isError, error } = useQuery({ queryKey: ["dashboard"], queryFn: () => api<DashboardData>("/api/dashboard"), staleTime: 20_000 });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["dashboard"] }); };
@@ -69,11 +69,11 @@ export function Dashboard({ displayName }: { displayName: string }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
       <div className="mb-7 flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1">
+        {embedded ? <div className="min-w-0 flex-1" data-testid="dashboard-widgets"><h2 className="text-h3 font-semibold tracking-[-0.01em]">Dashboard</h2><p className="mt-0.5 text-[13px] text-fg-muted">Your widgets — reorder, resize, add or remove them with Customize.</p></div> : <div className="min-w-0 flex-1">
           <p className="mb-1 text-[12px] font-medium uppercase tracking-[0.08em] text-fg-faint">{dateLabel || " "}</p>
           <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em] sm:text-h1">{greeting(now)}, {displayName.split(" ")[0]}</h1>
           {data && data.tasks.length > 0 && <p className="mt-1 text-[13px] text-fg-muted">{data.tasks.length} task{data.tasks.length === 1 ? "" : "s"} due soon</p>}
-        </div>
+        </div>}
         {editing ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <Popover><PopoverTrigger asChild><Button size="sm" variant="outline"><Plus /> Add widget</Button></PopoverTrigger>

@@ -28,6 +28,7 @@ export const FEATURES = [
   "transcription", // POST /api/audio/<attachmentId>/transcribe
   "research-export", // GET /api/research/export.tex
   "smart-properties", // database AI property config + runs
+  "constellation", // GET /api/graph/constellation (2-D projection of the page embeddings)
 ] as const;
 /** "3.0.0" for a 3.x build; a scratch build keeps its suffix ("3.0.0-dev"). */
 export const serverVersion = () => { const v = process.env.APP_VERSION ?? ""; return /^3\./.test(v) ? v : `3.0.0${v.includes("-") ? v.slice(v.indexOf("-")) : ""}`; };

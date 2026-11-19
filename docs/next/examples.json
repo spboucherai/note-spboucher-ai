@@ -2806,5 +2806,145 @@
     },
     "generatedAt": "2026-11-19T18:30:22.390Z",
     "base": "http://localhost:8483"
+  },
+  "constellation": {
+    "request": {
+      "method": "GET",
+      "path": "/api/graph/constellation"
+    },
+    "status": 200,
+    "body": {
+      "model": "text-embedding-3-small",
+      "computedAt": "2026-11-19T20:16:34.434Z",
+      "cached": false,
+      "signature": "text-embedding-3-small:13:9:2026-11-19T19:32:57.895Z",
+      "explained": [
+        0.28118,
+        0.17206
+      ],
+      "stats": {
+        "pages": 9,
+        "embedded": 9,
+        "shown": 9,
+        "links": 6,
+        "truncated": false
+      },
+      "points": [
+        {
+          "id": "10563baa-0631-4f9a-a9e7-14390f56a724",
+          "title": "Demo · Mortgage renewal",
+          "icon": "🏦",
+          "type": "page",
+          "section": "projects",
+          "x": -0.25529,
+          "y": 0.00405,
+          "cluster": 0,
+          "projectId": "10563baa-0631-4f9a-a9e7-14390f56a724",
+          "tags": [],
+          "updatedAt": "2026-11-19T19:32:36.705Z",
+          "words": 27,
+          "degree": 2
+        },
+        {
+          "id": "115dfe11-7419-452c-a041-647f3e89d029",
+          "title": "Demo · Reading notes — fixed vs variable",
+          "icon": "📚",
+          "type": "page",
+          "section": "documents",
+          "x": -0.49232,
+          "y": 0.07143,
+          "cluster": 0,
+          "projectId": null,
+          "tags": [],
+          "updatedAt": "2026-11-19T19:32:36.825Z",
+          "words": 28,
+          "degree": 1
+        },
+        {
+          "id": "3cba9d2f-f1e9-4ed6-9156-550614756f88",
+          "title": "Demo · Household budget",
+          "icon": "🧮",
+          "type": "page",
+          "section": "notes",
+          "x": -0.25166,
+          "y": -0.01337,
+          "cluster": 0,
+          "projectId": null,
+          "tags": [],
+          "updatedAt": "2026-11-19T19:32:36.815Z",
+          "words": 15,
+          "degree": 1
+        }
+      ],
+      "clusters": [
+        {
+          "id": 0,
+          "x": -0.125,
+          "y": -0.09891,
+          "r": 0.95743,
+          "size": 8,
+          "label": "Demo · Household budget",
+          "topTags": [
+            "finance",
+            "mortgage"
+          ]
+        },
+        {
+          "id": 1,
+          "x": 1,
+          "y": 0.79128,
+          "r": 0,
+          "size": 1,
+          "label": "Demo · Garden ideas",
+          "topTags": []
+        }
+      ],
+      "links": [
+        {
+          "id": "6123d6c5-501c-4b0e-8f61-05f6e8448a2b",
+          "source": "57d7caa6-c60f-41d7-bab6-b03e4f8fcdb6",
+          "target": "ff05a3e9-4d72-4b05-bcdb-04100a82f838",
+          "kind": "link",
+          "relType": "related",
+          "origin": "system"
+        },
+        {
+          "id": "1671f387-7b14-4dab-ba89-5959c5af4960",
+          "source": "5be0006b-6515-4c22-bfd5-86295f3706fe",
+          "target": "57d7caa6-c60f-41d7-bab6-b03e4f8fcdb6",
+          "kind": "link",
+          "relType": "related",
+          "origin": "system"
+        },
+        {
+          "id": "b7274800-7b41-4fee-b7d6-5324665ffcaf",
+          "source": "5be0006b-6515-4c22-bfd5-86295f3706fe",
+          "target": "ff05a3e9-4d72-4b05-bcdb-04100a82f838",
+          "kind": "link",
+          "relType": "related",
+          "origin": "system"
+        }
+      ],
+      "projects": [
+        {
+          "id": "10563baa-0631-4f9a-a9e7-14390f56a724",
+          "title": "Demo · Mortgage renewal",
+          "icon": "🏦",
+          "pages": 3
+        }
+      ],
+      "tags": [
+        {
+          "name": "finance",
+          "color": "gray",
+          "pages": 3
+        },
+        {
+          "name": "mortgage",
+          "color": "gray",
+          "pages": 2
+        }
+      ]
+    }
   }
 }

@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as DialogP from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { Home, Search, Plus, Menu as MenuIcon, X, Inbox, Star, Clock, Database, CheckSquare, FlaskConical, Share2, Link2, Bot, BarChart3, Trash2, Settings, Lock, ChevronRight, ChevronLeft, Sparkles, Archive, CloudOff, CloudUpload, FileText, Files, FolderKanban, Command } from "lucide-react";
+import { Home, Search, Plus, Menu as MenuIcon, X, Inbox, Star, Clock, Database, CheckSquare, FlaskConical, Share2, Link2, Bot, BarChart3, Trash2, Settings, Lock, ChevronRight, ChevronLeft, Sparkles, Archive, CloudOff, CloudUpload, FileText, Files, FolderKanban, Command, MessagesSquare, History, HeartPulse, Sparkle } from "lucide-react";
 import { useUI } from "@/lib/client/store";
 import { useOnline } from "@/lib/client/hooks";
 import { cn, timeAgo } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { wipeLocalData } from "@/lib/client/offline";
 import { SyncStatus } from "@/components/offline/SyncStatus";
 import type { TreeNode } from "./types";
 
-const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", graph: "Connections", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents", browse: "Browse", archive: "Archive", databases: "Databases" };
+const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", graph: "Connections", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents", browse: "Browse", archive: "Archive", databases: "Databases", timeline: "Timeline", timemachine: "Time machine", health: "Health", constellation: "Constellation" };
 const icon = (n: { icon: string | null; type: string }) => n.icon ?? (n.type === "canvas" ? "◇" : n.type === "database" ? "🗂" : n.type === "research" ? "🔬" : "📄");
 
 /** Things waiting on this device (captures not sent yet) + connectivity, as a small pill. */
@@ -116,7 +116,7 @@ function MobileDrawer({ tree }: { tree: TreeNode[] }) {
               {dbs.length ? dbs.slice(0, 8).map((n) => <Pg key={n.id} n={n} />) : <p className="px-3 pb-1 text-[13px] text-fg-faint">No database yet.</p>}
               <button className={cn(row, "text-accent")} onClick={async () => { const p = await api("/api/pages", { method: "POST", json: { title: "New database", section: "databases", type: "database" } }); close(); r.push(`/p/${p.id}`); }}><Database className="!text-accent" />New database</button>
               <H>Tools</H>
-              <L href="/tasks" icon={<CheckSquare />} label="Tasks" /><L href="/research" icon={<FlaskConical />} label="Research & references" /><L href="/backlinks" icon={<Link2 />} label="Connections" /><L href="/graph" icon={<Share2 />} label="Graph" /><L href="/ai/agents" icon={<Bot />} label="Agents" /><L href="/ai/models" icon={<BarChart3 />} label="AI models & costs" />
+              <L href="/tasks" icon={<CheckSquare />} label="Tasks" /><L href="/research" icon={<FlaskConical />} label="Research & references" /><L href="/backlinks" icon={<Link2 />} label="Connections" /><L href="/graph" icon={<Share2 />} label="Graph" />{/* NEXT-K ▼ */}<L href="/ai" icon={<MessagesSquare />} label="Ask My Knowledge" /><L href="/timeline" icon={<History />} label="Timeline" /><L href="/timemachine" icon={<Clock />} label="Time machine" /><L href="/health" icon={<HeartPulse />} label="Knowledge health" /><L href="/constellation" icon={<Sparkle />} label="Constellation · Labs" />{/* NEXT-K ▲ */}<L href="/ai/agents" icon={<Bot />} label="Agents" /><L href="/ai/models" icon={<BarChart3 />} label="AI models & costs" />
               <H>Library</H>
               <L href="/archive" icon={<Archive />} label="Archive" /><L href="/trash" icon={<Trash2 />} label="Trash" /><L href="/settings" icon={<Settings />} label="Settings" />
               <button onClick={lock} className={row}><Lock />Lock this device</button>

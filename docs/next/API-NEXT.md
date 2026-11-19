@@ -1730,6 +1730,178 @@ HTTP 200
 task `reason`, strict JSON schema `INSIGHT_SCHEMA`). It has been tested with an injected model only; no real provider call was made
 by this workstream.
 
+### Constellation — `GET /api/graph/constellation` <!-- NEXT-K (knowledge screens workstream) -->
+
+Feature flag `constellation`. The « Thought Constellation » (Labs): notes placed by meaning. `?refresh=1` recomputes the projection.
+**No model is called**: the positions come from the embeddings the search index already stores.
+
+→ `{ model, computedAt, cached, signature, explained, stats, points, clusters, links, projects, tags }`
+
+- A point is a live, non-archived page outside the inbox that has at least one embedded chunk. Its vector is the mean of its chunk
+  embeddings (pgvector `avg`); the cloud is projected to the plane by a **deterministic PCA** (power iteration with a fixed start
+  vector, each axis signed so that its largest loading is positive, coordinates scaled together into [-1, 1], `y` up). The same
+  embeddings always give the same map; near-identical notes are fanned out on a small spiral so every star stays reachable.
+- `explained` — share of the variance carried by each of the two axes (their sum says how much the flat map can be trusted).
+- The projection is cached per workspace (settings row) and recomputed only when `signature` changes
+  (`<embedding model>:<embeddings>:<embedded pages>:<date of the latest embedding>`); `cached` says which happened. Titles, tags,
+  projects and links are read at each call.
+- `stats`: `pages` (live pages) · `embedded` (pages with vectors) · `shown` (points) · `links` · `truncated` (more than 5 000 embedded
+  pages: the 5 000 most recently edited are shown). **`embedded: 0` ⇒ `points: []`**: clients show an empty state, never a made-up layout.
+- `points[]`: `id` · `title` · `icon` · `type` · `section` · `x`, `y` · `cluster` (index in `clusters`) · `projectId` (top-most ancestor
+  in the section `projects`, or itself; null outside a project) · `tags` (names) · `updatedAt` · `words` · `degree` (links below).
+- `clusters[]` (deterministic k-means in the plane, about √(n/2) clusters, at most 18): `id` · `x`, `y` · `r` (distance to the farthest
+  member) · `size` · `label` (title of the page closest to the centre) · `topTags`.
+- `links[]`: accepted page ↔ page edges between two points, one per pair: `id` · `source` · `target` · `kind` · `relType` · `origin`.
+- `projects[]` `{id, title, icon, pages}` and `tags[]` `{name, color, pages}` — for colouring, most frequent first.
+
+Measured on a synthetic workspace of 4 999 embedded pages (1536-d vectors): first computation 2.1 s, cached answer 0.12 s.
+
+(Real answer of the scratch instance `note_next_k_dev`; `points`, `clusters`, `links`, `projects` and `tags` cut to their first items.)
+
+```http
+GET /api/graph/constellation
+```
+
+```http
+HTTP 200
+```
+
+```json
+{
+  "model": "text-embedding-3-small",
+  "computedAt": "2026-11-19T20:16:34.434Z",
+  "cached": false,
+  "signature": "text-embedding-3-small:13:9:2026-11-19T19:32:57.895Z",
+  "explained": [
+    0.28118,
+    0.17206
+  ],
+  "stats": {
+    "pages": 9,
+    "embedded": 9,
+    "shown": 9,
+    "links": 6,
+    "truncated": false
+  },
+  "points": [
+    {
+      "id": "10563baa-0631-4f9a-a9e7-14390f56a724",
+      "title": "Demo · Mortgage renewal",
+      "icon": "🏦",
+      "type": "page",
+      "section": "projects",
+      "x": -0.25529,
+      "y": 0.00405,
+      "cluster": 0,
+      "projectId": "10563baa-0631-4f9a-a9e7-14390f56a724",
+      "tags": [],
+      "updatedAt": "2026-11-19T19:32:36.705Z",
+      "words": 27,
+      "degree": 2
+    },
+    {
+      "id": "115dfe11-7419-452c-a041-647f3e89d029",
+      "title": "Demo · Reading notes — fixed vs variable",
+      "icon": "📚",
+      "type": "page",
+      "section": "documents",
+      "x": -0.49232,
+      "y": 0.07143,
+      "cluster": 0,
+      "projectId": null,
+      "tags": [],
+      "updatedAt": "2026-11-19T19:32:36.825Z",
+      "words": 28,
+      "degree": 1
+    },
+    {
+      "id": "3cba9d2f-f1e9-4ed6-9156-550614756f88",
+      "title": "Demo · Household budget",
+      "icon": "🧮",
+      "type": "page",
+      "section": "notes",
+      "x": -0.25166,
+      "y": -0.01337,
+      "cluster": 0,
+      "projectId": null,
+      "tags": [],
+      "updatedAt": "2026-11-19T19:32:36.815Z",
+      "words": 15,
+      "degree": 1
+    }
+  ],
+  "clusters": [
+    {
+      "id": 0,
+      "x": -0.125,
+      "y": -0.09891,
+      "r": 0.95743,
+      "size": 8,
+      "label": "Demo · Household budget",
+      "topTags": [
+        "finance",
+        "mortgage"
+      ]
+    },
+    {
+      "id": 1,
+      "x": 1,
+      "y": 0.79128,
+      "r": 0,
+      "size": 1,
+      "label": "Demo · Garden ideas",
+      "topTags": []
+    }
+  ],
+  "links": [
+    {
+      "id": "6123d6c5-501c-4b0e-8f61-05f6e8448a2b",
+      "source": "57d7caa6-c60f-41d7-bab6-b03e4f8fcdb6",
+      "target": "ff05a3e9-4d72-4b05-bcdb-04100a82f838",
+      "kind": "link",
+      "relType": "related",
+      "origin": "system"
+    },
+    {
+      "id": "1671f387-7b14-4dab-ba89-5959c5af4960",
+      "source": "5be0006b-6515-4c22-bfd5-86295f3706fe",
+      "target": "57d7caa6-c60f-41d7-bab6-b03e4f8fcdb6",
+      "kind": "link",
+      "relType": "related",
+      "origin": "system"
+    },
+    {
+      "id": "b7274800-7b41-4fee-b7d6-5324665ffcaf",
+      "source": "5be0006b-6515-4c22-bfd5-86295f3706fe",
+      "target": "ff05a3e9-4d72-4b05-bcdb-04100a82f838",
+      "kind": "link",
+      "relType": "related",
+      "origin": "system"
+    }
+  ],
+  "projects": [
+    {
+      "id": "10563baa-0631-4f9a-a9e7-14390f56a724",
+      "title": "Demo · Mortgage renewal",
+      "icon": "🏦",
+      "pages": 3
+    }
+  ],
+  "tags": [
+    {
+      "name": "finance",
+      "color": "gray",
+      "pages": 3
+    },
+    {
+      "name": "mortgage",
+      "color": "gray",
+      "pages": 2
+    }
+  ]
+}
+```
+
 ---
 
 ## 4.4 Events journal and time machine

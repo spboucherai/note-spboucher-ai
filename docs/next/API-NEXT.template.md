@@ -484,6 +484,36 @@ known (same pages / passages) is not stored twice; a dismissed one does not come
 task `reason`, strict JSON schema `INSIGHT_SCHEMA`). It has been tested with an injected model only; no real provider call was made
 by this workstream.
 
+### Constellation — `GET /api/graph/constellation` <!-- NEXT-K (knowledge screens workstream) -->
+
+Feature flag `constellation`. The « Thought Constellation » (Labs): notes placed by meaning. `?refresh=1` recomputes the projection.
+**No model is called**: the positions come from the embeddings the search index already stores.
+
+→ `{ model, computedAt, cached, signature, explained, stats, points, clusters, links, projects, tags }`
+
+- A point is a live, non-archived page outside the inbox that has at least one embedded chunk. Its vector is the mean of its chunk
+  embeddings (pgvector `avg`); the cloud is projected to the plane by a **deterministic PCA** (power iteration with a fixed start
+  vector, each axis signed so that its largest loading is positive, coordinates scaled together into [-1, 1], `y` up). The same
+  embeddings always give the same map; near-identical notes are fanned out on a small spiral so every star stays reachable.
+- `explained` — share of the variance carried by each of the two axes (their sum says how much the flat map can be trusted).
+- The projection is cached per workspace (settings row) and recomputed only when `signature` changes
+  (`<embedding model>:<embeddings>:<embedded pages>:<date of the latest embedding>`); `cached` says which happened. Titles, tags,
+  projects and links are read at each call.
+- `stats`: `pages` (live pages) · `embedded` (pages with vectors) · `shown` (points) · `links` · `truncated` (more than 5 000 embedded
+  pages: the 5 000 most recently edited are shown). **`embedded: 0` ⇒ `points: []`**: clients show an empty state, never a made-up layout.
+- `points[]`: `id` · `title` · `icon` · `type` · `section` · `x`, `y` · `cluster` (index in `clusters`) · `projectId` (top-most ancestor
+  in the section `projects`, or itself; null outside a project) · `tags` (names) · `updatedAt` · `words` · `degree` (links below).
+- `clusters[]` (deterministic k-means in the plane, about √(n/2) clusters, at most 18): `id` · `x`, `y` · `r` (distance to the farthest
+  member) · `size` · `label` (title of the page closest to the centre) · `topTags`.
+- `links[]`: accepted page ↔ page edges between two points, one per pair: `id` · `source` · `target` · `kind` · `relType` · `origin`.
+- `projects[]` `{id, title, icon, pages}` and `tags[]` `{name, color, pages}` — for colouring, most frequent first.
+
+Measured on a synthetic workspace of 4 999 embedded pages (1536-d vectors): first computation 2.1 s, cached answer 0.12 s.
+
+(Real answer of the scratch instance `note_next_k_dev`; `points`, `clusters`, `links`, `projects` and `tags` cut to their first items.)
+
+{{ex:constellation}}
+
 ---
 
 ## 4.4 Events journal and time machine

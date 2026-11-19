@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUI, followSystemTheme } from "@/lib/client/store";
 import { RightPanel, registerBuiltInPanels } from "./RightPanel";
 import { useShellCommands } from "./shell-commands";
+import { useKnowledgeCommands } from "@/components/knowledge/register"; // NEXT-K
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav, MobileHeader } from "./MobileNav";
@@ -28,6 +29,7 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
   const { data: tree = initialTree } = useQuery({ queryKey: ["tree"], queryFn: () => api<TreeNode[]>("/api/tree").catch(async (e) => { const local = e?.status === 0 ? await replicaTree().catch(() => []) : []; if (local.length) return local as TreeNode[]; throw e; /* network lost: the device replica answers */ }), initialData: initialTree, staleTime: 10_000 });
   useEffect(() => { ui.setTheme(ui.theme); try { applyPrefs(readLocalPrefs()); } catch {} registerBuiltInPanels(); return followSystemTheme(); /* eslint-disable-next-line */ }, []);
   useShellCommands(tree, () => setHelp(true));
+  useKnowledgeCommands(); // NEXT-K: knowledge screens (graph views, timeline, time machine, health, constellation, ask) + the per-page Timeline panel
   // Handles for the end-to-end suites and for debugging from the console (UI state and motion helpers only — no data, no credentials).
   useEffect(() => { const w = window as unknown as Record<string, unknown>; w.__noteUI = () => useUI.getState(); w.__noteMotion = () => import("@/lib/client/motion"); }, []);
   useEffect(() => {

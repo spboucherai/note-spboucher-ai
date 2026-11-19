@@ -21,6 +21,7 @@ import { DatabaseView } from "@/components/database/DatabaseView";
 import { PageProperties } from "@/components/page/PageProperties";
 import { ResearchPanel } from "@/components/research/ResearchPanel";
 import dynamic from "next/dynamic";
+import { ZoomFrame } from "@/components/knowledge/SemanticZoom"; // NEXT-K: semantic zoom (Synopsis · Outline · Full · Full + connections)
 const PageGraphCard = dynamic(() => import("@/components/graph/PageGraphCard").then((m) => m.PageGraphCard), { ssr: false });
 
 const EMOJI = ["📄", "📝", "📚", "🔬", "🧠", "💡", "📊", "📈", "🗂", "🧪", "🏠", "🏦", "📐", "🧮", "🗓", "✅", "🚀", "⭐", "🔥", "🎯", "🧭", "🗺", "💬", "🤖", "🧩", "📎", "🔐", "🌍", "🏛", "🎓"];
@@ -92,6 +93,8 @@ function DocumentPageView({ page, breadcrumb, backlinks }: PageViewProps) {
               <MenuItem onSelect={() => setTagOpen(true)}><Tag /> Tags</MenuItem>
               <MenuItem onSelect={() => ui.openAI({ pageId: page.id })} className="md:hidden"><Sparkles /> Ask about this page</MenuItem>
               <MenuItem onSelect={loadVersions}><History /> Version history</MenuItem>
+              {/* NEXT-K: per-page timeline (right panel on wide screens, the timeline screen elsewhere) */}
+              <MenuItem onSelect={() => { if (window.matchMedia("(min-width: 1024px)").matches) ui.openPanel("timeline"); else r.push(`/timeline?pageId=${page.id}`); }}><Clock /> Timeline</MenuItem>
               <MenuItem onSelect={async () => { const p = await api(`/api/pages/${page.id}?action=duplicate`, { method: "POST" }); qc.invalidateQueries({ queryKey: ["tree"] }); r.push(`/p/${p.id}`); }}><Copy /> Duplicate</MenuItem>
               <MenuItem onSelect={() => window.open(`/api/export?format=md&pageId=${page.id}`, "_blank")}><FileDown /> Export Markdown</MenuItem>
               <MenuItem onSelect={() => window.open(`/api/export?format=pdf&pageId=${page.id}`, "_blank")}><Download /> Print / PDF</MenuItem>
@@ -131,9 +134,9 @@ function DocumentPageView({ page, breadcrumb, backlinks }: PageViewProps) {
       {isDb ? (
         <div className="mt-4"><DatabaseView pageId={page.id} /></div>
       ) : (
-        <div className="mt-3">
+        <ZoomFrame pageId={page.id} className="mt-3" readOnly={isTrashed} beforeZoom={() => sync.flush()}>
           <Editor content={page.content} pageId={page.id} editable={!isTrashed} autofocus={!title} onReady={(e) => { editorRef.current = e; /* a recovered draft or a remote copy may have arrived before the editor existed: show it now, without emitting an edit */ if (restored.current && !editorSynced.current) { setEditorDoc(e, restored.current); editorSynced.current = true; } }} onLock={(l) => { lockRef.current = l; }} onChange={(doc) => { if (lockRef.current) return; docRef.current = doc; queue({ content: doc }); }} />
-        </div>
+        </ZoomFrame>
       )}
       {!isTrashed && <div className="mt-16 border-t border-line pt-5"><div className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-faint">Connections</div><PageGraphCard pageId={page.id} /></div>}
       {backlinks.length > 0 && <div className="mt-6 border-t border-line pt-4"><div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-fg-muted"><Link2 className="size-3.5" /> {backlinks.length} backlink{backlinks.length > 1 ? "s" : ""}</div><div className="flex flex-wrap gap-1.5">{backlinks.map((b) => <Link key={b.id} href={`/p/${b.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-bg-elev px-3 text-[13px] shadow-card transition-colors hover:border-accent/40">{b.icon ?? "📄"} <span className="max-w-[14rem] truncate">{b.title}</span></Link>)}</div></div>}
