@@ -1,0 +1,72 @@
+-- Rollback of 0003_next_foundation (schema only; then delete the migration row:
+--   DELETE FROM drizzle.__drizzle_migrations WHERE created_at = 1795132800000;)
+-- Removes what 0003 added and nothing else: the journal, concepts, insights, canvases (the canvas PAGES stay, as ordinary pages of
+-- type 'canvas' with an empty document), the entity revisions and their tombstones, tasks.block_id, and the typed-relation columns.
+-- Edges created by the 3.0 features (kind 'relation' / 'cites') are deleted: without rel_type they would collide on the 2.x unique
+-- index (from_id, to_id, kind). Links and AI suggestions (kind 'link' / 'ai_suggested') are untouched.
+BEGIN;
+DROP TRIGGER IF EXISTS canvases_sync_tombstone ON "canvases";
+DROP TRIGGER IF EXISTS concepts_sync_tombstone ON "concepts";
+DROP TRIGGER IF EXISTS kedges_sync_tombstone ON "knowledge_edges";
+DROP TRIGGER IF EXISTS references_sync_tombstone ON "references";
+DROP TRIGGER IF EXISTS db_rows_sync_tombstone ON "database_rows";
+DROP TRIGGER IF EXISTS db_views_sync_tombstone ON "database_views";
+DROP TRIGGER IF EXISTS db_props_sync_tombstone ON "database_properties";
+DROP TRIGGER IF EXISTS databases_sync_tombstone ON "databases";
+DROP TRIGGER IF EXISTS tasks_sync_tombstone ON "tasks";
+DROP TRIGGER IF EXISTS canvases_sync_rev ON "canvases";
+DROP TRIGGER IF EXISTS concepts_sync_rev ON "concepts";
+DROP TRIGGER IF EXISTS kedges_sync_rev ON "knowledge_edges";
+DROP TRIGGER IF EXISTS references_sync_rev ON "references";
+DROP TRIGGER IF EXISTS db_rows_sync_rev ON "database_rows";
+DROP TRIGGER IF EXISTS db_views_sync_rev ON "database_views";
+DROP TRIGGER IF EXISTS db_props_sync_rev ON "database_properties";
+DROP TRIGGER IF EXISTS databases_sync_rev ON "databases";
+DROP TRIGGER IF EXISTS tasks_sync_rev ON "tasks";
+DROP TRIGGER IF EXISTS canvases_fill_ws ON "canvases";
+DROP TRIGGER IF EXISTS db_rows_fill_ws ON "database_rows";
+DROP TRIGGER IF EXISTS db_views_fill_ws ON "database_views";
+DROP TRIGGER IF EXISTS db_props_fill_ws ON "database_properties";
+DROP FUNCTION IF EXISTS sync_tombstone_canvas();
+DROP FUNCTION IF EXISTS sync_bump_rev_canvas();
+DROP FUNCTION IF EXISTS sync_fill_workspace();
+DELETE FROM "sync_tombstones" WHERE "kind" NOT IN ('page', 'attachment');
+DROP TABLE IF EXISTS "knowledge_events";
+DROP TABLE IF EXISTS "canvases";
+DROP TABLE IF EXISTS "knowledge_insights";
+DROP TABLE IF EXISTS "page_concepts";
+DROP TABLE IF EXISTS "concepts";
+DELETE FROM "knowledge_edges" WHERE "kind" IN ('relation', 'cites');
+DROP INDEX IF EXISTS "kedges_unique";
+DROP INDEX IF EXISTS "kedges_to_idx";
+DROP INDEX IF EXISTS "kedges_rev_idx";
+DROP INDEX IF EXISTS "references_rev_idx";
+DROP INDEX IF EXISTS "db_rows_rev_idx";
+DROP INDEX IF EXISTS "db_views_rev_idx";
+DROP INDEX IF EXISTS "db_props_rev_idx";
+DROP INDEX IF EXISTS "databases_rev_idx";
+DROP INDEX IF EXISTS "tasks_rev_idx";
+DROP INDEX IF EXISTS "tasks_page_idx";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "updated_at";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "target_block_id";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "source_block_id";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "target_kind";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "source_kind";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "valid_to";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "valid_from";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "note";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "origin";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "rel_type";
+ALTER TABLE "knowledge_edges" DROP COLUMN IF EXISTS "rev";
+CREATE UNIQUE INDEX "kedges_unique" ON "knowledge_edges" USING btree ("from_id","to_id","kind");
+ALTER TABLE "references" DROP COLUMN IF EXISTS "rev";
+ALTER TABLE "database_rows" DROP COLUMN IF EXISTS "workspace_id";
+ALTER TABLE "database_rows" DROP COLUMN IF EXISTS "rev";
+ALTER TABLE "database_views" DROP COLUMN IF EXISTS "workspace_id";
+ALTER TABLE "database_views" DROP COLUMN IF EXISTS "rev";
+ALTER TABLE "database_properties" DROP COLUMN IF EXISTS "workspace_id";
+ALTER TABLE "database_properties" DROP COLUMN IF EXISTS "rev";
+ALTER TABLE "databases" DROP COLUMN IF EXISTS "rev";
+ALTER TABLE "tasks" DROP COLUMN IF EXISTS "block_id";
+ALTER TABLE "tasks" DROP COLUMN IF EXISTS "rev";
+COMMIT;

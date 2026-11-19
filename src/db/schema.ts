@@ -102,24 +102,24 @@ export const databases = pgTable("databases", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }), // the page that hosts the database
   name: text().notNull(), description: text(), icon: text(), isTemplate: boolean("is_template").notNull().default(false),
-  templateOf: uuid("template_of"), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"),
+  templateOf: uuid("template_of"), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"), rev: bigint({ mode: "number" }).notNull().default(0),
 });
 export const databaseProperties = pgTable("database_properties", {
   id: uuid().primaryKey().defaultRandom(), databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }),
   name: text().notNull(), type: text().notNull(), // text number date checkbox status select multi_select url file relation rollup formula created_time last_edited_time ai
   config: jsonb().$type<Record<string, unknown>>().notNull().default({}), position: integer().notNull().default(0), width: integer().default(180),
-  createdAt: created(),
+  createdAt: created(), rev: bigint({ mode: "number" }).notNull().default(0), workspaceId: uuid("workspace_id"), // 3.0: filled by the trigger sync_fill_workspace
 }, (t) => [index("db_props_db_idx").on(t.databaseId)]);
 export const databaseRows = pgTable("database_rows", {
   id: uuid().primaryKey().defaultRandom(), databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }),
   pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
   values: jsonb().$type<Record<string, unknown>>().notNull().default({}), position: doublePrecision().notNull().default(0),
-  createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"),
+  createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"), rev: bigint({ mode: "number" }).notNull().default(0), workspaceId: uuid("workspace_id"),
 }, (t) => [index("db_rows_db_idx").on(t.databaseId), index("db_rows_values_idx").using("gin", t.values)]);
 export const databaseViews = pgTable("database_views", {
   id: uuid().primaryKey().defaultRandom(), databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }),
   name: text().notNull(), type: text().notNull().default("table"), // table board calendar gallery timeline list
-  config: jsonb().$type<Record<string, unknown>>().notNull().default({}), position: integer().notNull().default(0), isDefault: boolean("is_default").notNull().default(false), createdAt: created(),
+  config: jsonb().$type<Record<string, unknown>>().notNull().default({}), position: integer().notNull().default(0), isDefault: boolean("is_default").notNull().default(false), createdAt: created(), rev: bigint({ mode: "number" }).notNull().default(0), workspaceId: uuid("workspace_id"),
 });
 export const relationsTable = pgTable("relations", {
   id: uuid().primaryKey().defaultRandom(), propertyId: uuid("property_id").notNull().references(() => databaseProperties.id, { onDelete: "cascade" }),
@@ -142,7 +142,7 @@ export const pageTags = pgTable("page_tags", { pageId: uuid("page_id").notNull()
 export const tasks = pgTable("tasks", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }), title: text().notNull(), status: text().notNull().default("todo"), priority: text().default("medium"),
-  dueAt: ts("due_at"), completedAt: ts("completed_at"), project: text(), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"),
+  dueAt: ts("due_at"), completedAt: ts("completed_at"), project: text(), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"), rev: bigint({ mode: "number" }).notNull().default(0), blockId: text("block_id"), // 3.0: change feed + anchor of the task in its page (taskItem block id)
 }, (t) => [index("tasks_due_idx").on(t.dueAt)]);
 /** Journal of inbox triage actions so each one can be undone (page state before + ids of what the action created). */
 export const inboxActions = pgTable("inbox_actions", {
@@ -161,7 +161,10 @@ export const knowledgeEdges = pgTable("knowledge_edges", {
   kind: text().notNull(), // link | backlink | relation | ai_suggested | concept
   status: text().notNull().default("accepted"), // suggested | accepted | rejected
   confidence: doublePrecision(), rationale: text(), model: text(), createdAt: created(), decidedAt: ts("decided_at"),
-}, (t) => [uniqueIndex("kedges_unique").on(t.fromId, t.toId, t.kind), index("kedges_ws_idx").on(t.workspaceId, t.status)]);
+  // 3.0 (graph 2.0): typed relations. kind stays the family (link | ai_suggested | relation | cites); relType is the meaning.
+  relType: text("rel_type").notNull().default("related"), origin: text().notNull().default("system"), note: text(), validFrom: ts("valid_from"), validTo: ts("valid_to"),
+  sourceKind: text("source_kind").notNull().default("page"), targetKind: text("target_kind").notNull().default("page"), sourceBlockId: text("source_block_id"), targetBlockId: text("target_block_id"), updatedAt: created(), rev: bigint({ mode: "number" }).notNull().default(0),
+}, (t) => [uniqueIndex("kedges_unique").on(t.fromId, t.toId, t.kind, t.relType), index("kedges_ws_idx").on(t.workspaceId, t.status)]);
 
 /** Rows that no longer exist (permanent deletions), so that a native client that was offline learns about them. Written by triggers only. */
 export const syncTombstones = pgTable("sync_tombstones", {
@@ -235,7 +238,7 @@ export const researchReferences = pgTable("references", {
   pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }), citeKey: text("cite_key").notNull(), entryType: text("entry_type").notNull().default("article"),
   title: text().notNull(), authors: jsonb().$type<string[]>().default([]), year: integer(), journal: text(), doi: text(), url: text(), bibtex: text(), fields: jsonb().default({}),
   verified: text().notNull().default("user"), // user | doi_verified | ai_suggested
-  attachmentId: uuid("attachment_id").references(() => attachments.id, { onDelete: "set null" }), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"),
+  attachmentId: uuid("attachment_id").references(() => attachments.id, { onDelete: "set null" }), createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"), rev: bigint({ mode: "number" }).notNull().default(0),
 }, (t) => [uniqueIndex("references_key_unique").on(t.workspaceId, t.citeKey)]);
 export const experiments = pgTable("experiments", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
@@ -258,3 +261,32 @@ export const settings = pgTable("settings", { key: text().primaryKey(), value: j
 
 export const pagesRelations = rel(pages, ({ many, one }) => ({ versions: many(pageVersions), tags: many(pageTags), workspace: one(workspaces, { fields: [pages.workspaceId], references: [workspaces.id] }) }));
 export const databasesRelations = rel(databases, ({ many }) => ({ properties: many(databaseProperties), rows: many(databaseRows), views: many(databaseViews) }));
+
+// ---------- 3.0 « Next Generation » (migration 0003_next_foundation): journal, concepts, insights, canvas
+/** Events journal: one row per real event, written by the service layer next to the mutation (src/lib/events/service.ts). */
+export const knowledgeEvents = pgTable("knowledge_events", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  at: ts().notNull().defaultNow(), kind: text().notNull(), pageId: uuid("page_id"), entityKind: text("entity_kind"), entityId: text("entity_id"),
+  actor: text().notNull().default("user"), // user | agent | ai | system
+  device: text(), summary: text().notNull().default(""), data: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+}, (t) => [index("kevents_page_idx").on(t.pageId, t.at)]);
+export const concepts = pgTable("concepts", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  name: text().notNull(), description: text(), origin: text().notNull().default("user"), status: text().notNull().default("accepted"), model: text(),
+  createdAt: created(), updatedAt: created(), decidedAt: ts("decided_at"), rev: bigint({ mode: "number" }).notNull().default(0),
+});
+export const pageConcepts = pgTable("page_concepts", {
+  pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }), conceptId: uuid("concept_id").notNull().references(() => concepts.id, { onDelete: "cascade" }),
+  origin: text().notNull().default("user"), status: text().notNull().default("accepted"), confidence: doublePrecision(), blockId: text("block_id"), model: text(), createdAt: created(), decidedAt: ts("decided_at"),
+}, (t) => [primaryKey({ columns: [t.pageId, t.conceptId] })]);
+export const knowledgeInsights = pgTable("knowledge_insights", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  kind: text().notNull(), // contradiction | open_question | cluster | recurring_topic | duplicate
+  status: text().notNull().default("suggested"), // suggested | accepted | dismissed
+  title: text().notNull(), detail: text().notNull().default(""), data: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+  origin: text().notNull().default("system"), model: text(), fingerprint: text(), createdAt: created(), decidedAt: ts("decided_at"),
+});
+export const canvases = pgTable("canvases", {
+  pageId: uuid("page_id").primaryKey().references(() => pages.id, { onDelete: "cascade" }), workspaceId: uuid("workspace_id"),
+  data: jsonb().$type<Record<string, unknown>>().notNull(), version: integer().notNull().default(1), rev: bigint({ mode: "number" }).notNull().default(0), createdAt: created(), updatedAt: created(),
+});
