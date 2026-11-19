@@ -192,6 +192,8 @@ export const indexState = pgTable("index_state", {
 // ---------- AI
 export const aiProviders = pgTable("ai_providers", {
   id: text().primaryKey(), name: text().notNull(), enabled: boolean().notNull().default(true), lastDiscoveryAt: ts("last_discovery_at"), status: text().default("unknown"), statusDetail: text("status_detail"),
+  // NEXT-AI (0004): kind = openai | anthropic | openai_compatible ; key_env = NAME of the environment variable holding the key (never the key)
+  kind: text().notNull().default("openai_compatible"), baseUrl: text("base_url"), keyEnv: text("key_env"), label: text(),
 });
 export const aiModels = pgTable("ai_models", {
   id: text().primaryKey(), provider: text().notNull().references(() => aiProviders.id), displayName: text("display_name"),
@@ -201,7 +203,9 @@ export const aiModels = pgTable("ai_models", {
   probes: jsonb().$type<Record<string, { status: string; detail?: string; ms?: number }>>().default({}),
   benchmark: jsonb().$type<Record<string, unknown>>().default({}), // summary.json aggregate for this model
   capabilities: jsonb().default({}), notes: jsonb().$type<string[]>().default([]), discoveredAt: ts("discovered_at"), probedAt: ts("probed_at"), benchmarkedAt: ts("benchmarked_at"), createdAt: created(), updatedAt: created(),
-});
+  // NEXT-AI (0004): creator = who made the model (anthropic, openai, google, meta, …) ; route = provider id the calls go through
+  creator: text(), route: text(),
+}, (t) => [index("ai_models_provider_idx").on(t.provider)]);
 export const aiConversations = pgTable("ai_conversations", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   title: text().notNull().default("New conversation"), pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }), model: text(), routing: text().default("auto"),
@@ -231,6 +235,37 @@ export const aiComparisons = pgTable("ai_comparisons", {
   id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   prompt: text().notNull(), models: jsonb().$type<string[]>().notNull(), results: jsonb().$type<unknown[]>().notNull().default([]), createdAt: created(),
 });
+
+// ---------- NEXT-AI (migration 0004_next_ai) — one contiguous block: AI caches and logs. See docs/next/API-NEXT-AI.md.
+/** Semantic zoom level 1: AI synopsis of a page, valid while `content_hash` matches the page (title + Markdown). */
+export const aiSynopses = pgTable("ai_synopses", {
+  pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }), level: integer().notNull().default(1),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  contentHash: text("content_hash").notNull(), synopsis: text().notNull(), model: text().notNull(), provider: text().notNull(), costUsd: doublePrecision("cost_usd"), generatedAt: ts("generated_at").notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.pageId, t.level] })]);
+/** Smart inbox: validated AI suggestions for one capture, valid while `content_hash` matches. Suggestions only — nothing here is applied. */
+export const inboxSuggestions = pgTable("inbox_suggestions", {
+  pageId: uuid("page_id").primaryKey().references(() => pages.id, { onDelete: "cascade" }), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  contentHash: text("content_hash").notNull(), suggestions: jsonb().$type<Record<string, unknown>>().notNull().default({}), model: text().notNull(), provider: text().notNull(), costUsd: doublePrecision("cost_usd"), generatedAt: ts("generated_at").notNull().defaultNow(),
+});
+/** Voice notes: one transcript per audio attachment. status = pending | done | failed. transcript = [{t: seconds, text}]. */
+export const audioTranscripts = pgTable("audio_transcripts", {
+  attachmentId: uuid("attachment_id").primaryKey().references(() => attachments.id, { onDelete: "cascade" }), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  status: text().notNull().default("pending"), engine: text(), model: text(), language: text(), duration: doublePrecision(),
+  transcript: jsonb().$type<{ t: number; text: string }[]>().notNull().default([]), text: text().notNull().default(""),
+  summary: jsonb().$type<{ text: string; decisions: string[]; tasks: string[]; model: string; at: string } | null>(), wantSummary: boolean("want_summary").notNull().default(false),
+  error: text(), costUsd: doublePrecision("cost_usd"), requestedAt: ts("requested_at").notNull().defaultNow(), startedAt: ts("started_at"), finishedAt: ts("finished_at"),
+});
+/** Smart database properties: one row per computation of an AI cell. status = queued | running | done | failed | skipped. */
+export const aiPropertyRuns = pgTable("ai_property_runs", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }), propertyId: uuid("property_id").notNull().references(() => databaseProperties.id, { onDelete: "cascade" }),
+  rowId: uuid("row_id").notNull().references(() => databaseRows.id, { onDelete: "cascade" }),
+  status: text().notNull().default("queued"), trigger: text().notNull().default("manual"), task: text().notNull().default("custom"), model: text(), provider: text(),
+  inputTokens: integer("input_tokens").notNull().default(0), outputTokens: integer("output_tokens").notNull().default(0), costUsd: doublePrecision("cost_usd"), outputHash: text("output_hash"), error: text(),
+  createdAt: created(), startedAt: ts("started_at"), finishedAt: ts("finished_at"),
+}, (t) => [index("ai_property_runs_db_idx").on(t.databaseId, t.createdAt), index("ai_property_runs_cell_idx").on(t.rowId, t.propertyId, t.createdAt)]);
+// ---------- end NEXT-AI
 
 // ---------- research
 export const researchReferences = pgTable("references", {

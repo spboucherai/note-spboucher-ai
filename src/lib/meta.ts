@@ -20,6 +20,14 @@ export const FEATURES = [
   "zoom", // GET /api/pages/<id>/zoom?level=2|3
   "nodes-v3", // 3.0 document nodes understood by export, search and validation
   "files-range", // Range on /api/files/<id>
+  "zoom-synopsis", // GET /api/pages/<id>/zoom?level=1 (AI, cached, marked)
+  "ask-scope", // POST /api/ai/chat scope all|page|project|selection, verified block citations
+  "actions-v2", // coherence, questions, links, synthesis, structure
+  "models-v2", // GET /api/ai/models with creator, route, logo, availability
+  "inbox-suggestions", // GET /api/inbox/<id>/suggestions, POST …/apply
+  "transcription", // POST /api/audio/<attachmentId>/transcribe
+  "research-export", // GET /api/research/export.tex
+  "smart-properties", // database AI property config + runs
 ] as const;
 /** "3.0.0" for a 3.x build; a scratch build keeps its suffix ("3.0.0-dev"). */
 export const serverVersion = () => { const v = process.env.APP_VERSION ?? ""; return /^3\./.test(v) ? v : `3.0.0${v.includes("-") ? v.slice(v.indexOf("-")) : ""}`; };

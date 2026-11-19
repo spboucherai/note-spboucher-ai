@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import type { AICallOptions, AIEvent, AIResult, AIUsage } from "./types";
 import { getModel, costUsd } from "./catalog";
+import { providerDef } from "./registry";
+import { streamOpenAICompatible, type CompatCapabilities } from "./openai-compatible";
 
 let _oa: OpenAI | null = null, _an: Anthropic | null = null;
 const oa = () => (_oa ??= new OpenAI({ maxRetries: 2, timeout: 10 * 60_000 }));
@@ -13,8 +15,13 @@ const REFUSAL_RE = /^(I can['’]t|I cannot|I['’]m unable to) (provide|share|h
 
 export async function* streamAI(o: AICallOptions): AsyncGenerator<AIEvent> {
   const t0 = now(); let ttft: number | null = null;
+  // Route by provider KIND (SPEC §3.5): openai → Responses API, anthropic → Messages API, openai_compatible → Chat Completions adapter.
+  const row = await getModel(o.model).catch(() => null); // also refreshes the provider registry
+  const kind = providerDef(o.provider)?.kind ?? (o.provider === "openai" || o.provider === "anthropic" ? o.provider : null);
+  if (kind === null) { yield { type: "error", message: `Unknown AI provider "${o.provider}".` }; return; }
+  if (kind === "openai_compatible") { yield* streamOpenAICompatible(o, { capabilities: (row?.capabilities ?? null) as CompatCapabilities | null }); return; }
   try {
-    if (o.provider === "openai") {
+    if (kind === "openai") {
       const input: any[] = o.messages.map((m) => ({ role: m.role, content: m.role === "user" ? [...(m.images ?? []).map((im) => ({ type: "input_image", image_url: `data:${im.mime};base64,${im.dataBase64}`, detail: "auto" })), { type: "input_text", text: m.content }] : m.content }));
       const body: any = { model: o.model, input, max_output_tokens: o.maxTokens ?? 8000, stream: true };
       if (o.system) body.instructions = o.system;

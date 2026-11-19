@@ -20,6 +20,7 @@ import { handleSuggestLinks } from "./handlers/suggest-links";
 import { handleAiProperty } from "./handlers/ai-property";
 import { handleMaintenance } from "./handlers/maintenance";
 import { handleGraphInsights } from "./handlers/graph-insights";
+import { handleTranscribe } from "./handlers/transcribe";
 
 const boss = new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: 4 });
 boss.on("error", (e: Error) => log.error({ detail: e.message }, "pg-boss error"));
@@ -36,6 +37,7 @@ await work(QUEUES.suggestLinks, handleSuggestLinks);
 await work(QUEUES.aiProperty, handleAiProperty);
 await work(QUEUES.maintenance, handleMaintenance);
 await work(QUEUES.graphInsights, handleGraphInsights);
+await work(QUEUES.transcribe, handleTranscribe);
 // nightly encrypted backup at 03:30 America/Toronto; hourly housekeeping
 await boss.schedule(QUEUES.backup, "30 3 * * *", { kind: "full" }, { tz: "America/Toronto" });
 await boss.schedule(QUEUES.maintenance, "17 * * * *", {}, { tz: "America/Toronto" });

@@ -13,6 +13,7 @@
     "@types/sanitize-html": "^2.16.2",
     "@types/turndown": "^5.0.6",
     "drizzle-kit": "^0.31.11",
+    "simple-icons": "^16.38.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
