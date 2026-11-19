@@ -34,7 +34,7 @@ export async function stateAt(wsId: string, at: Date, scope: { pageId?: string |
   const states: PageState[] = [];
   for (const p of pages) {
     const base = { id: p.id, icon: p.icon, section: p.section, parentId: p.parentId, trashedAt: p.deletedAt && p.deletedAt <= at ? p.deletedAt.toISOString() : null, currentTitle: p.title, currentVersion: p.version };
-    if (p.createdAt > at) { states.push({ ...base, title: p.title, existed: false, source: "none", exact: true, version: null, versionId: null, versionAt: null, wordCount: null, changedSince: true }); continue; }
+    if (p.createdAt > at) { states.push({ ...base, title: p.title, existed: false, source: "none", exact: false, version: null, versionId: null, versionAt: null, wordCount: null, changedSince: true }); continue; }
     if (p.updatedAt <= at) { states.push({ ...base, title: p.title, existed: true, source: "current", exact: true, version: p.version, versionId: null, versionAt: p.updatedAt.toISOString(), wordCount: p.wordCount, changedSince: false, ...(withContent ? { content: p.content, properties: p.properties } : {}) }); continue; }
     const cols = withContent ? undefined : { id: V.id, version: V.version, title: V.title, createdAt: V.createdAt, wordCount: V.wordCount };
     const pick = async (after: boolean) => (cols ? await db.select(cols).from(V).where(and(eq(V.pageId, p.id), gt(V.version, 0), after ? gt(V.createdAt, at) : lte(V.createdAt, at))).orderBy(after ? asc(V.createdAt) : desc(V.createdAt)).limit(1)

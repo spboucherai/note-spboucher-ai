@@ -1,4 +1,5 @@
 /** Research tasks = rows of `tasks` scoped to a research page. */
+import { parseDue } from "@/lib/tasks/due";
 import { and, asc, eq, isNull, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { HttpError } from "@/lib/errors";
@@ -11,7 +12,7 @@ export async function listTasks(wsId: string, pageId: string) {
   return db.select().from(T).where(and(eq(T.workspaceId, wsId), eq(T.pageId, pageId), isNull(T.deletedAt))).orderBy(dsql`(${T.status} = 'done') asc`, dsql`${T.dueAt} asc nulls last`, asc(T.createdAt));
 }
 export async function createTask(wsId: string, input: TaskInput) {
-  const [t] = await db.insert(T).values({ workspaceId: wsId, pageId: input.pageId, title: input.title.trim() || "Task", status: input.status ?? "todo", priority: input.priority ?? "medium", dueAt: input.dueAt ? new Date(input.dueAt) : null, project: input.project ?? null, completedAt: input.status === "done" ? new Date() : null }).returning();
+  const [t] = await db.insert(T).values({ workspaceId: wsId, pageId: input.pageId, title: input.title.trim() || "Task", status: input.status ?? "todo", priority: input.priority ?? "medium", dueAt: parseDue(input.dueAt), project: input.project ?? null, completedAt: input.status === "done" ? new Date() : null }).returning();
   await recordEvent(db, { workspaceId: wsId, kind: "task.created", pageId: t.pageId, entityKind: "task", entityId: t.id, summary: t.title, data: { via: "research" } });
   return t;
 }
@@ -24,7 +25,7 @@ export async function updateTask(wsId: string, id: string, patch: Partial<TaskIn
   if (patch.title !== undefined) set.title = patch.title.trim() || prev.title;
   if (patch.status !== undefined) { set.status = patch.status; set.completedAt = patch.status === "done" ? (prev.completedAt ?? new Date()) : null; }
   if (patch.priority !== undefined) set.priority = patch.priority;
-  if (patch.dueAt !== undefined) set.dueAt = patch.dueAt ? new Date(patch.dueAt) : null;
+  if (patch.dueAt !== undefined) set.dueAt = parseDue(patch.dueAt); // a bare date is stored at 12:00 UTC, as /api/tasks does
   if (patch.project !== undefined) set.project = patch.project;
   if (patch.pageId !== undefined) set.pageId = patch.pageId;
   const [t] = await db.update(T).set(set).where(eq(T.id, id)).returning();

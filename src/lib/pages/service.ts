@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, sql as dsql, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, sql as dsql, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import fs from "node:fs/promises";
 import { docText, wordCount, extractRefs, docTaskItems, docMarkers, emptyDoc, ensureBlockIds, type PMNode } from "@/lib/editor/text";
@@ -219,7 +219,10 @@ async function syncTaskItems(tx: Executor, p: Page, prev: Page | null): Promise<
 export async function softDeletePage(workspaceId: string, id: string) {
   const ids = await descendants(workspaceId, id); ids.push(id);
   await db.transaction(async (tx) => {
-    const done = await tx.update(schema.pages).set({ deletedAt: new Date() }).where(and(inArray(schema.pages.id, ids), eq(schema.pages.workspaceId, workspaceId))).returning({ id: schema.pages.id, title: schema.pages.title });
+    const at = new Date();
+    const done = await tx.update(schema.pages).set({ deletedAt: at }).where(and(inArray(schema.pages.id, ids), eq(schema.pages.workspaceId, workspaceId))).returning({ id: schema.pages.id, title: schema.pages.title });
+    // a database follows its host page: its feed row (`kinds=database`) gets the same `deletedAt` (and a new `rev`), so native clients drop it
+    await tx.update(schema.databases).set({ deletedAt: at, updatedAt: at }).where(and(inArray(schema.databases.pageId, ids), eq(schema.databases.workspaceId, workspaceId), isNull(schema.databases.deletedAt)));
     const root = done.find((d) => d.id === id); if (root) await recordEvent(tx, { workspaceId, kind: "page.trashed", pageId: id, summary: root.title, data: { count: done.length } });
   });
   await db.delete(schema.chunks).where(and(eq(schema.chunks.sourceType, "page"), inArray(schema.chunks.sourceId, ids)));
@@ -229,6 +232,7 @@ export async function restorePage(workspaceId: string, id: string) {
   const ids = await descendants(workspaceId, id, true); ids.push(id);
   await db.transaction(async (tx) => {
     const done = await tx.update(schema.pages).set({ deletedAt: null }).where(and(inArray(schema.pages.id, ids), eq(schema.pages.workspaceId, workspaceId))).returning({ id: schema.pages.id, title: schema.pages.title });
+    await tx.update(schema.databases).set({ deletedAt: null, updatedAt: new Date() }).where(and(inArray(schema.databases.pageId, ids), eq(schema.databases.workspaceId, workspaceId), isNotNull(schema.databases.deletedAt))); // …and comes back with it
     const root = done.find((d) => d.id === id); if (root) await recordEvent(tx, { workspaceId, kind: "page.restored", pageId: id, summary: root.title, data: { count: done.length } });
   });
   for (const pid of ids) await enqueue(QUEUES.index, { sourceType: "page", sourceId: pid, workspaceId });

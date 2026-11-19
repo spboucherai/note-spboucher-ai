@@ -116,11 +116,12 @@ async function deleteRelationPair(p: Property, dbId: string, keepSelf: boolean) 
 }
 export async function deleteProperty(wsId: string, dbId: string, propId: string) {
   const d = await ensureDatabase(wsId, dbId);
-  const [p] = await db.select().from(schema.databaseProperties).where(and(eq(schema.databaseProperties.id, propId), eq(schema.databaseProperties.databaseId, d.id))); if (!p) throw new HttpError(404, "Property not found");
+  const [p] = await db.select().from(schema.databaseProperties).where(and(eq(schema.databaseProperties.id, propId), eq(schema.databaseProperties.databaseId, d.id))); if (!p) return false; // nothing to delete: DELETE is idempotent
   if (p.type === "title") throw new HttpError(400, "The title property cannot be deleted");
   if (p.type === "relation") await deleteRelationPair(p as Property, d.id, false); else await db.delete(schema.databaseProperties).where(eq(schema.databaseProperties.id, propId));
   await db.update(schema.databaseRows).set({ values: dsql`${schema.databaseRows.values} - ${propId}` }).where(eq(schema.databaseRows.databaseId, d.id));
   await pruneViews(d.id, propId);
+  return true;
 }
 const pruneFilter = (f: FilterNode, propId: string): FilterNode | null => { if (!isGroup(f)) return f.property === propId ? null : f; const key = f.or ? "or" : "and"; const items = (f.or ?? f.and ?? []).map((n) => pruneFilter(n, propId)).filter((n): n is FilterNode => !!n && (!isGroup(n) || (n.and ?? n.or ?? []).length > 0)); return { [key]: items } as FilterGroup; };
 /** 3.0: a deleted property leaves no dead reference in the saved views (filter rules, sorts, grouping, date / cover properties, hidden, order, widths, card properties). */
@@ -254,7 +255,7 @@ async function checkViewConfig(dbId: string, config: ViewConfig) {
 }
 export async function deleteView(wsId: string, dbId: string, viewId: string) {
   const d = await ensureDatabase(wsId, dbId);
-  const all = await db.select({ id: schema.databaseViews.id }).from(schema.databaseViews).where(eq(schema.databaseViews.databaseId, d.id)); if (all.length <= 1) throw new HttpError(400, "A database needs at least one view");
+  const all = await db.select({ id: schema.databaseViews.id }).from(schema.databaseViews).where(eq(schema.databaseViews.databaseId, d.id)); if (!all.some((v) => v.id === viewId)) return false; /* nothing to delete: DELETE is idempotent */ if (all.length <= 1) throw new HttpError(400, "A database needs at least one view", "last_view");
   await db.delete(schema.databaseViews).where(and(eq(schema.databaseViews.id, viewId), eq(schema.databaseViews.databaseId, d.id)));
 }
 

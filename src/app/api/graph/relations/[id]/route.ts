@@ -11,8 +11,9 @@ export const PATCH = handler(async ({ req, ws, params, user }) => {
   await audit(user.id, b.status ? `graph.relation.${b.status}` : "graph.relation.update", { type: "edge", id });
   return Response.json(r);
 });
-/** DELETE → `{ok:true}`. Only relations (kind `relation`); a document link or a citation → 409 `derived_edge`. */
+/** DELETE → `{ok:true}`, idempotent (an unknown or already deleted id answers the same 200). Only relations (kind `relation`); a document link or a citation → 409 `derived_edge`. */
 export const DELETE = handler(async ({ ws, params, user }) => {
-  const id = uuid.parse(params.id); await deleteRelation(ws.id, id);
-  await audit(user.id, "graph.relation.delete", { type: "edge", id }); return Response.json({ ok: true });
+  const id = uuid.parse(params.id);
+  if (await deleteRelation(ws.id, id)) await audit(user.id, "graph.relation.delete", { type: "edge", id });
+  return Response.json({ ok: true });
 });

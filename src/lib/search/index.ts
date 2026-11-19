@@ -1,3 +1,4 @@
+import { pgIso, pgNum } from "@/lib/pg-values";
 import { and, eq, inArray, isNull, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { chunkDocument, chunkPlainText, type Chunk } from "./chunk";
@@ -108,7 +109,8 @@ async function searchReferences(workspaceId: string, query: string, limit: numbe
 /** Title / quick search (trigram + prefix) for the command palette and mentions. */
 export async function quickSearch(workspaceId: string, q: string, limit = 10) {
   if (!q.trim()) return db.select({ id: schema.pages.id, title: schema.pages.title, icon: schema.pages.icon, type: schema.pages.type, section: schema.pages.section, updatedAt: schema.pages.updatedAt }).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), dsql`deleted_at is null`)).orderBy(dsql`last_opened_at desc nulls last, updated_at desc`).limit(limit);
-  return db.execute(dsql`select id, title, icon, type, section, updated_at as "updatedAt" from pages where workspace_id = ${workspaceId} and deleted_at is null and (title ilike ${"%" + q + "%"} or title % ${q}) order by (title ilike ${q + "%"}) desc, similarity(title, ${q}) desc, updated_at desc limit ${limit}`) as unknown as Promise<{ id: string; title: string; icon: string | null; type: string; section: string; updatedAt: Date }[]>;
+  const rows = (await db.execute(dsql`select id, title, icon, type, section, updated_at as "updatedAt" from pages where workspace_id = ${workspaceId} and deleted_at is null and (title ilike ${"%" + q + "%"} or title % ${q}) order by (title ilike ${q + "%"}) desc, similarity(title, ${q}) desc, updated_at desc limit ${limit}`)) as unknown as { id: string; title: string; icon: string | null; type: string; section: string; updatedAt: unknown }[];
+  return rows.map((r) => ({ ...r, updatedAt: pgIso(r.updatedAt) })); // raw SQL hands back PostgreSQL text: the API answers ISO-8601, like the branch above
 }
 
 /** Near-duplicate pages: pairs of chunks from different pages with cosine similarity ≥ threshold (default 0.93). */
@@ -134,14 +136,14 @@ export async function indexHealth(workspaceId: string) {
   let failed: { id: string; sourceId: string | null; sourceType: string | null; error: string; at: string }[] = []; let queued = 0;
   try {
     const f = (await db.execute(dsql`select id, data, output, completed_on from pgboss.job where name = 'index-source' and state = 'failed' and completed_on > now() - interval '7 days' and data->>'workspaceId' = ${workspaceId} order by completed_on desc limit 30`)) as any[];
-    failed = f.map((j) => ({ id: j.id, sourceId: j.data?.sourceId ?? null, sourceType: j.data?.sourceType ?? null, error: String(j.output?.message ?? j.output?.value ?? "failed").slice(0, 200), at: j.completed_on }));
+    failed = f.map((j) => ({ id: j.id, sourceId: j.data?.sourceId ?? null, sourceType: j.data?.sourceType ?? null, error: String(j.output?.message ?? j.output?.value ?? "failed").slice(0, 200), at: pgIso(j.completed_on) ?? "" }));
     const [q] = (await db.execute(dsql`select count(*)::int as n from pgboss.job where name in ('index-source','reindex-all') and state in ('created','retry','active')`)) as any[]; queued = q?.n ?? 0;
   } catch { /* queue schema not readable: report what we know */ }
   // a failure is only current if that source is still not indexed
   const stillPending = new Set(pending.map((p) => p.id));
-  return { pending: pending.map((p) => ({ id: p.id, title: p.title, icon: p.icon, updatedAt: p.updated_at })), pendingFiles, failed: failed.filter((f) => !f.sourceId || stillPending.has(f.sourceId) || f.sourceType === "attachment"), queued, embeddingsConfigured: Boolean(process.env.OPENAI_API_KEY) };
+  return { pending: pending.map((p) => ({ id: p.id, title: p.title, icon: p.icon, updatedAt: pgIso(p.updated_at) })), pendingFiles, failed: failed.filter((f) => !f.sourceId || stillPending.has(f.sourceId) || f.sourceType === "attachment"), queued, embeddingsConfigured: Boolean(process.env.OPENAI_API_KEY) };
 }
 export async function indexStats(workspaceId: string) {
   const [s] = (await db.execute(dsql`select (select count(*) from pages where workspace_id = ${workspaceId} and deleted_at is null) as pages, (select count(*) from attachments where workspace_id = ${workspaceId} and deleted_at is null and extracted_text is not null) as attachments, (select count(*) from chunks where workspace_id = ${workspaceId}) as chunks, (select count(*) from chunks c join embeddings e on e.chunk_id = c.id where c.workspace_id = ${workspaceId}) as embedded, (select count(distinct source_id) from index_state) as indexed_sources, (select max(indexed_at) from index_state) as last_indexed, (select count(*) from index_state where model <> ${EMBEDDING_MODEL} or version <> ${EMBEDDING_VERSION}) as stale`)) as any[];
-  return { ...s, model: EMBEDDING_MODEL, version: EMBEDDING_VERSION };
+  return { pages: pgNum(s.pages), attachments: pgNum(s.attachments), chunks: pgNum(s.chunks), embedded: pgNum(s.embedded), indexed_sources: pgNum(s.indexed_sources), last_indexed: pgIso(s.last_indexed), stale: pgNum(s.stale), model: EMBEDDING_MODEL, version: EMBEDDING_VERSION };
 }

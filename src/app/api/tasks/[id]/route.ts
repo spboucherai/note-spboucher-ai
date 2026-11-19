@@ -13,9 +13,9 @@ export const PATCH = handler(async ({ req, ws, params, user }) => {
   if (patch.status !== undefined) await audit(user.id, patch.status === "done" ? "task.complete" : patch.status === "todo" ? "task.reopen" : "task.update", { type: "task", id });
   return Response.json(taskOut(t));
 });
-/** DELETE /api/tasks/<id> → soft delete. Idempotent: deleting an already deleted task answers 200 `{ok:true, deleted:false}`; an unknown id → 404. */
+/** DELETE /api/tasks/<id> → soft delete. Idempotent: deleting an already deleted or unknown task answers 200 `{ok:true, deleted:false}`. */
 export const DELETE = handler(async ({ ws, params, user }) => {
-  const id = uuid.parse(params.id); await getTask(ws.id, id, { includeDeleted: true });
+  const id = uuid.parse(params.id);
   const deleted = await deleteTask(ws.id, id);
   if (deleted) await audit(user.id, "task.delete", { type: "task", id });
   return Response.json({ ok: true, deleted });

@@ -13,6 +13,8 @@ export const GET = handler(async ({ req, ws }) => {
   if (status && !["suggested", "accepted", "dismissed", "all"].includes(status)) throw new HttpError(400, "Unknown status", "bad_request");
   if (kind && !(INSIGHT_KINDS as readonly string[]).includes(kind)) throw new HttpError(400, "Unknown kind", "bad_request");
   if (lim !== null && !/^\d{1,3}$/.test(lim)) throw new HttpError(400, "limit must be an integer", "bad_request");
-  const [intelligence, stored] = await Promise.all([u.get("intelligence") === "0" ? null : computeIntelligence(ws.id, { limit: lim ? Number(lim) : 20 }), listInsights(ws.id, { status, kind })]);
+  // `limit` (clamped to 1..100) caps every list of `intelligence` AND `insights`; without it: 20 per intelligence list, 200 insights
+  const n = lim === null ? undefined : Math.min(100, Math.max(1, Number(lim)));
+  const [intelligence, stored] = await Promise.all([u.get("intelligence") === "0" ? null : computeIntelligence(ws.id, { limit: n ?? 20 }), listInsights(ws.id, { status, kind, limit: n })]);
   return Response.json({ intelligence, ...stored });
 });

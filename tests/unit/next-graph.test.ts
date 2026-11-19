@@ -56,7 +56,7 @@ test("a user relation is typed, accepted at once, journaled, unique per (from, t
   assert.equal(await code(updateRelation(ws, other.relation.id, { relType: "supports" })), "relation_exists");
   const edited = await updateRelation(ws, id, { note: null, validTo: new Date("2026-12-31T00:00:00Z"), relType: "part_of" }); assert.equal(edited.note, null); assert.equal(edited.relType, "part_of"); assert.ok(edited.rev > r.relation.rev);
   assert.deepEqual((await listRelations(ws, { nodeId: a.id })).map((x) => x.relType).sort(), ["extends", "part_of"]); assert.equal((await listRelations(ws, { nodeId: a.id, relType: "extends" })).length, 1);
-  await deleteRelation(ws, id); assert.equal(await code(getRelation(ws, id)), "not_found"); assert.equal(await code(deleteRelation(ws, id)), "not_found");
+  await deleteRelation(ws, id); assert.equal(await code(getRelation(ws, id)), "not_found"); assert.equal(await deleteRelation(ws, id), false, "idempotent: nothing left to delete");
   assert.deepEqual((await kinds(a.id)).filter((k) => k.startsWith("relation.")), ["relation.created", "relation.created", "relation.removed"]);
   assert.equal(REL_TYPES.length, 12);
 });

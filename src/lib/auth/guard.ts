@@ -7,7 +7,7 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 
-import { HttpError } from "@/lib/errors";
+import { HttpError, errorCode } from "@/lib/errors";
 export { HttpError };
 
 /** For route handlers: 401 without a valid session. Also enforces same-origin on mutating requests. */
@@ -47,6 +47,6 @@ export const getWorkspace = cache(async (userId: string) => {
 });
 export function jsonError(e: unknown, requestId?: string) {
   const h: Record<string, string> = { "cache-control": "no-store" }; if (requestId) h["x-request-id"] = requestId;
-  if (e instanceof HttpError) return Response.json({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.extra ?? {}) }, { status: e.status, headers: h });
-  return Response.json({ error: "Internal error", ...(requestId ? { requestId } : {}) }, { status: 500, headers: h });
+  if (e instanceof HttpError) return Response.json({ error: e.message, code: errorCode(e.status, e.code), ...(e.extra ?? {}) }, { status: e.status, headers: h });
+  return Response.json({ error: "Internal error", code: "internal", ...(requestId ? { requestId } : {}) }, { status: 500, headers: h });
 }

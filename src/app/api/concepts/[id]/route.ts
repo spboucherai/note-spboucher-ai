@@ -11,5 +11,5 @@ export const PATCH = handler(async ({ req, ws, params, user }) => {
   await audit(user.id, "concept.update", { type: "concept", id }); return Response.json(c);
 });
 export const DELETE = handler(async ({ ws, params, user }) => {
-  const id = uuid.parse(params.id); await deleteConcept(ws.id, id); await audit(user.id, "concept.delete", { type: "concept", id }); return Response.json({ ok: true });
+  const id = uuid.parse(params.id); if (await deleteConcept(ws.id, id)) await audit(user.id, "concept.delete", { type: "concept", id }); /* idempotent: an unknown id answers the same 200 */ return Response.json({ ok: true });
 });

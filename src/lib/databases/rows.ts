@@ -193,4 +193,4 @@ export async function updateRowTemplate(wsId: string, dbId: string, id: string, 
   if (patch.isDefault !== undefined) { if (patch.isDefault) await db.update(T).set({ isDefault: false }).where(eq(T.databaseId, d.id)); set.isDefault = patch.isDefault; }
   const [t] = await db.update(T).set(set).where(eq(T.id, id)).returning(); return tplOut(t);
 }
-export async function deleteRowTemplate(wsId: string, dbId: string, id: string) { const d = await ensureDatabase(wsId, dbId); const r = await db.delete(T).where(and(eq(T.id, id), eq(T.databaseId, d.id))).returning({ id: T.id }); if (!r.length) throw new HttpError(404, "Template not found", "not_found"); }
+export async function deleteRowTemplate(wsId: string, dbId: string, id: string) { const d = await ensureDatabase(wsId, dbId); const r = await db.delete(T).where(and(eq(T.id, id), eq(T.databaseId, d.id))).returning({ id: T.id }); return r.length > 0; /* false: nothing to delete — DELETE is idempotent */ }

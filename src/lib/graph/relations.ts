@@ -50,7 +50,7 @@ const eventData = (k: EdgeRow, titles: Map<string, string>) => ({ relationId: k.
  */
 export async function createRelation(wsId: string, input: RelationInput, opts: { origin?: "user" | "ai"; model?: string | null; confidence?: number | null; rationale?: string | null } = {}): Promise<{ relation: RelationOut; existing: boolean }> {
   const origin = opts.origin ?? "user"; const sourceKind = input.sourceKind ?? "page"; const targetKind = input.targetKind ?? "page";
-  if (input.fromId === input.toId && sourceKind === targetKind) throw new HttpError(400, "A relation needs two different nodes", "bad_node");
+  if (input.fromId === input.toId && sourceKind === targetKind) throw new HttpError(400, "A relation needs two different nodes", "bad_node", { field: "toId" });
   if (input.validFrom && input.validTo && input.validTo < input.validFrom) throw new HttpError(400, "validTo is before validFrom", "bad_request");
   return db.transaction(async (tx) => {
     if (input.id) { const [old] = await tx.select().from(K).where(eq(K.id, input.id)); if (old) { if (old.workspaceId !== wsId) throw new HttpError(409, "This id is already in use", "id_taken"); return { relation: out(old, await nodeTitles(tx, wsId, [old])), existing: true }; } }
@@ -101,13 +101,15 @@ export async function updateRelation(wsId: string, id: string, patch: RelationPa
   });
 }
 /** Delete a relation (user or AI one). Derived edges → 409 `derived_edge`. The tombstone comes from the trigger. */
-export async function deleteRelation(wsId: string, id: string): Promise<void> {
-  await db.transaction(async (tx) => {
-    const [cur] = await tx.select().from(K).where(and(eq(K.id, id), eq(K.workspaceId, wsId))); if (!cur) throw new HttpError(404, "Relation not found", "not_found");
+/** Returns false when there was nothing to delete (already deleted, or never existed): DELETE is idempotent, the route answers 200 both times. */
+export async function deleteRelation(wsId: string, id: string): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [cur] = await tx.select().from(K).where(and(eq(K.id, id), eq(K.workspaceId, wsId))); if (!cur) return false;
     if (cur.kind !== "relation") throw new HttpError(409, cur.kind === "ai_suggested" ? "A link suggestion is rejected, not deleted" : "This edge is derived from a document: edit the document instead", "derived_edge");
     const titles = await nodeTitles(tx, wsId, [cur]);
     await tx.delete(K).where(eq(K.id, id));
     await recordEvent(tx, { workspaceId: wsId, kind: "relation.removed", pageId: pageOf(cur), entityKind: "edge", entityId: cur.id, summary: `${titles.get(cur.fromId) ?? "?"} — ${cur.relType} → ${titles.get(cur.toId) ?? "?"}`, data: eventData(cur, titles) });
+    return true;
   });
 }
 /** Relations (kind `relation`, plus `cites` / `ai_suggested` when asked) touching a node, or all of them. Newest first, ≤ 500. */

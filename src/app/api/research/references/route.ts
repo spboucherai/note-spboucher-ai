@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { handler, parseBody, uuid, HttpError } from "@/lib/api";
-import { listReferences, createReference } from "@/lib/research/references";
+import { listReferences, createReference, REPLAYED } from "@/lib/research/references";
 import { audit } from "@/lib/audit";
 import { shortLabel, formatCitation } from "@/lib/research/cite";
 import { projectPages, projectReferences } from "@/lib/research/latex";
@@ -36,6 +36,7 @@ export const GET = handler(async ({ req, ws }) => {
 export const POST = handler(async ({ req, ws, user }) => {
   const b = await parseBody(req, refSchema);
   const r = await createReference(ws.id, { ...b, verified: b.verified ?? "user" }); // 3.0: a client-chosen `id` makes the call idempotent (the stored reference is returned)
+  if (REPLAYED.has(r)) return Response.json(r, { status: 200, headers: { "x-existing": "1" } }); // same id again: the stored row, nothing written
   await audit(user.id, "reference.create", { type: "reference", id: r.id }, { citeKey: r.citeKey });
   return Response.json(r, { status: 201 });
 });

@@ -41,6 +41,12 @@ const plainName = (a: string) => a.replace(/^\{(.*)\}$/, "$1").replace(/\s+/g, "
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 export interface ReferenceInput { id?: string; pageId?: string | null; citeKey?: string | null; entryType?: string; title: string; authors?: string[]; year?: number | null; journal?: string | null; doi?: string | null; url?: string | null; fields?: Record<string, unknown>; verified?: Verified; attachmentId?: string | null; bibtex?: string | null }
+/** Rows answered by `createReference` because their client-chosen id already existed (the route answers 200 + `x-existing: 1`). */
+export const REPLAYED = new WeakSet<object>();
+/**
+ * Create a reference. With a client-chosen `id` the call is idempotent: a known id answers the stored row untouched; the id of a
+ * DELETED reference is refused (409 `reference_deleted` — a retry never resurrects; bringing it back is the explicit `POST /api/research/references/<id>?action=restore`).
+ */
 export async function createReference(wsId: string, input: ReferenceInput) {
   const doi = normDoi(input.doi); const entryType = input.entryType ?? "article"; const rawAuthors = (input.authors ?? []).map((a) => a.trim()).filter(Boolean); const authors = rawAuthors.map(plainName);
   const base = input.citeKey?.trim() || makeCiteKey(authors, input.year ?? null, input.title);
@@ -50,7 +56,7 @@ export async function createReference(wsId: string, input: ReferenceInput) {
   const fields = fieldsOf({ title: input.title.trim(), authors, year: input.year ?? null, journal: input.journal ?? null, doi, url: input.url ?? null, entryType, fields: given });
   // the entry as imported is kept only when it carries the key we store
   const bibtex = input.bibtex && citeKey === input.citeKey?.trim() ? input.bibtex : formatBibtex({ citeKey, entryType, fields });
-  if (input.id) { const [old] = await db.select().from(R).where(eq(R.id, input.id)); if (old) { if (old.workspaceId !== wsId) throw new HttpError(409, "This id is already in use", "id_taken"); return old; } } // 3.0: client-chosen id, idempotent
+  if (input.id) { const [old] = await db.select().from(R).where(eq(R.id, input.id)); if (old) { if (old.workspaceId !== wsId) throw new HttpError(409, "This id is already in use", "id_taken"); if (old.deletedAt) throw new HttpError(409, "This reference was deleted", "reference_deleted", { id: old.id, deletedAt: old.deletedAt.toISOString() }); REPLAYED.add(old); return old; } } // 3.0: client-chosen id, idempotent
   const [r] = await db.insert(R).values({ ...(input.id ? { id: input.id } : {}), workspaceId: wsId, pageId: input.pageId ?? null, citeKey, entryType, title: input.title.trim(), authors, year: input.year ?? null, journal: input.journal ?? null, doi, url: input.url ?? (doi ? `https://doi.org/${doi}` : null), fields, bibtex, verified: input.verified ?? "user", attachmentId: input.attachmentId ?? null }).returning();
   await recordEvent(db, { workspaceId: wsId, kind: "reference.added", pageId: r.pageId, entityKind: "reference", entityId: r.id, summary: r.title, data: { citeKey: r.citeKey, verified: r.verified, ...(r.doi ? { doi: r.doi } : {}) } });
   if (r.pageId) await recordEvent(db, { workspaceId: wsId, kind: "reference.linked", pageId: r.pageId, entityKind: "reference", entityId: r.id, summary: r.title, data: { referenceId: r.id, citeKey: r.citeKey, title: r.title, via: "page" } });

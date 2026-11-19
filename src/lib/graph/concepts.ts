@@ -65,7 +65,7 @@ export async function updateConcept(wsId: string, id: string, patch: ConceptPatc
   await db.transaction(async (tx) => {
     const [cur] = await tx.select().from(C).where(and(eq(C.id, id), eq(C.workspaceId, wsId))); if (!cur) throw new HttpError(404, "Concept not found", "not_found");
     const set: Partial<typeof C.$inferInsert> = {};
-    if (patch.name !== undefined) { const name = cleanName(patch.name); if (!name) throw new HttpError(400, "A concept needs a name", "bad_request"); if (name.toLowerCase() !== cur.name.toLowerCase()) { const [same] = await tx.select({ id: C.id }).from(C).where(and(eq(C.workspaceId, wsId), dsql`lower(${C.name}) = ${name.toLowerCase()}`)); if (same) throw new HttpError(409, "A concept with this name already exists", "concept_exists", { id: same.id }); } set.name = name; }
+    if (patch.name !== undefined) { const name = cleanName(patch.name); if (!name) throw new HttpError(400, "A concept needs a name", "bad_request"); if (name.toLowerCase() !== cur.name.toLowerCase()) { const [same] = await tx.select({ id: C.id, status: C.status }).from(C).where(and(eq(C.workspaceId, wsId), dsql`lower(${C.name}) = ${name.toLowerCase()}`)); if (same) throw new HttpError(409, "A concept with this name already exists", "concept_exists", { id: same.id, status: same.status }); } set.name = name; }
     if (patch.description !== undefined) set.description = patch.description?.slice(0, 2000) ?? null;
     if (patch.status !== undefined && patch.status !== cur.status) { set.status = patch.status; set.decidedAt = patch.status === "suggested" ? null : new Date(); }
     if (Object.keys(set).length) await tx.update(C).set({ ...set, updatedAt: new Date() }).where(eq(C.id, id));
@@ -77,7 +77,9 @@ export async function updateConcept(wsId: string, id: string, patch: ConceptPatc
   });
   return getConcept(wsId, id);
 }
-export async function deleteConcept(wsId: string, id: string): Promise<void> {
-  const r = await db.delete(C).where(and(eq(C.id, id), eq(C.workspaceId, wsId))).returning({ id: C.id }); if (!r.length) throw new HttpError(404, "Concept not found", "not_found");
+/** Returns false when there was nothing to delete: DELETE is idempotent, the route answers 200 both times. */
+export async function deleteConcept(wsId: string, id: string): Promise<boolean> {
+  const r = await db.delete(C).where(and(eq(C.id, id), eq(C.workspaceId, wsId))).returning({ id: C.id }); if (!r.length) return false;
   await db.delete(schema.knowledgeEdges).where(and(eq(schema.knowledgeEdges.workspaceId, wsId), dsql`((${schema.knowledgeEdges.fromId} = ${id} and ${schema.knowledgeEdges.sourceKind} = 'concept') or (${schema.knowledgeEdges.toId} = ${id} and ${schema.knowledgeEdges.targetKind} = 'concept'))`));
+  return true;
 }

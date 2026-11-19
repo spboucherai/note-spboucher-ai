@@ -173,7 +173,7 @@ test("row templates: capture a row, create from a template (explicit values win)
   assert.equal((await updateRowTemplate(ws, d.id, t.id, { name: "Weekly", isDefault: true, values: { [n.id]: 1 } })).name, "Weekly"); assert.deepEqual((await listRowTemplates(ws, d.id)).map((x) => x.isDefault), [true, false]);
   assert.equal(await code(createRow(ws, d.id, { templateId: "00000000-0000-4000-8000-000000000000" })), "not_found");
   const other = await newDb("templates other"); assert.equal(await code(createRow(ws, other.id, { templateId: t.id })), "not_found", "a template belongs to its database");
-  await deleteRowTemplate(ws, d.id, t2.id); assert.equal((await listRowTemplates(ws, d.id)).length, 1); assert.equal(await code(deleteRowTemplate(ws, d.id, t2.id)), "not_found");
+  await deleteRowTemplate(ws, d.id, t2.id); assert.equal((await listRowTemplates(ws, d.id)).length, 1); assert.equal(await deleteRowTemplate(ws, d.id, t2.id), false, "idempotent: nothing left to delete");
   const again = await createRowTemplate(ws, d.id, { id: t.id, name: "ignored" }); assert.equal(again.name, "Weekly", "idempotent on a client id");
 });
 
