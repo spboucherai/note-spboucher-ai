@@ -1,7 +1,7 @@
 "use client";
 import { api, ApiError, newKey } from "./api";
 import { deleteOutbox, listOutbox, putOutbox, type OutboxItem } from "./offline";
-import { uploadFile } from "@/components/editor/Editor";
+import { uploadFile } from "@/lib/client/upload";
 
 /**
  * Outbox for quick captures. A capture is written to the device first, then sent. Its id IS the Idempotency-Key, and uploaded attachment ids

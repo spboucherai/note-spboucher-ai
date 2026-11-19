@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookMarked, ChevronRight, Copy, ExternalLink, FileText, FlaskConical, Paperclip, Pencil, Plus, Quote, ShieldCheck, TextQuote, Trash2, Unlink, X, Highlighter } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useOnline } from "@/lib/client/hooks";
-import { uploadFile } from "@/components/editor/Editor";
+import { uploadFile } from "@/lib/client/upload";
 import { Input, Textarea } from "@/components/ui/input";
 import { Badge, Dialog, SheetContent, Skeleton, Spinner } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
@@ -133,7 +133,7 @@ function PdfSection({ r, pdf, loading, pageId, onChanged }: { r: Ref; pdf: Links
         <div className="mt-2 rounded-lg border border-line p-3 text-[13px]" role="status" aria-live="polite">
           <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{up.file.name}</span><span className="shrink-0 tabular-nums text-fg-muted">{up.state === "failed" ? "failed" : up.state === "saving" ? "saving…" : `${Math.round(up.progress * 100)} %`}</span></div>
           {up.state !== "failed" && <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-bg-sunk" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(up.progress * 100)} aria-label={`Uploading ${up.file.name}`}><div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${Math.max(2, Math.round(up.progress * 100))}%` }} /></div>}
-          {up.state === "failed" && <div className="mt-1 break-words text-danger">{up.error}</div>}
+          {up.state === "failed" && <div className="mt-1 break-words text-danger-text">{up.error}</div>}
           <div className="mt-2 flex flex-wrap gap-2">{up.state === "uploading" && <TButton variant="outline" onClick={() => abort.current?.abort()}><X /> Cancel upload</TButton>}{up.state === "failed" && <><TButton onClick={() => start(up.file)}>Retry</TButton><TButton variant="outline" onClick={() => input.current?.click()}>Choose another file</TButton><TButton variant="ghost" onClick={() => setUp(null)}>Dismiss</TButton></>}</div>
         </div>
       )}

@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Paperclip, Trash2, Upload, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useIsTouch, useOnline } from "@/lib/client/hooks";
-import { uploadFile } from "@/components/editor/Editor";
+import { uploadFile } from "@/lib/client/upload";
 import { Badge, Empty } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { Confirm, ErrorBox, IconBtn, ListSkeleton, TButton, errText, fmtBytes } from "./ui";
@@ -59,7 +59,7 @@ export function FilesTab({ pageId }: { pageId: string }) {
         <li key={j.id} className="rounded-lg border border-line bg-bg-elev p-3 text-[13px]" role="status" aria-live="polite">
           <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{j.file.name}</span><span className="shrink-0 tabular-nums text-fg-muted">{j.state === "failed" ? "failed" : j.progress >= 1 ? "processing…" : `${Math.round(j.progress * 100)} %`}</span>{j.state === "uploading" && <IconBtn label={`Cancel the upload of ${j.file.name}`} onClick={() => j.abort.abort()}><X /></IconBtn>}</div>
           {j.state === "uploading" ? <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-bg-sunk" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(j.progress * 100)} aria-label={`Uploading ${j.file.name}`}><div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${Math.max(2, Math.round(j.progress * 100))}%` }} /></div>
-            : <><div className="mt-1 break-words text-danger">{j.error}</div><div className="mt-2 flex gap-2"><TButton onClick={() => retry(j)}>Retry</TButton><TButton variant="ghost" onClick={() => setJobs((js) => js.filter((x) => x.id !== j.id))}>Dismiss</TButton></div></>}
+            : <><div className="mt-1 break-words text-danger-text">{j.error}</div><div className="mt-2 flex gap-2"><TButton onClick={() => retry(j)}>Retry</TButton><TButton variant="ghost" onClick={() => setJobs((js) => js.filter((x) => x.id !== j.id))}>Dismiss</TButton></div></>}
         </li>))}</ul>}
       {q.isLoading ? <ListSkeleton /> : q.isError ? <ErrorBox title="Could not load the files" message={errText(q.error)} onRetry={() => q.refetch()} /> : !files.length && !jobs.length ? (
         <Empty icon={<FileText />} title="No files on this page" hint="Upload the PDFs of the papers you cite, then attach each one to its reference from the References tab." action={<TButton onClick={() => input.current?.click()} disabled={!online}><Upload /> Upload files</TButton>} />
