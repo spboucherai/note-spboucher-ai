@@ -28,7 +28,8 @@ await boss.start();
 await ensureQueues(boss);
 
 const work = (q: string, fn: (d: any) => Promise<unknown>, opts: Record<string, unknown> = {}) => boss.work(q, { batchSize: 1, includeMetadata: true, ...opts } as any, wrap(q, fn) as any);
-await work(QUEUES.index, handleIndex, { pollingIntervalSeconds: 2 });
+// 3.0: two pollers at 0.5 s — one job every 2 s left a backlog of minutes after a burst of saves (search lagged behind edits)
+for (let i = 0; i < 2; i++) await work(QUEUES.index, handleIndex, { pollingIntervalSeconds: 0.5 });
 await work(QUEUES.reindexAll, handleReindexAll);
 await work(QUEUES.importFile, handleImport);
 await work(QUEUES.backup, handleBackup);
