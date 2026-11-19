@@ -214,8 +214,8 @@ test("selection, alignment, undo, clipboard, stacking, resize, context menu, min
 
 test("entry points and exports: command center, canvasLink block, listing with its icon, page and file drops, PNG / SVG / Markdown", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto("/");
   await sql`delete from pages where title = 'New canvas'`; // leftovers of other tests would be offered as pages of that name
+  await page.goto("/");
   // command center → New canvas
   await page.keyboard.press("ControlOrMeta+k"); await page.locator("[cmdk-input]").fill("New canvas"); await page.getByRole("option", { name: /New canvas/ }).first().click();
   await page.waitForURL(/\/p\/[0-9a-f-]{36}/); await ready(page).waitFor(); const id = page.url().split("/p/")[1].slice(0, 36); made.push(id);
