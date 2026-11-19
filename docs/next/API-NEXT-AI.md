@@ -500,6 +500,16 @@ cited by key or by a `citation` node in its text. (`?pageId=` and the whole-libr
 
 with `x-missing-ids: 00000000-0000-4000-8000-000000000000`. Errors: `400 bad_id`, `400 too_many_ids`.
 
+- ★ (slice next-p-ra) `?attachmentId=<attachment id>` → the references whose attached PDF is that file, each with `label`; used by the
+  `pdf` block to save its annotations as extracts of that reference (extract id derived from attachment id + annotation id, see
+  `src/lib/research/pdf-extracts.ts`; `POST …/extracts {id,…}` is idempotent on it). `400 bad_id` on a malformed id.
+
+### 8.4 `POST /api/research/papers` — `kind` (slice next-p-ra, additive)
+
+`{title?, status?, venue?, kind?: "paper" | "project"}`. Default `paper` = unchanged. `project` creates the root research page
+(`properties.researchKind = "project"`) and five child pages (Hypotheses, Methods notes, Equations, Results, Figures;
+`properties.researchRole`), and answers the root page plus `children: [{id, title, key}]` — the tree `export.tex` turns into sections.
+
 ## 9. Error codes introduced by this workstream
 
 | code | status | where |
