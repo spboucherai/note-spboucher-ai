@@ -43,10 +43,10 @@ export function SyncStatus({ className, quiet = false }: { className?: string; q
   const title = `${label}${s.info?.lastSync ? ` · last sync ${timeAgo(s.info.lastSync)}` : ""}`;
   return (
     <>
-      {!(quiet && tone === "synced") && <button type="button" data-testid="sync-status" data-state={tone} data-pending={s.pending} aria-label={`Sync status: ${title}`} title={title} onClick={() => setOpen(true)}
+      {!(quiet && (tone === "synced" || (tone === "offline" && !s.pending))) && <button type="button" data-testid="sync-status" data-state={tone} data-pending={s.pending} aria-label={`Sync status: ${title}`} title={title} onClick={() => setOpen(true)}
         className={cn("flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium transition-colors", tone === "synced" ? "text-fg-muted hover:bg-bg-hover" : tone === "pending" ? "bg-accent-soft text-accent" : tone === "offline" ? "bg-warning/20 text-fg" : "bg-danger/15 text-danger", className)}>
         {s.syncing ? <RefreshCw className="size-4 animate-spin motion-reduce:animate-none" /> : tone === "offline" ? <CloudOff className="size-4" /> : tone === "error" ? <TriangleAlert className="size-4" /> : tone === "pending" ? <CloudUpload className="size-4" /> : <Check className="size-4" />}
-        <span className={cn(tone === "synced" && "max-lg:hidden")}>{label}</span>
+        {quiet ? (s.pending + s.failed > 0 && <span className="tabular-nums">{s.pending + s.failed}</span>) : <span className={cn(tone === "synced" && "max-lg:hidden")}>{label}</span>}
       </button>}
       <SyncInspector open={open} onOpenChange={setOpen} summary={s} />
     </>

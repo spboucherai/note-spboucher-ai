@@ -221,7 +221,7 @@ test("inbox and archive: a failed load is shown as a failure with a retry, never
   await page.route(/\/api\/pages\?view=archived/, (route) => (fail ? route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "database unavailable" }) }) : route.continue()));
   await page.goto("/inbox"); await expect(page.getByText("The inbox could not be loaded")).toBeVisible({ timeout: 15_000 }); await expect(page.getByText("Nothing to sort")).toHaveCount(0); await expect(page.getByText("database unavailable")).toBeVisible();
   await page.goto("/archive"); await expect(page.getByText("Could not load the archive")).toBeVisible({ timeout: 15_000 }); await expect(page.getByText("Nothing archived")).toHaveCount(0);
-  fail = false; await page.getByRole("button", { name: "Try again" }).click(); await expect(page.getByText("Could not load the archive")).toHaveCount(0);
+  fail = false; await page.getByRole("button", { name: /^(Try again|Retry)$/ }).click(); await expect(page.getByText("Could not load the archive")).toHaveCount(0);
 });
 
 test("REAL provider (E2E_REAL_AI=1): suggestions for a real capture come back validated and AI-marked; nothing changes until applied", async ({ page }) => {

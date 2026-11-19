@@ -94,7 +94,7 @@ test("photo and PDF upload: progress, insertion, authenticated delivery", async 
 test("network loss and return: text is kept on the device and saved once", async ({ page, context }, t) => {
   const p = await newPage(page, uniq(t, "E2E-offline"), docOf(para("online text"))); await page.goto(`/p/${p.id}`); const ed = page.locator(".ProseMirror").first(); await ed.click(); await page.keyboard.press("Control+End");
   await context.setOffline(true); await page.keyboard.type(" typed-while-offline");
-  await expect(page.getByRole("status").filter({ hasText: /Offline · kept on this device/ })).toBeVisible({ timeout: 15_000 }); await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /Offline · kept on this device/ })).toBeVisible({ timeout: 15_000 }); await expect(page.getByRole("button", { name: "Retry" }).first()).toBeVisible();
   expect(JSON.stringify((await sql`select content from pages where id = ${p.id}`)[0].content)).not.toContain("typed-while-offline");
   const draft = await page.evaluate((id) => new Promise((res) => { const r = indexedDB.open("note-local"); r.onsuccess = () => { const g = r.result.transaction("drafts").objectStore("drafts").get(id); g.onsuccess = () => res(JSON.stringify(g.result ?? null)); }; }), p.id); expect(draft).toContain("typed-while-offline");
   await context.setOffline(false); await saved(page);
@@ -173,7 +173,7 @@ test("every main screen fits the phone: no horizontal overflow, states render", 
 test("lock this device: session revoked server-side, local drafts erased", async ({ browser }, t) => {
   const vp = t.project.use.viewport!; const ctx = await browser.newContext({ viewport: vp, hasTouch: true, isMobile: true, storageState: { cookies: [], origins: [] } }); const page = await ctx.newPage(); await withSavedPasskey(page);
   await page.goto("/login"); await page.getByRole("button", { name: /Continue with/ }).click(); await expect(page).toHaveURL(/:\d+\/$/);
-  await page.evaluate(() => new Promise<void>((res) => { const r = indexedDB.open("note-local", 1); r.onupgradeneeded = () => { r.result.createObjectStore("drafts", { keyPath: "pageId" }); r.result.createObjectStore("outbox", { keyPath: "id" }); }; r.onsuccess = () => { const tx = r.result.transaction("drafts", "readwrite"); tx.objectStore("drafts").put({ pageId: "x", baseVersion: 1, patch: { title: "private draft" }, updatedAt: Date.now() }); tx.oncomplete = () => res(); }; }));
+  await page.evaluate(() => new Promise<void>((res) => { const r = indexedDB.open("note-local"); /* no version: the app owns the schema (v2 since 3.0) */ r.onupgradeneeded = () => { r.result.createObjectStore("drafts", { keyPath: "pageId" }); r.result.createObjectStore("outbox", { keyPath: "id" }); }; r.onsuccess = () => { const tx = r.result.transaction("drafts", "readwrite"); tx.objectStore("drafts").put({ pageId: "x", baseVersion: 1, patch: { title: "private draft" }, updatedAt: Date.now() }); tx.oncomplete = () => res(); }; }));
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "More" }).click(); await page.getByRole("dialog").getByRole("button", { name: "Lock this device" }).click();
   await expect(page).toHaveURL(/\/login$/); expect((await page.request.get("/api/tree")).status()).toBe(401);
