@@ -85,7 +85,7 @@ test("every new block: insert from the slash menu, save, reload — still there 
   await expect(page.locator("[data-node='citation']")).toHaveCount(1); await expect(page.locator(".callout[data-kind='hypothesis']")).toHaveCount(1);
   await expect(page.getByTestId("editor-lock")).toHaveCount(0);
   // the live view feature-detects its endpoint: a server without POST /api/query shows a neutral state (or rows once the backend has it)
-  await expect(page.locator(".nb[data-node='queryView']")).toContainText(/not available on this server yet|Nothing matches|Open|Updating/);
+  await expect(page.locator(".nb[data-node='queryView']")).toContainText(/not available on this server yet|Nothing matches|Open|Updating|Live · updated/); // 3.0 backend: real rows + the live indicator (slice next-p-ra)
 });
 
 test("mermaid renders, and the stored render follows the code (PNG preview + sha256 previewHash, never while typing)", async ({ page }) => {
