@@ -220,7 +220,7 @@ test("daily brief is Home: real sections, AI summary only on a click and marked 
   expect((await apiCall(page, "POST", "/api/tasks", { title: `${PFX} late ${s}`, pageId: a.id, dueAt: new Date(Date.now() - 2 * 86_400_000).toISOString() })).status).toBe(201);
   expect((await apiCall(page, "POST", "/api/tasks", { title: `${PFX} now ${s}`, dueAt: new Date().toISOString() })).status).toBe(201);
   expect((await apiCall(page, "POST", "/api/capture", { kind: "note", text: `${PFX} capture ${s}` })).status).toBeLessThan(300);
-  await sql`update knowledge_edges set status = 'rejected' where status = 'suggested' and model = 'fixture'`; const sug = await suggest(ws, a.id, b.id, "supports");
+  await sql`update knowledge_edges set status = 'rejected' where status = 'suggested' and model = 'fixture'`; await sql`delete from settings where key like 'brief.summary:%'`; /* a summary stored by another suite would hide the "Summarise my day" button */ const sug = await suggest(ws, a.id, b.id, "supports");
   await page.goto("/"); const brief = page.getByTestId("brief"); await expect(brief.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening|night),/);
   await expect(page.getByTestId("brief-overdue")).toContainText(`late ${s}`); await expect(page.getByTestId("brief-overdue")).toContainText("overdue by 2 days"); await expect(page.getByTestId("brief-today")).toContainText(`now ${s}`);
   await expect(page.getByTestId("brief-recent")).toContainText(`Brief other ${s}`); await expect(page.getByTestId("brief-captures")).toContainText(`capture ${s}`); await expect(page.getByTestId("brief-lede")).toContainText("overdue");
