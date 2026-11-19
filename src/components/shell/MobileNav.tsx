@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as DialogP from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { Home, Search, Plus, Menu as MenuIcon, X, Inbox, Star, Clock, Database, CheckSquare, FlaskConical, Share2, Link2, Bot, BarChart3, Trash2, Settings, Lock, ChevronRight, ChevronLeft, Sparkles, Archive, CloudOff, CloudUpload, FileText, Files, FolderKanban } from "lucide-react";
+import { Home, Search, Plus, Menu as MenuIcon, X, Inbox, Star, Clock, Database, CheckSquare, FlaskConical, Share2, Link2, Bot, BarChart3, Trash2, Settings, Lock, ChevronRight, ChevronLeft, Sparkles, Archive, CloudOff, CloudUpload, FileText, Files, FolderKanban, Command } from "lucide-react";
 import { useUI } from "@/lib/client/store";
 import { useOnline } from "@/lib/client/hooks";
 import { cn, timeAgo } from "@/lib/utils";
@@ -40,6 +40,7 @@ export function MobileHeader({ tree }: { tree: TreeNode[] }) {
       {!root && here && <span className="pointer-events-none absolute inset-x-0 text-center text-[15px] font-semibold" aria-hidden>{here}</span>}
       <span className="flex-1" />
       <SyncPill />
+      <button onClick={() => ui.set({ paletteOpen: true })} aria-label="Command center" className="grid size-11 place-items-center rounded-lg text-fg-muted"><Command className="size-5" /></button>
       <button onClick={() => ui.toggleAI()} aria-label="AI assistant" aria-pressed={ui.aiOpen} className={cn("grid size-11 place-items-center rounded-lg", ui.aiOpen ? "text-ai" : "text-fg-muted")}><Sparkles className="size-5" /></button>
     </header>
   );

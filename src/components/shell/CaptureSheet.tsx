@@ -1,4 +1,5 @@
 "use client";
+import { lumenPulse } from "@/lib/client/motion";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -64,6 +65,8 @@ export function CaptureSheet() {
     if (!res.sent && res.error && navigator.onLine && !/network|timed out/i.test(res.error)) { toast("Could not capture", { description: res.error, tone: "danger" }); return; } // refused by the server: keep the text on screen
     setText(""); setFiles([]); setKind("note"); try { localStorage.removeItem(DRAFT); } catch {}
     ui.set({ captureOpen: false });
+    // 6 Quick Capture: Lumen pulse where the capture was launched from (the + of the phone bar, else the bottom of the screen)
+    lumenPulse(document.querySelector(".mobile-nav [aria-label='Quick capture']"));
     if (res.sent) { qc.invalidateQueries({ queryKey: ["inbox"] }); qc.invalidateQueries({ queryKey: ["inbox-count"] }); if (open && res.pageId) r.push(`/p/${res.pageId}`); else toast("Captured to inbox", { tone: "success" }); }
     else toast("Saved on this device", { description: "It will be sent to your inbox as soon as the network is back." });
   }
@@ -71,7 +74,7 @@ export function CaptureSheet() {
   const A = ({ label, icon, onTap, active }: { label: string; icon: React.ReactNode; onTap: () => void; active?: boolean }) => <button type="button" aria-label={label} aria-pressed={active} onClick={onTap} className={cn("grid size-11 shrink-0 place-items-center rounded-xl border border-line text-fg-muted active:bg-bg-sunk [&_svg]:size-5", active && "border-danger/50 bg-danger/10 text-danger")}>{icon}</button>;
   return (
     <Dialog open={ui.captureOpen} onOpenChange={(o) => { if (!o) close(); }}>
-      <SheetContent title="Quick capture" description={online ? "Goes to your inbox. Sort it later." : undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
+      <SheetContent title="Quick capture" className="capture-sheet" description={online ? "Goes to your inbox. Sort it later." : undefined} onOpenAutoFocus={(e) => e.preventDefault()}>
         {!online && <div className="mb-2 flex items-center gap-2 rounded-lg bg-warning/15 px-3 py-2 text-[13px]"><CloudOff className="size-4 shrink-0" />Offline — the capture is kept on this device and sent later.</div>}
         <div role="radiogroup" aria-label="Kind of capture" className="mb-2 flex gap-1 rounded-xl bg-bg-sunk p-1"><K id="note" icon={<FileText />} label="Note" /><K id="tasks" icon={<ListChecks />} label="To-do" /><K id="link" icon={<Link2 />} label="Link" /></div>
         <textarea ref={input} value={text} onChange={(e) => setText(e.target.value)} aria-label="Capture text" rows={4} enterKeyHint="enter" placeholder={kind === "tasks" ? "One task per line…" : kind === "link" ? "Paste a link, then a note if you like…" : "Write anything. The first line becomes the title."} inputMode={kind === "link" && !text ? "url" : "text"} className="block max-h-[38dvh] min-h-[7.5rem] w-full resize-none rounded-xl border border-line bg-bg p-3 text-[16px] leading-6 outline-none [field-sizing:content] focus:border-accent/60" onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); save(); } }} />
