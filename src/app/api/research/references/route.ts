@@ -10,6 +10,8 @@ export const refSchema = z.object({ id: uuid.optional(), pageId: uuid.nullable()
  * NEXT (SPEC §4.14): ?ids=<uuid,uuid,…> (≤ 200) → exactly those references, for resolving `citation` nodes — each row gains `label`
  * (author–year) and `citation` (formatted entry); ids that do not exist are listed in the `x-missing-ids` header.
  * ?projectId=<page id> → references of a project (attached to any of its pages, or cited in its text).
+ * ?attachmentId=<attachment id> → the references whose attached PDF is that file (each with `label`), so a `pdf` block can link its
+ *   annotations to the reference's extracts. Combinable with nothing else; `400 bad_id` on a malformed id.
  */
 export const GET = handler(async ({ req, ws }) => {
   const u = new URL(req.url).searchParams; const pageId = u.get("pageId"); const rawIds = u.get("ids"); const projectId = u.get("projectId");
@@ -18,6 +20,11 @@ export const GET = handler(async ({ req, ws }) => {
     for (const id of ids) if (!uuid.safeParse(id).success) throw new HttpError(400, "Invalid reference id", "bad_id");
     const rows = ids.length ? await listReferences(ws.id, { ids }) : []; const found = new Set(rows.map((r) => r.id));
     return Response.json(rows.map((r) => ({ ...r, label: shortLabel(r), citation: formatCitation(r) })), { headers: { "x-missing-ids": ids.filter((i) => !found.has(i)).join(",") } });
+  }
+  const attachmentId = u.get("attachmentId");
+  if (attachmentId !== null) {
+    if (!uuid.safeParse(attachmentId).success) throw new HttpError(400, "Invalid attachmentId", "bad_id");
+    return Response.json((await listReferences(ws.id, { attachmentId })).map((r) => ({ ...r, label: shortLabel(r) })));
   }
   if (projectId) {
     if (!uuid.safeParse(projectId).success) throw new HttpError(400, "Invalid projectId", "bad_id");

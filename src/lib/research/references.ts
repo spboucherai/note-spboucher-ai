@@ -19,8 +19,9 @@ const R = schema.researchReferences;
 export type ReferenceRow = typeof R.$inferSelect;
 export type Verified = "user" | "doi_verified" | "ai_suggested";
 
-export async function listReferences(wsId: string, opts: { pageId?: string | null; ids?: string[] } = {}) {
-  return db.select().from(R).where(and(eq(R.workspaceId, wsId), isNull(R.deletedAt), opts.pageId ? eq(R.pageId, opts.pageId) : undefined, opts.ids?.length ? inArray(R.id, opts.ids) : undefined)).orderBy(desc(R.year), asc(R.citeKey));
+/** `attachmentId` (3.0): the references whose attached PDF is that file — how a `pdf` block finds the reference its annotations belong to. */
+export async function listReferences(wsId: string, opts: { pageId?: string | null; ids?: string[]; attachmentId?: string | null } = {}) {
+  return db.select().from(R).where(and(eq(R.workspaceId, wsId), isNull(R.deletedAt), opts.pageId ? eq(R.pageId, opts.pageId) : undefined, opts.ids?.length ? inArray(R.id, opts.ids) : undefined, opts.attachmentId ? eq(R.attachmentId, opts.attachmentId) : undefined)).orderBy(desc(R.year), asc(R.citeKey));
 }
 export async function getReference(wsId: string, id: string) {
   const [r] = await db.select().from(R).where(and(eq(R.id, id), eq(R.workspaceId, wsId), isNull(R.deletedAt))); if (!r) throw new HttpError(404, "Reference not found", "not_found"); return r;

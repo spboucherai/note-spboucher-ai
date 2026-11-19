@@ -29,9 +29,10 @@ export function ResearchOverview() {
   const refList = refs.filter((x) => matchRef(x, q));
   const pageTitle = (id: string | null) => papers.find((p) => p.id === id)?.title ?? (id ? "Another page" : "Library");
   const refreshRefs = () => { qc.invalidateQueries({ queryKey: ["research-refs"] }); qc.invalidateQueries({ queryKey: ["research-overview"] }); };
+  const [kind, setKind] = useState<"paper" | "project">("paper");
   async function create() {
     if (busy) return; setBusy(true); setCreateError(null);
-    try { const p = await api("/api/research/papers", { method: "POST", json: { title: draft.title.trim() || undefined, venue: draft.venue.trim() || undefined } }); qc.invalidateQueries({ queryKey: ["tree"] }); qc.invalidateQueries({ queryKey: ["research-overview"] }); clearDraft(); toast("Working paper created", { tone: "success" }); setNewOpen(false); r.push(`/p/${p.id}`); }
+    try { const p = await api("/api/research/papers", { method: "POST", json: { title: draft.title.trim() || undefined, venue: draft.venue.trim() || undefined, ...(kind === "project" ? { kind: "project" } : {}) } }); qc.invalidateQueries({ queryKey: ["tree"] }); qc.invalidateQueries({ queryKey: ["research-overview"] }); clearDraft(); toast(kind === "project" ? "Research project created" : "Working paper created", { tone: "success", ...(kind === "project" ? { description: "Hypotheses, Methods notes, Equations, Results and Figures pages were added under it." } : {}) }); setNewOpen(false); r.push(`/p/${p.id}`); }
     catch (e) { setCreateError(errText(e)); } finally { setBusy(false); }
   }
   const counts = PAPER_STATUSES.map((s) => [s, papers.filter((p) => p.status === s).length] as const);
@@ -74,6 +75,7 @@ export function ResearchOverview() {
       </Tabs>
       <Dialog open={newOpen} onOpenChange={setNewOpen}><SheetContent title="New working paper" description="Creates a research page with a LaTeX-ready template (abstract, introduction, model with a displayed equation, data, results, conclusion).">
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void create(); }}>
+          <fieldset className="grid gap-2 sm:grid-cols-2" aria-label="What to create">{([["paper", "Working paper", "One page with the paper template"], ["project", "Research project", "Root page + Hypotheses, Methods notes, Equations, Results, Figures"]] as const).map(([id, name, hint]) => <label key={id} className={cn("flex min-h-11 cursor-pointer items-start gap-2 rounded-lg border p-2.5 text-[13px]", kind === id ? "border-accent bg-accent-soft/40" : "border-line")}><input type="radio" name="research-kind" value={id} checked={kind === id} onChange={() => setKind(id)} className="mt-0.5" /><span className="min-w-0"><span className="block font-medium">{name}</span><span className="block text-[12px] text-fg-muted">{hint}</span></span></label>)}</fieldset>
           <Field label="Title"><Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Working Paper 35 — …" className={FIELD} /></Field>
           <Field label="Target venue (optional)"><Input value={draft.venue} onChange={(e) => setDraft({ ...draft, venue: e.target.value })} placeholder="Journal of Financial Economics" className={FIELD} /></Field>
           {createError && <ErrorBox className="mt-0" title="Not created — your entries are still here" message={createError} onRetry={create} />}
