@@ -51,14 +51,15 @@ function normalizeConfig(type: PropertyType, config: PropertyConfig = {}): Prope
   if (c.options) c.options = c.options.map((o, i) => ({ id: o.id || newId(), name: String(o.name ?? `Option ${i + 1}`).trim() || `Option ${i + 1}`, color: o.color || "gray", ...(o.group ? { group: o.group } : {}) }));
   return c;
 }
-export async function createProperty(wsId: string, dbId: string, input: { name: string; type: PropertyType; config?: PropertyConfig; width?: number | null; position?: number }): Promise<Property> {
+export async function createProperty(wsId: string, dbId: string, input: { id?: string; name: string; type: PropertyType; config?: PropertyConfig; width?: number | null; position?: number }): Promise<Property> {
   const d = await ensureDatabase(wsId, dbId);
+  if (input.id) { const [old] = await db.select().from(schema.databaseProperties).where(eq(schema.databaseProperties.id, input.id)); if (old) { if (old.databaseId !== d.id) throw new HttpError(409, "This id is already in use", "id_taken"); return old as Property; } } // 3.0: client-chosen id, idempotent
   if (!PROPERTY_TYPES.includes(input.type)) throw new HttpError(400, "Unknown property type");
   if (input.type === "title") throw new HttpError(400, "A database has exactly one title property");
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.databaseProperties).where(eq(schema.databaseProperties.databaseId, d.id));
   const config = normalizeConfig(input.type, input.config);
   if (input.type === "relation" && config.targetDatabaseId) await ensureDatabase(wsId, config.targetDatabaseId);
-  const [p] = await db.insert(schema.databaseProperties).values({ databaseId: d.id, name: input.name.trim() || "Property", type: input.type, config, width: input.width ?? (input.type === "checkbox" ? 90 : 180), position: input.position ?? Number(max) + 1 }).returning();
+  const [p] = await db.insert(schema.databaseProperties).values({ ...(input.id ? { id: input.id } : {}), databaseId: d.id, name: input.name.trim() || "Property", type: input.type, config, width: input.width ?? (input.type === "checkbox" ? 90 : 180), position: input.position ?? Number(max) + 1 }).returning();
   if (input.type === "relation" && config.twoWay && config.targetDatabaseId) {
     const target = await ensureDatabase(wsId, config.targetDatabaseId);
     const [{ tmax }] = await db.select({ tmax: dsql<number>`coalesce(max(position),0)` }).from(schema.databaseProperties).where(eq(schema.databaseProperties.databaseId, target.id));
@@ -139,13 +140,16 @@ function splitValues(props: Property[], values: Record<string, unknown>) {
   }
   return { stored, drop, title, rels };
 }
-export async function createRow(wsId: string, dbId: string, input: { title?: string; values?: Record<string, unknown>; position?: number; content?: any; icon?: string | null }): Promise<RowOut> {
+export async function createRow(wsId: string, dbId: string, input: { id?: string; pageId?: string; title?: string; values?: Record<string, unknown>; position?: number; content?: any; icon?: string | null }): Promise<RowOut> {
   const d = await ensureDatabase(wsId, dbId); const props = await propsOf(d);
+  // 3.0: client-chosen ids (row `id`, and `pageId` for the row's page). The same row id twice → the stored row, untouched.
+  if (input.id) { const [old] = await db.select({ id: schema.databaseRows.id, databaseId: schema.databaseRows.databaseId }).from(schema.databaseRows).where(eq(schema.databaseRows.id, input.id)); if (old) { if (old.databaseId !== d.id) throw new HttpError(409, "This id is already in use", "id_taken"); const [row] = await getRows(d, props, [old.id]); if (row) return row; throw new HttpError(409, "This row was deleted", "row_deleted"); } }
+  if (input.pageId) { const [taken] = await db.select({ id: schema.pages.id }).from(schema.pages).where(eq(schema.pages.id, input.pageId)); if (taken) throw new HttpError(409, "This page id is already in use", "id_taken"); }
   const { stored, title, rels } = splitValues(props, input.values ?? {}); const tp = titleProp(props);
   const t = (input.title ?? title ?? "").trim(); if (tp) stored[tp.id] = t;
-  const page = await createPage(wsId, { title: t, parentId: d.pageId, section: "databases", type: "page", databaseId: d.id, content: input.content, icon: input.icon ?? null });
+  const page = await createPage(wsId, { ...(input.pageId ? { id: input.pageId } : {}), title: t, parentId: d.pageId, section: "databases", type: "page", databaseId: d.id, content: input.content, icon: input.icon ?? null });
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.databaseRows).where(eq(schema.databaseRows.databaseId, d.id));
-  const [row] = await db.insert(schema.databaseRows).values({ databaseId: d.id, pageId: page.id, values: stored, position: input.position ?? Number(max) + 1 }).returning();
+  const [row] = await db.insert(schema.databaseRows).values({ ...(input.id ? { id: input.id } : {}), databaseId: d.id, pageId: page.id, values: stored, position: input.position ?? Number(max) + 1 }).returning();
   for (const r of rels) await setRelations(r.p, row.id, r.ids);
   return (await getRows(d, props, [row.id]))[0];
 }
@@ -186,10 +190,11 @@ export async function enqueueAi(wsId: string, dbId: string, rowId: string, prope
 }
 
 // ---------- views
-export async function createView(wsId: string, dbId: string, input: { name: string; type: ViewType; config?: ViewConfig }): Promise<View> {
+export async function createView(wsId: string, dbId: string, input: { id?: string; name: string; type: ViewType; config?: ViewConfig }): Promise<View> {
   const d = await ensureDatabase(wsId, dbId); if (!VIEW_TYPES.includes(input.type)) throw new HttpError(400, "Unknown view type");
+  if (input.id) { const [old] = await db.select().from(schema.databaseViews).where(eq(schema.databaseViews.id, input.id)); if (old) { if (old.databaseId !== d.id) throw new HttpError(409, "This id is already in use", "id_taken"); return old as View; } } // 3.0: client-chosen id, idempotent
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.databaseViews).where(eq(schema.databaseViews.databaseId, d.id));
-  const [v] = await db.insert(schema.databaseViews).values({ databaseId: d.id, name: input.name.trim() || input.type, type: input.type, config: input.config ?? {}, position: Number(max) + 1 }).returning(); return v as View;
+  const [v] = await db.insert(schema.databaseViews).values({ ...(input.id ? { id: input.id } : {}), databaseId: d.id, name: input.name.trim() || input.type, type: input.type, config: input.config ?? {}, position: Number(max) + 1 }).returning(); return v as View;
 }
 export async function updateView(wsId: string, dbId: string, viewId: string, patch: Partial<{ name: string; type: ViewType; config: ViewConfig; position: number; isDefault: boolean }>): Promise<View> {
   const d = await ensureDatabase(wsId, dbId);

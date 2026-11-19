@@ -11,7 +11,7 @@ export const GET = handler(async ({ ws, params, req }) => {
 });
 /** { title?, values?, position?, content? } or { rows: [...] } */
 export const POST = handler(async ({ ws, params, req, user }) => {
-  const row = z.object({ title: z.string().max(500).optional(), values: values.optional(), position: z.number().optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional() });
+  const row = z.object({ id: uuid.optional(), pageId: uuid.optional(), title: z.string().max(500).optional(), values: values.optional(), position: z.number().optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional() });
   const b = await parseBody(req, z.union([z.object({ rows: z.array(row).max(500) }), row.strict()]));
   const inputs = "rows" in b ? b.rows : [b]; const out = []; for (const i of inputs) out.push(await createRow(ws.id, params.id, i));
   await audit(user.id, "database.row.create", { type: "database", id: params.id }, { count: out.length });

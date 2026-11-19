@@ -5,7 +5,7 @@ import { PROPERTY_TYPES } from "@/lib/databases/types";
 import { audit } from "@/lib/audit";
 const type = z.enum(PROPERTY_TYPES); const config = z.record(z.string(), z.unknown());
 export const POST = handler(async ({ ws, params, req, user }) => {
-  const b = await parseBody(req, z.object({ name: z.string().max(200), type, config: config.optional(), width: z.number().int().min(40).max(2000).nullable().optional(), position: z.number().optional() }));
+  const b = await parseBody(req, z.object({ id: uuid.optional(), name: z.string().max(200), type, config: config.optional(), width: z.number().int().min(40).max(2000).nullable().optional(), position: z.number().optional() }));
   const p = await createProperty(ws.id, params.id, b as any); await audit(user.id, "database.property.create", { type: "property", id: p.id }, { name: p.name, type: p.type });
   return Response.json(p, { status: 201 });
 });
