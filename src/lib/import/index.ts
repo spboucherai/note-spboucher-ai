@@ -9,7 +9,7 @@ import { restoreJson } from "./restore";
 import { newCtx, getPageById, tick, ImportError, type ImportCtx, type DuplicateMode } from "./pages";
 import { sha256Hex, validateUpload, type ImportKind } from "./validate";
 
-export { detectKind, validateUpload, KINDS, ACCEPT, LIMITS, type ImportKind } from "./validate";
+export { detectKind, validateUpload, parentIdOf, KINDS, ACCEPT, LIMITS, type ImportKind } from "./validate";
 /** Files up to this size are imported synchronously in the request; larger ones go to the worker. */
 export const INLINE_MAX = 2 * 1024 * 1024;
 export const INLINE_KINDS = new Set<ImportKind>(["markdown", "csv", "bibtex", "docx", "pdf"]);

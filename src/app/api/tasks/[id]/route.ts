@@ -1,6 +1,6 @@
-import { handler, parseBody, uuid } from "@/lib/api";
+import { handler, parseBody, uuid, HttpError } from "@/lib/api";
 import { audit } from "@/lib/audit";
-import { deleteTask, getTask, taskOut, updateTask } from "@/lib/tasks/service";
+import { deleteTask, getTask, restoreTask, taskOut, updateTask } from "@/lib/tasks/service";
 import { taskPatch } from "@/lib/tasks/schema";
 
 /** GET /api/tasks/<id> → the task, in any state (a deleted task answers with `deletedAt`). */
@@ -19,4 +19,14 @@ export const DELETE = handler(async ({ ws, params, user }) => {
   const deleted = await deleteTask(ws.id, id);
   if (deleted) await audit(user.id, "task.delete", { type: "task", id });
   return Response.json({ ok: true, deleted });
+});
+/**
+ * POST /api/tasks/<id>?action=restore → the task, live again (undo of a delete; same contract as /api/research/tasks/<id>). Idempotent:
+ * restoring a task that is not deleted answers 200 with the task untouched; an unknown id → 404; another action → 400.
+ */
+export const POST = handler(async ({ req, ws, params, user }) => {
+  const id = uuid.parse(params.id); if (new URL(req.url).searchParams.get("action") !== "restore") throw new HttpError(400, "Unknown action", "bad_action");
+  const before = await getTask(ws.id, id, { includeDeleted: true }); if (!before.deletedAt) return Response.json(taskOut(before));
+  const t = await restoreTask(ws.id, id); await audit(user.id, "task.restore", { type: "task", id });
+  return Response.json(taskOut(t));
 });

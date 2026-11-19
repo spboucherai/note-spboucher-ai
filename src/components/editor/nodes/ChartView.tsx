@@ -5,16 +5,22 @@
  *   `chartModel`, sized by a ResizeObserver so it never widens the page, with a legend, `<title>` on every mark and a spoken summary;
  *   plus the editing side: inline title, kind switcher, X / Y mapping and an editable data grid (cells, rows, columns, paste from a
  *   spreadsheet). Typing is written to the document ~400 ms after the last key; structural actions at once. A chart fed by a database
- *   (`source`) shows its stored snapshot and its `source` is never touched.
+ *   (`source: {databaseId, viewId?}`) reads its rows live through `POST /api/query` (see ./live.tsx): `columns` / `rows` then hold the
+ *   last snapshot (what native clients and offline readers draw), rewritten — outside the undo history — only when the live data
+ *   differs. Offline or on a server error the snapshot is drawn and flagged as such.
  * author: Simon-Pierre Boucher — contact@spboucher.ai
  */
 import * as React from "react";
-import { ChartArea, ChartColumn, ChartLine, ChartPie, ChartScatter, ClipboardPaste, Database, Plus, Table2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChartArea, ChartColumn, ChartLine, ChartPie, ChartScatter, ClipboardPaste, Database, Plus, RefreshCw, Table2, Unlink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import type { ChartAttrs, ChartCell, ChartKind } from "@/lib/editor/next-node-defs";
 import { chartModel, coerceCell, defaultChartConfig, formatNumber, parsePastedCells, parsePastedTable, uniqueName, type ChartModel } from "@/lib/editor/chart";
+import { chartQueryBody, sameTable } from "@/lib/editor/query";
+import { api } from "@/lib/client/api";
 import { NodeButton, NodeFrame, NodeState, useDebounced, type LeafViewProps } from "./frame";
+import { useLiveQuery, LiveBadge } from "./live";
 
 type Data = Pick<ChartAttrs, "title" | "columns" | "rows" | "x" | "y">;
 const KINDS: { kind: ChartKind; label: string; icon: React.ReactNode }[] = [
@@ -28,7 +34,7 @@ const show = (v: ChartCell | undefined) => (v == null ? "" : String(v));
 const color = (i: number) => `var(--ch-${i + 1})`;
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, Math.max(1, n - 1))}…` : s);
 
-export function ChartView({ attrs, update, editable, selected }: LeafViewProps<ChartAttrs>) {
+export function ChartView({ attrs, update, editable, selected, editor, getPos }: LeafViewProps<ChartAttrs>) {
   const [data, setData] = React.useState<Data>(() => fromAttrs(attrs));
   const [editing, setEditing] = React.useState(false);
   const [pasting, setPasting] = React.useState(false);
@@ -43,7 +49,23 @@ export function ChartView({ attrs, update, editable, selected }: LeafViewProps<C
   const apply = React.useCallback((next: Data) => { cur.current = next; setData(next); pending.current = true; push(next); push.flush(); }, [push]);
 
   const kind: ChartKind = KINDS.some((k) => k.kind === attrs.kind) ? attrs.kind : "bar";
-  const snapshot = attrs.source != null, hasData = data.columns.length > 0, canEdit = editable;
+  const snapshot = attrs.source != null, canEdit = editable;
+  /* ---- live data of a chart fed by a database ---- */
+  const liveBody = React.useMemo(() => (attrs.source?.databaseId ? chartQueryBody(attrs.source) : null), [attrs.source?.databaseId, attrs.source?.viewId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const live = useLiveQuery(liveBody, "database"); const fresh = snapshot && live.result && !live.stale ? live.result.table : null;
+  // keep the stored snapshot equal to the live data — never in the undo history (an undo must not fight the refresh), never when read-only
+  React.useEffect(() => {
+    if (!fresh || !editor.isEditable || editor.isDestroyed || pending.current) return; if (sameTable(fresh, { columns: attrs.columns, rows: attrs.rows })) return;
+    const pos = getPos(); if (typeof pos !== "number") return; const node = editor.state.doc.nodeAt(pos); if (!node || node.type.name !== "chart") return;
+    const keep = (attrs.x == null || fresh.columns.includes(attrs.x)) && attrs.y.length > 0 && attrs.y.every((c) => fresh.columns.includes(c));
+    editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, columns: fresh.columns, rows: fresh.rows, ...(keep ? {} : defaultChartConfig(fresh.columns, fresh.rows)) }).setMeta("addToHistory", false));
+  }, [fresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  // what is drawn: the live table when there is one (a read-only reader cannot store it), else the stored snapshot
+  const drawn: Data = React.useMemo(() => { if (!fresh || sameTable(fresh, data)) return data; const ok = (data.x == null || fresh.columns.includes(data.x)) && data.y.length > 0 && data.y.every((c) => fresh.columns.includes(c)); return { ...data, columns: fresh.columns, rows: fresh.rows, ...(ok ? {} : defaultChartConfig(fresh.columns, fresh.rows)) }; }, [fresh, data]);
+  const hasData = drawn.columns.length > 0;
+  const [linking, setLinking] = React.useState(false);
+  const dbs = useQuery({ queryKey: ["tree-databases"], enabled: linking && canEdit, staleTime: 60_000, queryFn: async () => (await api<{ id: string; title: string; type: string; databaseId?: string | null }[]>("/api/tree")).filter((n) => n.type === "database") });
+  const link = (databaseId: string) => { setLinking(false); if (databaseId) update({ source: { databaseId } }); };
 
   const setCell = React.useCallback((r: number, c: number, v: ChartCell) => {
     const d = cur.current; typing({ ...d, rows: d.rows.map((row, i) => (i === r ? Array.from({ length: Math.max(d.columns.length, row.length) }, (_, j) => (j === c ? v : row[j] ?? null)) : row)) });
@@ -85,12 +107,15 @@ export function ChartView({ attrs, update, editable, selected }: LeafViewProps<C
           {KINDS.map((k) => <NodeButton key={k.kind} label={k.label} active={kind === k.kind} onClick={() => { if (kind !== k.kind) update({ kind: k.kind }); }}>{k.icon}</NodeButton>)}
         </div>
       )}
-      {snapshot && <div className="ch-note"><Database aria-hidden /> <span>Snapshot of a database — live data arrives in a later version</span></div>}
-      {hasData ? <ChartFigure kind={kind} data={data} /> : (
+      {snapshot && <div className="ch-note" data-testid="chart-source"><Database aria-hidden /> <span className="min-w-0 truncate">{live.result?.name ? `Database · ${live.result.name}` : "Database"}</span>
+        {live.unavailable ? <span>· live data is not available on this server yet — stored snapshot</span> : live.result ? <LiveBadge live={live} /> : live.loading ? <span>· reading…</span> : <span className="live-badge" data-state={live.reason === "offline" ? "offline" : "stale"} data-testid="live-indicator"><span className="live-dot" aria-hidden /><span className="live-text">{live.reason === "offline" ? "Offline · stored snapshot" : `Not refreshed · stored snapshot${live.error ? ` (${live.error.message})` : ""}`}</span></span>}
+        <span className="ml-auto inline-flex gap-1"><NodeButton label="Refresh" onClick={live.refresh} disabled={live.fetching}><RefreshCw /></NodeButton>{canEdit && <NodeButton label="Unlink from the database (keeps the data)" onClick={() => update({ source: null })}><Unlink /></NodeButton>}</span></div>}
+      {hasData ? <ChartFigure kind={kind} data={drawn} /> : (
         <NodeState icon={<ChartColumn />} title="Empty chart" hint={canEdit && !snapshot ? "Add a small table to plot: type it, or paste it from a spreadsheet." : "This chart has no data."}>
-          {canEdit && !snapshot && <><NodeButton label="Start with sample data" text onClick={() => { apply(SAMPLE); setEditing(true); }}><Table2 /></NodeButton><NodeButton label="Paste a table" text onClick={() => setPasting(true)}><ClipboardPaste /></NodeButton></>}
+          {canEdit && !snapshot && <><NodeButton label="Start with sample data" text onClick={() => { apply(SAMPLE); setEditing(true); }}><Table2 /></NodeButton><NodeButton label="Paste a table" text onClick={() => setPasting(true)}><ClipboardPaste /></NodeButton><NodeButton label="Plot a database" text active={linking} onClick={() => setLinking((v) => !v)}><Database /></NodeButton></>}
         </NodeState>
       )}
+      {canEdit && linking && !snapshot && <div className="ch-paste"><label className="flex items-center gap-2 text-ui text-fg-muted">Database<select className="nb-field min-w-0 flex-1" aria-label="Database to plot" defaultValue="" onChange={(e) => link(e.target.value)}><option value="">{dbs.isLoading ? "Loading…" : (dbs.data ?? []).length ? "Choose…" : "No database yet"}</option>{(dbs.data ?? []).map((d) => <option key={d.id} value={d.databaseId ?? d.id}>{d.title || "Untitled"}</option>)}</select></label><div className="nb-meta mt-1">The chart follows the database: its rows are read each time the page is shown, and the last version is kept in the page for offline reading.</div></div>}
       {canEdit && pasting && !snapshot && <PastePanel onCancel={() => setPasting(false)} onUse={replaceTable} replaces={hasData} />}
       {canEdit && editing && hasData && (
         <div className="ch-edit">

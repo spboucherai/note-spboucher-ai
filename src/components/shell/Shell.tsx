@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUI, followSystemTheme } from "@/lib/client/store";
 import { RightPanel, registerBuiltInPanels } from "./RightPanel";
 import { useShellCommands } from "./shell-commands";
@@ -9,8 +9,11 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav, MobileHeader } from "./MobileNav";
 import { CaptureSheet } from "./CaptureSheet";
+import { CaptureDrop } from "./CaptureDrop";
 import { flushOutbox } from "@/lib/client/outbox";
 import { purgeExpired } from "@/lib/client/offline";
+import { createPage, startSyncEngine } from "@/lib/client/journal";
+import { replicaTree } from "@/lib/client/replica";
 import { CommandPalette } from "./CommandPalette";
 import { AIPanel } from "./AIPanel";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -21,8 +24,8 @@ import { api } from "@/lib/client/api";
 import { applyPrefs, readLocalPrefs } from "@/components/settings/prefs";
 
 export function Shell({ user, workspace, initialTree, children }: { user: ShellUser; workspace: { id: string; name: string }; initialTree: TreeNode[]; children: React.ReactNode }) {
-  const ui = useUI(); const r = useRouter(); const pathname = usePathname(); const [help, setHelp] = useState(false);
-  const { data: tree = initialTree } = useQuery({ queryKey: ["tree"], queryFn: () => api<TreeNode[]>("/api/tree"), initialData: initialTree, staleTime: 10_000 });
+  const ui = useUI(); const r = useRouter(); const pathname = usePathname(); const [help, setHelp] = useState(false); const qc = useQueryClient();
+  const { data: tree = initialTree } = useQuery({ queryKey: ["tree"], queryFn: () => api<TreeNode[]>("/api/tree").catch(async (e) => { const local = e?.status === 0 ? await replicaTree().catch(() => []) : []; if (local.length) return local as TreeNode[]; throw e; /* network lost: the device replica answers */ }), initialData: initialTree, staleTime: 10_000 });
   useEffect(() => { ui.setTheme(ui.theme); try { applyPrefs(readLocalPrefs()); } catch {} registerBuiltInPanels(); return followSystemTheme(); /* eslint-disable-next-line */ }, []);
   useShellCommands(tree, () => setHelp(true));
   // Handles for the end-to-end suites and for debugging from the console (UI state and motion helpers only — no data, no credentials).
@@ -33,7 +36,7 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
       if (mod && e.key === "k") { e.preventDefault(); ui.set({ paletteOpen: !ui.paletteOpen }); }
       else if (mod && e.key === "/") { e.preventDefault(); ui.toggleAI(); }
       else if (mod && e.key === "\\") { e.preventDefault(); ui.toggleSidebar(); }
-      else if (mod && e.shiftKey && e.key.toLowerCase() === "n") { e.preventDefault(); api("/api/pages", { method: "POST", json: { title: "" } }).then((p) => r.push(`/p/${p.id}`)); }
+      else if (mod && e.shiftKey && e.key.toLowerCase() === "n") { e.preventDefault(); createPage({ title: "" }).then((p) => r.push(`/p/${p.id}`)).catch(() => {}); }
       else if (mod && e.shiftKey && e.key.toLowerCase() === "c") { e.preventDefault(); ui.set({ captureOpen: true }); }
       else if (mod && e.key === ".") { e.preventDefault(); ui.set({ focusMode: !ui.focusMode }); }
       else if (mod && (e.key === "?" || (e.shiftKey && e.key === "/"))) { e.preventDefault(); setHelp((h) => !h); }
@@ -55,6 +58,8 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
     // Reload only when the user asked for the update. (The first install also fires controllerchange — reloading then would throw away an open sheet or a half-typed capture.)
     let reloaded = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded && (window as any).__noteUpdateAccepted) { reloaded = true; window.location.reload(); } });
   }, []);
+  // Offline-first (3.0): keep the device replica in step with the server, replay the mutation journal, and keep the offline shell of THIS build in the service-worker cache.
+  useEffect(() => { const stop = startSyncEngine(); if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") navigator.serviceWorker.ready.then((reg) => { if (navigator.onLine) reg.active?.postMessage({ type: "REFRESH_SHELL" }); }).catch(() => {}); const refetch = () => qc.invalidateQueries({ queryKey: ["tree"] }); window.addEventListener("note:journal-changed", refetch); return () => { stop(); window.removeEventListener("note:journal-changed", refetch); }; /* eslint-disable-next-line */ }, []);
   // Installed-app shortcuts (manifest): /?capture=1 opens the capture sheet, /?ai=1 the assistant.
   useEffect(() => { const q = new URLSearchParams(window.location.search); if (q.get("capture") === "1") { ui.set({ captureOpen: true }); history.replaceState(null, "", "/"); } else if (q.get("ai") === "1") { ui.openAI(); history.replaceState(null, "", "/"); } /* eslint-disable-next-line */ }, []);
   // Device-local hygiene + replay of what was captured offline (after a wake from sleep, a relaunch of the installed app, or the network coming back).
@@ -74,6 +79,7 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
       {!ui.aiOpen && !ui.focusMode && <RightPanel pathname={pathname} />}
       <CommandPalette tree={tree} />
       <CaptureSheet />
+      <CaptureDrop />
       {update && <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] mx-auto flex max-w-md items-center gap-3 rounded-xl border border-line bg-bg-elev p-3 text-[13.5px] shadow-pop"><span className="min-w-0 flex-1">A new version is ready.</span><button className="h-9 rounded-lg bg-accent px-3 font-medium text-accent-fg" onClick={() => { (window as any).__noteUpdateAccepted = true; update.postMessage({ type: "SKIP_WAITING" }); }}>Reload</button><button aria-label="Later" className="h-9 px-2 text-fg-muted" onClick={() => setUpdate(null)}>Later</button></div>}
       <ShortcutsDialog open={help} onOpenChange={setHelp} />
       {ui.focusMode && <button onClick={() => ui.set({ focusMode: false })} title="Exit focus mode (⌘.)" className="fixed right-3 top-3 z-30 grid size-8 place-items-center rounded-md border border-line bg-bg-elev/80 text-fg-muted shadow-card backdrop-blur hover:text-fg safe-top"><Minimize2 className="size-4" /></button>}

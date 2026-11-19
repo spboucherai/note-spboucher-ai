@@ -255,6 +255,19 @@ Any edit or rename changes `contentHash` and invalidates the synopsis.
 
 ## 5. Smart Inbox (SPEC §4.12)
 
+### 5.0 `POST /api/capture` — kinds (3.0, branch `next-p-cv`)
+
+Body unchanged: `{kind, text?, url?, attachmentIds?}` → `201 {id, title, kind, inboxAt}` (`kind` = the stored `pages.capture_kind`).
+
+| kind | stored as | content |
+|---|---|---|
+| `note`, `tasks`, `link`, `photo`, `file` | same | unchanged from 2.x |
+| `audio` | `audio` | each audio attachment becomes an **`audio` node** (`attachmentId`, `title`, `transcriptStatus:"none"`) instead of a file card, so the capture is a voice note that can be transcribed (§6); non-audio attachments keep their card |
+| `screenshot` | `screenshot` | like `photo` (image nodes); default title `Screenshot · <date>` |
+| `document` | `document` | a PDF attachment becomes a **`pdf` node** (`attachmentId`, `name`, `page:1`, `annotations:[]`), other files a file card |
+| `selection` | `selection` | `text` (required) as a `blockquote`; `url` = its source, either `/p/<pageId>` / `/p/<pageId>#block-<blockId>` (kept relative: the capture then appears in that page's backlinks) or an http(s) address; any other value is ignored |
+| `idea` | **`note`** | request-only alias: a note created with the icon 💡 (the stored kinds stay the ones of SPEC §4.12) |
+
 ### 5.1 `GET /api/inbox/<id>/suggestions`
 
 AI suggestions for one capture: title, tags, destination, related pages, summary. **Suggestions only — this route changes nothing.**
@@ -499,6 +512,16 @@ cited by key or by a `citation` node in its text. (`?pageId=` and the whole-libr
 ```
 
 with `x-missing-ids: 00000000-0000-4000-8000-000000000000`. Errors: `400 bad_id`, `400 too_many_ids`.
+
+- ★ (slice next-p-ra) `?attachmentId=<attachment id>` → the references whose attached PDF is that file, each with `label`; used by the
+  `pdf` block to save its annotations as extracts of that reference (extract id derived from attachment id + annotation id, see
+  `src/lib/research/pdf-extracts.ts`; `POST …/extracts {id,…}` is idempotent on it). `400 bad_id` on a malformed id.
+
+### 8.4 `POST /api/research/papers` — `kind` (slice next-p-ra, additive)
+
+`{title?, status?, venue?, kind?: "paper" | "project"}`. Default `paper` = unchanged. `project` creates the root research page
+(`properties.researchKind = "project"`) and five child pages (Hypotheses, Methods notes, Equations, Results, Figures;
+`properties.researchRole`), and answers the root page plus `children: [{id, title, key}]` — the tree `export.tex` turns into sections.
 
 ## 9. Error codes introduced by this workstream
 

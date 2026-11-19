@@ -765,6 +765,12 @@ HTTP 200
   `404 not_found` (unknown or deleted), `400 bad_page`. Setting `pageId: null` without `blockId` also clears `blockId`.
 - `DELETE` → soft delete, `200 {"ok":true,"deleted":true}`; **idempotent**: on an already deleted task
   `200 {"ok":true,"deleted":false}`; unknown id `404`.
+- `POST /api/tasks/<id>?action=restore` (P-RA, additive) → the task, live again (`deletedAt` cleared; undo of a delete in the web
+  app). **Idempotent**: on a task that is not deleted `200` with the task untouched; unknown id `404 not_found`; another
+  `action` `400 bad_action`. A `POST /api/tasks` with the same `id` never resurrects a deleted task (it answers the stored row).
+- Lists (P-RA, additive): `GET /api/pages?view=…` accepts `offset=<0..100000>` (default 0; `400 bad_offset` otherwise) and sets
+  the header `x-next-offset` when the page came back full — the body stays a plain array. `GET /api/search?limit=` accepts up to
+  **120** (60 before); there is no offset, a longer result list is asked with a higher limit.
 
 ```http
 PATCH /api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7

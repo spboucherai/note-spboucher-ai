@@ -101,17 +101,19 @@ test("sha256 preview hash (hex, UTF-8) matches known vectors", async () => {
   assert.equal(await sha256Hex("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   assert.equal(await sha256Hex("flowchart LR\n  é --> ü"), (await import("node:crypto")).createHash("sha256").update("flowchart LR\n  é --> ü", "utf8").digest("hex"));
 });
-test("live views: request body and tolerant row normalisation", () => {
+test("live views: request body and the reader of the final POST /api/query shape", () => {
   assert.deepEqual(queryBody({ source: "tasks", databaseId: null, viewId: null, filter: { status: "open", tag: " " }, limit: 999 }), { source: "tasks", filter: { status: "open" }, limit: 200 });
   assert.deepEqual(queryBody({ source: "database", databaseId: "d", viewId: "v", filter: {}, limit: 0 }), { source: "database", databaseId: "d", viewId: "v", filter: {}, limit: 25 });
   const id = "11111111-2222-4333-8444-555555555555";
-  const r = normaliseQueryResult({ rows: [{ id: "t1", title: "Write", status: "open", due: "2020-01-01", pageId: id, blockId: "b" }, { id: "t2", text: "Done one", status: "done" }], total: 9 }, "tasks");
-  assert.equal(r.total, 9); assert.equal(r.rows[0].href, `/p/${id}#block-b`); assert.equal(r.rows[1].done, true); assert.equal(r.rows[1].title, "Done one");
+  // shape of docs/next/API-NEXT.md §4.7 (the real server answers are pinned in next-p-ra-live.test.ts)
+  const answer = (source: string, columns: { key: string; label: string; type: string }[], rows: Record<string, unknown>[]) => ({ source, columns, rows, total: 9, limit: 25, table: { columns: columns.map((c) => c.label), rows: rows.map((r) => columns.map((c) => (r[c.key] ?? null) as string | number | null)) }, resolvedAt: "2026-11-19T18:30:22.355Z" });
+  const r = normaliseQueryResult(answer("tasks", [{ key: "title", label: "Tâche", type: "text" }, { key: "status", label: "État", type: "select" }, { key: "dueAt", label: "Échéance", type: "date" }], [{ id: "t1", title: "Write", status: "todo", dueAt: "2020-01-01T12:00:00.000Z", pageId: id, blockId: "b" }, { id: "t2", title: "Done one", status: "done", dueAt: null, pageId: null }]), "tasks");
+  assert.equal(r.total, 9); assert.equal(r.rows[0].href, `/p/${id}#block-b`); assert.equal(r.rows[1].done, true); assert.equal(r.rows[1].title, "Done one"); assert.equal(r.rows[1].href, null);
   assert.equal(isOverdue("2020-01-01", false), true); assert.equal(isOverdue("2020-01-01", true), false); assert.equal(isOverdue(null, false), false);
-  assert.deepEqual(groupByStatus(r.rows).map((g) => [g.status, g.rows.length]), [["open", 1], ["done", 1]]);
-  assert.equal(normaliseQueryResult([{ id, title: "A page" }], "pages").rows[0].href, `/p/${id}`);
-  const db = normaliseQueryResult({ columns: [{ name: "Name" }, { name: "Stage" }], rows: [{ id: "r", cells: { Name: "Row 1", Stage: "Lead" } }] }, "database"); assert.deepEqual(db.columns, ["Name", "Stage"]); assert.equal(db.rows[0].title, "Row 1");
-  assert.deepEqual(normaliseQueryResult(null, "tasks").rows, []);
+  assert.deepEqual(groupByStatus(r.rows).map((g) => [g.status, g.rows.length]), [["todo", 1], ["done", 1]]);
+  assert.equal(normaliseQueryResult(answer("pages", [{ key: "title", label: "Titre", type: "page" }], [{ id, pageId: id, title: "A page" }]), "pages").rows[0].href, `/p/${id}`);
+  const db = normaliseQueryResult(answer("database", [{ key: "p1", label: "Name", type: "page" }, { key: "p2", label: "Stage", type: "select" }], [{ id: "r", pageId: id, title: "Row 1", p1: "Row 1", p2: "Lead" }]), "database"); assert.deepEqual(db.columns.map((c) => c.label), ["Name", "Stage"]); assert.equal(db.rows[0].title, "Row 1"); assert.equal(db.rows[0].status, "Lead");
+  assert.throws(() => normaliseQueryResult(null, "tasks"), /Unexpected answer/); assert.throws(() => normaliseQueryResult([{ id, title: "bare array" }], "pages"), /Unexpected answer/);
 });
 test("design tokens keep WCAG AA contrast in both themes (scripts/contrast.mjs)", () => {
   const out = JSON.parse(execFileSync("node", ["scripts/contrast.mjs", "--json"], { encoding: "utf8" }));

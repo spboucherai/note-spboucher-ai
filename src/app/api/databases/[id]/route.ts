@@ -1,14 +1,15 @@
 import { z } from "zod";
 import { handler, parseBody } from "@/lib/api";
-import { getDatabase, updateDatabase, queryRows } from "@/lib/databases/service";
-import { exportCsv } from "@/lib/databases/csv";
+import { getDatabase, updateDatabase } from "@/lib/databases/service";
+import { iterateRows } from "@/lib/databases/engine";
+import { exportCsvStream } from "@/lib/databases/csv";
 import { audit } from "@/lib/audit";
 /** GET by database id OR host page id. ?format=csv[&viewId=] exports the rows. */
 export const GET = handler(async ({ ws, params, req }) => {
   const d = await getDatabase(ws.id, params.id); const u = new URL(req.url);
   if (u.searchParams.get("format") === "csv") {
-    const view = d.views.find((v) => v.id === u.searchParams.get("viewId")); const r = await queryRows(d.id, d.properties, { filter: view?.config.filter ?? null, sorts: view?.config.sorts ?? [], limit: 1000 });
-    return new Response(exportCsv(d.properties, r.rows, view?.config.hidden ?? []), { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${d.name.replace(/[^\w.-]+/g, "_") || "database"}.csv"` } });
+    const view = d.views.find((v) => v.id === u.searchParams.get("viewId")); // 3.0 (audit D11): every row, streamed
+    return new Response(exportCsvStream(d.properties, iterateRows(d.id, d.properties, { filter: view?.config.filter ?? null, sorts: view?.config.sorts ?? [] }), view?.config.hidden ?? []), { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${d.name.replace(/[^\w.-]+/g, "_") || "database"}.csv"` } });
   }
   return Response.json(d);
 });

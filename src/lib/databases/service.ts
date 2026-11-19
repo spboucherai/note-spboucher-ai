@@ -4,8 +4,11 @@ import { HttpError } from "@/lib/errors";
 import { createPage, softDeletePage } from "@/lib/pages/service";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import type { Database, Property, PropertyType, PropertyConfig, View, ViewType, ViewConfig, RowOut, SelectOption, RelationRef } from "./types";
-import { PROPERTY_TYPES, COMPUTED_TYPES, VIEW_TYPES } from "./types";
-import { hydrate, loadProps, loadRaw, queryRows } from "./query";
+import { PROPERTY_TYPES, COMPUTED_TYPES, VIEW_TYPES, AGGREGATES, isGroup } from "./types";
+import type { FilterGroup, FilterNode, Sort } from "./types";
+import { hydrate, loadProps, loadRaw } from "./query";
+import { queryRows, validateFilter, validateSorts, collectRules } from "./engine";
+import { formulaCycle } from "./formula";
 import { displayValue, ensureOption, newId, numberOf, titleProp, isEmpty } from "./values";
 
 export type DbRow = typeof schema.databases.$inferSelect;
@@ -51,6 +54,17 @@ function normalizeConfig(type: PropertyType, config: PropertyConfig = {}): Prope
   if (c.options) c.options = c.options.map((o, i) => ({ id: o.id || newId(), name: String(o.name ?? `Option ${i + 1}`).trim() || `Option ${i + 1}`, color: o.color || "gray", ...(o.group ? { group: o.group } : {}) }));
   return c;
 }
+/**
+ * 3.0: a formula that ends up reading itself is refused when it is saved (400 `formula_cycle`, with the path), instead of being stored and
+ * failing on every cell; a rollup must name a known aggregate. A syntax error is NOT refused (the editor shows it; the cell shows it).
+ */
+function checkComputed(props: Property[], self: { id?: string; name: string; type: PropertyType; config: PropertyConfig }) {
+  if (self.type === "formula" && typeof self.config.expression === "string" && self.config.expression.trim()) {
+    const others = props.filter((p) => p.id !== self.id); const cycle = formulaCycle(others, self.name, self.config.expression);
+    if (cycle) throw new HttpError(400, `Circular formula: ${cycle.join(" → ")}`, "formula_cycle", { cycle });
+  }
+  if (self.type === "rollup" && self.config.aggregate !== undefined && !(AGGREGATES as readonly string[]).includes(String(self.config.aggregate))) throw new HttpError(400, `Unknown aggregate "${String(self.config.aggregate)}"`, "bad_request");
+}
 export async function createProperty(wsId: string, dbId: string, input: { id?: string; name: string; type: PropertyType; config?: PropertyConfig; width?: number | null; position?: number }): Promise<Property> {
   const d = await ensureDatabase(wsId, dbId);
   if (input.id) { const [old] = await db.select().from(schema.databaseProperties).where(eq(schema.databaseProperties.id, input.id)); if (old) { if (old.databaseId !== d.id) throw new HttpError(409, "This id is already in use", "id_taken"); return old as Property; } } // 3.0: client-chosen id, idempotent
@@ -58,6 +72,7 @@ export async function createProperty(wsId: string, dbId: string, input: { id?: s
   if (input.type === "title") throw new HttpError(400, "A database has exactly one title property");
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.databaseProperties).where(eq(schema.databaseProperties.databaseId, d.id));
   const config = normalizeConfig(input.type, input.config);
+  checkComputed(await loadProps(d.id), { name: input.name.trim() || "Property", type: input.type, config });
   if (input.type === "relation" && config.targetDatabaseId) await ensureDatabase(wsId, config.targetDatabaseId);
   const [p] = await db.insert(schema.databaseProperties).values({ ...(input.id ? { id: input.id } : {}), databaseId: d.id, name: input.name.trim() || "Property", type: input.type, config, width: input.width ?? (input.type === "checkbox" ? 90 : 180), position: input.position ?? Number(max) + 1 }).returning();
   if (input.type === "relation" && config.twoWay && config.targetDatabaseId) {
@@ -80,6 +95,8 @@ export async function updateProperty(wsId: string, dbId: string, propId: string,
     set.type = patch.type;
   }
   if (patch.config !== undefined || set.type) set.config = normalizeConfig(type, { ...(patch.config ?? (set.type ? {} : prev.config)) });
+  if (type === "formula" || type === "rollup") { const all = await loadProps(d.id); const name = (set.name as string | undefined) ?? prev.name; checkComputed(all, { id: prev.id, name, type, config: (set.config as PropertyConfig | undefined) ?? (prev.config as PropertyConfig) }); }
+  else if (set.name && set.name !== prev.name) { /* a rename can close a cycle only through a formula that already reads the new name: checked when that formula is evaluated */ }
   if (set.type && set.type !== "relation" && prev.type === "relation") await deleteRelationPair(prev as Property, d.id, true);
   if (prev.type === "relation" && type === "relation" && patch.config && patch.config.targetDatabaseId && patch.config.targetDatabaseId !== prev.config.targetDatabaseId) { await db.delete(schema.relationsTable).where(eq(schema.relationsTable.propertyId, prev.id)); }
   const [p] = await db.update(schema.databaseProperties).set(set).where(eq(schema.databaseProperties.id, propId)).returning();
@@ -88,7 +105,11 @@ export async function updateProperty(wsId: string, dbId: string, propId: string,
 }
 async function deleteRelationPair(p: Property, dbId: string, keepSelf: boolean) {
   const synced = p.config.syncedPropertyId as string | undefined;
-  if (synced) { if (!keepSelf) await db.delete(schema.databaseProperties).where(eq(schema.databaseProperties.id, p.id)); return; }
+  if (synced) {
+    // 3.0 (audit D21): removing the reverse side leaves the forward property a plain one-way relation (it kept `twoWay: true` with no counterpart)
+    await db.update(schema.databaseProperties).set({ config: dsql`${schema.databaseProperties.config} - 'twoWay'` }).where(eq(schema.databaseProperties.id, synced));
+    if (!keepSelf) await db.delete(schema.databaseProperties).where(eq(schema.databaseProperties.id, p.id)); return;
+  }
   await db.delete(schema.databaseProperties).where(dsql`${schema.databaseProperties.config}->>'syncedPropertyId' = ${p.id}`);
   await db.delete(schema.relationsTable).where(eq(schema.relationsTable.propertyId, p.id));
   if (!keepSelf) await db.delete(schema.databaseProperties).where(eq(schema.databaseProperties.id, p.id));
@@ -99,6 +120,20 @@ export async function deleteProperty(wsId: string, dbId: string, propId: string)
   if (p.type === "title") throw new HttpError(400, "The title property cannot be deleted");
   if (p.type === "relation") await deleteRelationPair(p as Property, d.id, false); else await db.delete(schema.databaseProperties).where(eq(schema.databaseProperties.id, propId));
   await db.update(schema.databaseRows).set({ values: dsql`${schema.databaseRows.values} - ${propId}` }).where(eq(schema.databaseRows.databaseId, d.id));
+  await pruneViews(d.id, propId);
+}
+const pruneFilter = (f: FilterNode, propId: string): FilterNode | null => { if (!isGroup(f)) return f.property === propId ? null : f; const key = f.or ? "or" : "and"; const items = (f.or ?? f.and ?? []).map((n) => pruneFilter(n, propId)).filter((n): n is FilterNode => !!n && (!isGroup(n) || (n.and ?? n.or ?? []).length > 0)); return { [key]: items } as FilterGroup; };
+/** 3.0: a deleted property leaves no dead reference in the saved views (filter rules, sorts, grouping, date / cover properties, hidden, order, widths, card properties). */
+async function pruneViews(dbId: string, propId: string) {
+  for (const v of await db.select().from(schema.databaseViews).where(eq(schema.databaseViews.databaseId, dbId))) {
+    const c = { ...(v.config as ViewConfig) }; const before = JSON.stringify(c);
+    if (c.filter) { const f = pruneFilter(c.filter, propId) as FilterGroup | null; c.filter = f && (f.and ?? f.or ?? []).length ? f : null; }
+    if (c.sorts) c.sorts = c.sorts.filter((s) => s.property !== propId);
+    for (const k of ["groupBy", "dateProperty", "startProperty", "endProperty", "coverProperty"] as const) if (c[k] === propId) c[k] = null;
+    for (const k of ["hidden", "order", "cardProps", "mobileProps"] as const) if (Array.isArray(c[k])) (c as any)[k] = (c[k] as string[]).filter((x) => x !== propId);
+    for (const k of ["widths", "footers"] as const) if (c[k] && typeof c[k] === "object" && propId in (c[k] as object)) { const o = { ...(c[k] as Record<string, unknown>) }; delete o[propId]; (c as any)[k] = o; }
+    if (JSON.stringify(c) !== before) await db.update(schema.databaseViews).set({ config: c }).where(eq(schema.databaseViews.id, v.id));
+  }
 }
 export async function reorderProperties(wsId: string, dbId: string, ids: string[]) {
   const d = await ensureDatabase(wsId, dbId);
@@ -124,7 +159,10 @@ async function convertValues(dbId: string, prev: Property, next: Property) {
 async function propsOf(d: DbRow) { return loadProps(d.id); }
 const relIds = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x : (x as RelationRef)?.rowId)).filter((x): x is string => typeof x === "string" && UUID.test(x)) : typeof v === "string" && UUID.test(v) ? [v] : []);
 export async function setRelations(p: Property, rowId: string, targetIds: string[]) {
-  const synced = p.config.syncedPropertyId as string | undefined; const ids = [...new Set(targetIds)]; const single = p.config.single ? ids.slice(0, 1) : ids;
+  const synced = p.config.syncedPropertyId as string | undefined; let ids = [...new Set(targetIds)];
+  // 3.0 (audit D20): only live rows of the target database can be linked (any existing row id used to be accepted)
+  if (ids.length && p.config.targetDatabaseId) { const ok = new Set((await db.select({ id: schema.databaseRows.id }).from(schema.databaseRows).where(and(inArray(schema.databaseRows.id, ids), eq(schema.databaseRows.databaseId, p.config.targetDatabaseId as string)))).map((r) => r.id)); ids = ids.filter((x) => ok.has(x)); }
+  const single = p.config.single ? ids.slice(0, 1) : ids;
   if (synced) { await db.delete(schema.relationsTable).where(and(eq(schema.relationsTable.propertyId, synced), eq(schema.relationsTable.toRowId, rowId))); if (single.length) await db.insert(schema.relationsTable).values(single.map((f) => ({ propertyId: synced, fromRowId: f, toRowId: rowId }))).onConflictDoNothing(); }
   else { await db.delete(schema.relationsTable).where(and(eq(schema.relationsTable.propertyId, p.id), eq(schema.relationsTable.fromRowId, rowId))); if (single.length) await db.insert(schema.relationsTable).values(single.map((t) => ({ propertyId: p.id, fromRowId: rowId, toRowId: t }))).onConflictDoNothing(); }
 }
@@ -140,11 +178,13 @@ function splitValues(props: Property[], values: Record<string, unknown>) {
   }
   return { stored, drop, title, rels };
 }
-export async function createRow(wsId: string, dbId: string, input: { id?: string; pageId?: string; title?: string; values?: Record<string, unknown>; position?: number; content?: any; icon?: string | null }): Promise<RowOut> {
+export async function createRow(wsId: string, dbId: string, input: { id?: string; pageId?: string; title?: string; values?: Record<string, unknown>; position?: number; content?: any; icon?: string | null; templateId?: string }): Promise<RowOut> {
   const d = await ensureDatabase(wsId, dbId); const props = await propsOf(d);
   // 3.0: client-chosen ids (row `id`, and `pageId` for the row's page). The same row id twice → the stored row, untouched.
   if (input.id) { const [old] = await db.select({ id: schema.databaseRows.id, databaseId: schema.databaseRows.databaseId }).from(schema.databaseRows).where(eq(schema.databaseRows.id, input.id)); if (old) { if (old.databaseId !== d.id) throw new HttpError(409, "This id is already in use", "id_taken"); const [row] = await getRows(d, props, [old.id]); if (row) return row; throw new HttpError(409, "This row was deleted", "row_deleted"); } }
   if (input.pageId) { const [taken] = await db.select({ id: schema.pages.id }).from(schema.pages).where(eq(schema.pages.id, input.pageId)); if (taken) throw new HttpError(409, "This page id is already in use", "id_taken"); }
+  // 3.0: `templateId` = a row template of this database: its values are the defaults (explicit values win), its body and icon fill what is not sent
+  if (input.templateId) { const [t] = await db.select().from(schema.databaseRowTemplates).where(and(eq(schema.databaseRowTemplates.id, input.templateId), eq(schema.databaseRowTemplates.databaseId, d.id))); if (!t) throw new HttpError(404, "Template not found", "not_found"); input = { ...input, values: { ...t.values, ...(input.values ?? {}) }, content: input.content ?? t.content ?? undefined, icon: input.icon ?? t.icon }; }
   const { stored, title, rels } = splitValues(props, input.values ?? {}); const tp = titleProp(props);
   const t = (input.title ?? title ?? "").trim(); if (tp) stored[tp.id] = t;
   const page = await createPage(wsId, { ...(input.pageId ? { id: input.pageId } : {}), title: t, parentId: d.pageId, section: "databases", type: "page", databaseId: d.id, content: input.content, icon: input.icon ?? null });
@@ -178,9 +218,11 @@ export async function deleteRows(wsId: string, dbId: string, ids: string[]) {
   return rows.length;
 }
 export async function listRowsSimple(wsId: string, dbId: string, q: string | undefined, limit = 50) {
-  const d = await ensureDatabase(wsId, dbId);
-  const raws = await loadRaw([eq(schema.databaseRows.databaseId, d.id), ...(q?.trim() ? [dsql`${schema.pages.title} ilike ${"%" + q.trim().replace(/[%_\\]/g, "\\$&") + "%"}`] : [])]);
-  return raws.slice(0, limit).map((r): RelationRef => ({ rowId: r.id, pageId: r.pageId, title: r.title, icon: r.icon }));
+  const d = await ensureDatabase(wsId, dbId); // 3.0: LIMIT in SQL (the 2.x version loaded every row of the database for each keystroke of a relation picker)
+  const rows = await db.select({ rowId: schema.databaseRows.id, pageId: schema.databaseRows.pageId, title: schema.pages.title, icon: schema.pages.icon }).from(schema.databaseRows).innerJoin(schema.pages, eq(schema.pages.id, schema.databaseRows.pageId))
+    .where(and(eq(schema.databaseRows.databaseId, d.id), isNull(schema.databaseRows.deletedAt), isNull(schema.pages.deletedAt), ...(q?.trim() ? [dsql`${schema.pages.title} ilike ${"%" + q.trim().replace(/[%_\\]/g, "\\$&") + "%"}`] : [])))
+    .orderBy(schema.databaseRows.position, schema.databaseRows.createdAt).limit(Math.max(1, Math.min(500, limit)));
+  return rows as RelationRef[];
 }
 export async function enqueueAi(wsId: string, dbId: string, rowId: string, propertyId: string) {
   const d = await ensureDatabase(wsId, dbId); const props = await propsOf(d); const p = props.find((x) => x.id === propertyId);
@@ -192,6 +234,7 @@ export async function enqueueAi(wsId: string, dbId: string, rowId: string, prope
 // ---------- views
 export async function createView(wsId: string, dbId: string, input: { id?: string; name: string; type: ViewType; config?: ViewConfig }): Promise<View> {
   const d = await ensureDatabase(wsId, dbId); if (!VIEW_TYPES.includes(input.type)) throw new HttpError(400, "Unknown view type");
+  if (input.config) await checkViewConfig(d.id, input.config);
   if (input.id) { const [old] = await db.select().from(schema.databaseViews).where(eq(schema.databaseViews.id, input.id)); if (old) { if (old.databaseId !== d.id) throw new HttpError(409, "This id is already in use", "id_taken"); return old as View; } } // 3.0: client-chosen id, idempotent
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.databaseViews).where(eq(schema.databaseViews.databaseId, d.id));
   const [v] = await db.insert(schema.databaseViews).values({ ...(input.id ? { id: input.id } : {}), databaseId: d.id, name: input.name.trim() || input.type, type: input.type, config: input.config ?? {}, position: Number(max) + 1 }).returning(); return v as View;
@@ -199,9 +242,15 @@ export async function createView(wsId: string, dbId: string, input: { id?: strin
 export async function updateView(wsId: string, dbId: string, viewId: string, patch: Partial<{ name: string; type: ViewType; config: ViewConfig; position: number; isDefault: boolean }>): Promise<View> {
   const d = await ensureDatabase(wsId, dbId);
   const [prev] = await db.select().from(schema.databaseViews).where(and(eq(schema.databaseViews.id, viewId), eq(schema.databaseViews.databaseId, d.id))); if (!prev) throw new HttpError(404, "View not found");
+  if (patch.config) await checkViewConfig(d.id, patch.config);
   if (patch.isDefault) await db.update(schema.databaseViews).set({ isDefault: false }).where(eq(schema.databaseViews.databaseId, d.id));
   const set: Record<string, unknown> = {}; if (patch.name !== undefined) set.name = patch.name.trim() || prev.name; if (patch.type) set.type = patch.type; if (patch.config !== undefined) set.config = { ...(prev.config as ViewConfig), ...patch.config }; if (patch.position !== undefined) set.position = patch.position; if (patch.isDefault !== undefined) set.isDefault = patch.isDefault;
   const [v] = await db.update(schema.databaseViews).set(set).where(eq(schema.databaseViews.id, viewId)).returning(); return v as View;
+}
+/** 3.0 (audit D10): the filter and the sorts saved with a view are validated (unknown property / operator, `and` + `or` in one group → 400 `bad_filter` / `bad_sort`). */
+async function checkViewConfig(dbId: string, config: ViewConfig) {
+  if (config.filter == null && config.sorts == null) return; const props = await loadProps(dbId);
+  if (config.filter != null) validateFilter(config.filter, props, "config.filter"); if (config.sorts != null) validateSorts(config.sorts, props);
 }
 export async function deleteView(wsId: string, dbId: string, viewId: string) {
   const d = await ensureDatabase(wsId, dbId);
@@ -238,4 +287,5 @@ export async function duplicateDatabase(wsId: string, dbId: string, opts: { with
   }
   return getDatabase(wsId, d.id);
 }
-export { queryRows, isEmpty };
+export { queryRows, isEmpty, collectRules };
+export type { Sort };

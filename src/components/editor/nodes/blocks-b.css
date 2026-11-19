@@ -130,3 +130,22 @@ button.au-wave-load:focus-visible { outline: 2px solid var(--ring); }
   .au-meter { display: none; }
   .pdfv-page[data-rendering="true"] .pdfv-canvas { transition: none; }
 }
+
+/* ---------- voice flows (SPEC §4.13): pause, transcription states, search hits, AI actions, keep/delete the original ---------- */
+.au-rec[data-paused="true"] .au-rec-dot { animation: none; background: var(--fg-faint); }
+.au-paused { font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.au-note { display: flex; align-items: center; gap: .375rem; margin: 0; min-width: 0; }
+.au-note svg, .au-keep svg { width: 14px; height: 14px; flex-shrink: 0; }
+.au-line.is-hit { background: color-mix(in oklab, var(--warning) 22%, transparent); }
+.au-line.is-hit .au-stamp { color: var(--fg-muted); }
+.au-line:disabled { cursor: default; }
+.au-line:disabled:hover { background: transparent; }
+.au-line.is-hit:disabled:hover { background: color-mix(in oklab, var(--warning) 22%, transparent); }
+.au-hint { color: var(--fg-muted); min-width: 0; }
+.au-pending { display: inline-flex; align-items: center; gap: .375rem; }
+.au-spin { width: .75rem; height: .75rem; border-radius: var(--r-pill); border: 2px solid var(--line-strong); border-top-color: var(--accent); animation: au-spin .8s linear infinite; }
+@keyframes au-spin { to { transform: rotate(360deg); } }
+.au-problem { margin: 0; padding: .375rem .5rem; border-radius: var(--r-sm); background: color-mix(in oklab, var(--danger) 9%, transparent); color: var(--fg); font-size: 0.8125rem; line-height: 1.25rem; overflow-wrap: anywhere; }
+.au-keep { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+.au-summary-actions { display: flex; flex-wrap: wrap; gap: .375rem; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid color-mix(in oklab, var(--ai) 20%, transparent); }
+@media (prefers-reduced-motion: reduce) { .au-spin { animation: none; border-top-color: var(--line-strong); } }

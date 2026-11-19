@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import type { Property, PropertyType, PropertyConfig, SelectOption, OptionColor } from "@/lib/databases/types";
-import { PROPERTY_TYPES, AGGREGATES, OPTION_COLORS } from "@/lib/databases/types";
-import { evaluate, FORMULA_HELP } from "@/lib/databases/formula";
+import { PROPERTY_TYPES, AGGREGATES, OPTION_COLORS, isError } from "@/lib/databases/types";
+import { evaluate, FORMULA_HELP, formulaCycle, formulaSyntaxError } from "@/lib/databases/formula";
+import { AiConfigEditor, aiConfigOf, aiProblem } from "./SmartProperty";
+import { api } from "@/lib/client/api";
+import { toast } from "@/components/ui/toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { formulaValue, newId, pickColor, displayValue } from "@/lib/databases/values";
 import { useDb, usePropertyMutations, useAllDatabases, useRemoteDatabase } from "./hooks";
 import { TYPE_META, TypeIcon, Sel, Field, inputCls } from "./meta";
@@ -21,12 +25,20 @@ export function PropertyEditor({ prop, onClose, onBack }: { prop?: Property; onC
   const [pickType, setPickType] = useState(!prop); const [confirm, setConfirm] = useState(false);
   const set = (c: Partial<PropertyConfig>) => setConfig((x) => ({ ...x, ...c }));
   const changeType = (t: PropertyType) => { setType(t); setPickType(false); if (!prop || prop.type !== t) setConfig(OPT_TYPES.includes(type) && OPT_TYPES.includes(t) && config.options?.length ? { options: config.options } : {}); if (!name) setName(TYPE_META[t].label); };
+  const qc = useQueryClient();
+  // 3.0: a formula that would read itself cannot be saved — the cycle is shown here, with its path, before the server refuses it
+  const cycle = type === "formula" && typeof config.expression === "string" && config.expression.trim() ? formulaCycle(ctx.props.filter((p) => p.id !== prop?.id), name.trim() || TYPE_META[type].label, config.expression) : null;
   const save = async () => {
     const n = name.trim() || TYPE_META[type].label;
-    if (type === "relation" && !config.targetDatabaseId) return;
-    if (prop) await m.update.mutateAsync({ id: prop.id, ...(n !== prop.name ? { name: n } : {}), ...(type !== prop.type ? { type } : {}), config });
-    else await m.create.mutateAsync({ name: n, type, config });
-    onClose();
+    if ((type === "relation" && !config.targetDatabaseId) || cycle) return;
+    try { // 3.0: failures stay in the editor (toast by the mutation) instead of rejecting unhandled
+      let cfg = config;
+      if (type === "ai") { const ai = aiConfigOf(config); cfg = { ...config, prompt: ai.prompt, ai }; }
+      const saved = prop ? await m.update.mutateAsync({ id: prop.id, ...(n !== prop.name ? { name: n } : {}), ...(type !== prop.type ? { type } : {}), config: cfg }) : await m.create.mutateAsync({ name: n, type, config: cfg });
+      // the AI part goes through the documented route, which validates and normalises it
+      if (type === "ai") { await api(`/api/databases/${ctx.db.id}/ai/config`, { method: "PUT", json: { propertyId: saved.id, ai: aiConfigOf(cfg) } }); qc.invalidateQueries({ queryKey: ["db", ctx.db.pageId] }); }
+      onClose();
+    } catch (e: any) { if (type === "ai" && e?.message) toast("AI configuration not saved", { description: e.message, tone: "danger" }); }
   };
   if (pickType) return (
     <div className="w-64">
@@ -36,15 +48,17 @@ export function PropertyEditor({ prop, onClose, onBack }: { prop?: Property; onC
     </div>
   );
   return (
-    <div className="w-72 space-y-2.5">
+    <div className="w-72 space-y-2.5 md:max-h-[calc(var(--radix-popover-content-available-height,100vh)-2rem)] md:overflow-y-auto md:pr-1">{/* a long configuration (AI, options) scrolls inside the popover instead of running off the screen */}
       <div className="flex items-center gap-1 text-[12px] font-medium text-fg-muted">{onBack && <button type="button" onClick={onBack} className="rounded p-0.5 hover:bg-bg-sunk"><ChevronLeft className="size-4" /></button>}{prop ? "Edit property" : "New property"}</div>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Property name" autoFocus className={inputCls} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } if (e.key === "Escape") onClose(); }} />
       <button type="button" disabled={prop?.type === "title"} onClick={() => setPickType(true)} className="flex h-8 w-full items-center gap-2 rounded-md border border-line px-2 text-[13px] hover:bg-bg-sunk disabled:opacity-60"><TypeIcon type={type} />{TYPE_META[type].label}<span className="ml-auto text-[11px] text-fg-faint">{prop?.type === "title" ? "fixed" : "change"}</span></button>
       <ConfigEditor type={type} config={config} set={set} prop={prop} />
+      {cycle && <p role="alert" data-testid="formula-cycle" className="rounded-md bg-danger/10 px-2 py-1.5 text-[12px] text-danger">Circular reference: {cycle.join(" → ")}. A formula cannot read itself, directly or through other formulas.</p>}
+      {type === "ai" && aiProblem(aiConfigOf(config)) && <p className="text-[11px] text-fg-muted">You can save now and complete the configuration later; cells will show the problem until then.</p>}
       <div className="flex items-center gap-1.5 pt-1">
-        <Button size="sm" onClick={save} disabled={m.create.isPending || m.update.isPending || (type === "relation" && !config.targetDatabaseId)}>{prop ? "Save" : "Add property"}</Button>
+        <Button size="sm" onClick={save} disabled={m.create.isPending || m.update.isPending || (type === "relation" && !config.targetDatabaseId) || !!cycle}>{prop ? "Save" : "Add property"}</Button>
         <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
-        {prop && prop.type !== "title" && (confirm ? <Button size="sm" variant="danger" className="ml-auto" onClick={async () => { await m.remove.mutateAsync(prop.id); onClose(); }}>Confirm delete</Button> : <Button size="sm" variant="ghost" className="ml-auto text-danger" onClick={() => setConfirm(true)}><Trash2 /></Button>)}
+        {prop && prop.type !== "title" && (confirm ? <Button size="sm" variant="danger" className="ml-auto" onClick={async () => { try { await m.remove.mutateAsync(prop.id); onClose(); } catch { /* toast shown by the mutation */ } }}>Confirm delete</Button> : <Button size="sm" variant="ghost" className="ml-auto text-danger" onClick={() => setConfirm(true)}><Trash2 /></Button>)}
       </div>
     </div>
   );
@@ -56,9 +70,9 @@ function ConfigEditor({ type, config, set, prop }: { type: PropertyType; config:
     case "number": return <Field label="Format"><Sel value={config.format ?? "number"} onChange={(e) => set({ format: e.target.value as any })} className="w-full"><option value="number">Number</option><option value="integer">Integer</option><option value="percent">Percent</option><option value="currency">Currency (CAD)</option></Sel></Field>;
     case "date": return <label className="flex items-center justify-between text-[13px]">Include time<Switch checked={!!config.includeTime} onCheckedChange={(v) => set({ includeTime: v })} /></label>;
     case "relation": return <RelationConfig config={config} set={set} isNew={!prop} />;
-    case "rollup": return <RollupConfig config={config} set={set} />;
+    case "rollup": return <RollupConfig config={config} set={set} prop={prop} />;
     case "formula": return <FormulaConfig config={config} set={set} />;
-    case "ai": return <Field label="Prompt" hint="Describe what to generate. Use {{Property}} to insert a value; all other properties and the page text are provided as context."><textarea value={config.prompt ?? ""} onChange={(e) => set({ prompt: e.target.value })} rows={4} placeholder="Summarize this paper in 3 sentences…" className={cn(inputCls, "h-auto py-1.5 max-md:h-auto")} /></Field>;
+    case "ai": return <AiConfigEditor value={aiConfigOf(config)} onChange={(ai) => set({ ai, prompt: ai.prompt })} />;
     default: return null;
   }
 }
@@ -95,25 +109,27 @@ function RelationConfig({ config, set, isNew }: { config: PropertyConfig; set: (
     </div>
   );
 }
-function RollupConfig({ config, set }: { config: PropertyConfig; set: (c: Partial<PropertyConfig>) => void }) {
+const AGG_LABEL: Record<(typeof AGGREGATES)[number], string> = { count: "Count rows", count_values: "Count values", sum: "Sum", avg: "Average", min: "Min (or earliest date)", max: "Max (or latest date)", unique: "Unique values", show: "Show original values", count_unique: "Count unique values", empty: "Count empty", not_empty: "Count not empty", percent_empty: "Percent empty", percent_not_empty: "Percent not empty", checked: "Count checked", unchecked: "Count unchecked", percent_checked: "Percent checked", percent_unchecked: "Percent unchecked", median: "Median", range: "Range (max − min, days for dates)" };
+function RollupConfig({ config, set, prop }: { config: PropertyConfig; set: (c: Partial<PropertyConfig>) => void; prop?: Property }) {
   const ctx = useDb(); const rels = ctx.props.filter((p) => p.type === "relation"); const rel = rels.find((p) => p.id === config.relationPropertyId);
   const { data: target } = useRemoteDatabase(rel?.config.targetDatabaseId as string | undefined);
   return (
     <div className="space-y-2">
       <Field label="Relation"><Sel value={config.relationPropertyId ?? ""} onChange={(e) => set({ relationPropertyId: e.target.value || undefined, targetPropertyId: undefined })} className="w-full"><option value="">Choose…</option>{rels.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Sel>{!rels.length && <span className="text-[11px] text-warning">Add a relation property first.</span>}</Field>
-      <Field label="Property of the related rows"><Sel value={config.targetPropertyId ?? ""} onChange={(e) => set({ targetPropertyId: e.target.value || undefined })} className="w-full" disabled={!target}><option value="">Choose…</option>{(target?.properties ?? []).filter((p) => !["relation", "rollup", "formula", "file", "ai"].includes(p.type)).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Sel></Field>
-      <Field label="Calculate"><Sel value={config.aggregate ?? "count"} onChange={(e) => set({ aggregate: e.target.value as any })} className="w-full">{AGGREGATES.map((a) => <option key={a} value={a}>{({ count: "Count rows", count_values: "Count values", sum: "Sum", avg: "Average", min: "Min", max: "Max", unique: "Unique values", show: "Show values" } as any)[a]}</option>)}</Sel></Field>
+      <Field label="Property of the related rows"><Sel value={config.targetPropertyId ?? ""} onChange={(e) => set({ targetPropertyId: e.target.value || undefined })} className="w-full" disabled={!target}><option value="">Choose…</option>{(target?.properties ?? []).filter((p) => p.type !== "file" && p.id !== prop?.id).map((p) => <option key={p.id} value={p.id}>{p.name}{["relation", "rollup", "formula"].includes(p.type) ? ` (${p.type})` : ""}</option>)}</Sel></Field>
+      <Field label="Calculate"><Sel value={config.aggregate ?? "count"} onChange={(e) => set({ aggregate: e.target.value as any })} className="w-full">{AGGREGATES.map((a) => <option key={a} value={a}>{AGG_LABEL[a]}</option>)}</Sel></Field>
     </div>
   );
 }
 function FormulaConfig({ config, set }: { config: PropertyConfig; set: (c: Partial<PropertyConfig>) => void }) {
   const ctx = useDb(); const expr = config.expression ?? ""; const row = ctx.rows[0];
-  const preview = useMemo(() => { if (!expr.trim()) return null; const byName = new Map(ctx.props.map((p) => [p.name, p])); return evaluate(expr, { prop: (n) => { const p = byName.get(n); if (!p) throw new Error(`Unknown property "${n}"`); return row ? formulaValue(p, row.values[p.id]) : null; } }); }, [expr, ctx.props, row]);
-  const err = preview && typeof preview === "object" && "error" in preview ? preview.error : null;
+  const preview = useMemo(() => { if (!expr.trim()) return null; const byName = new Map(ctx.props.map((p) => [p.name, p])); return evaluate(expr, { prop: (n) => { const p = byName.get(n); if (!p) throw new Error(`Unknown property "${n}"`); const v = row?.values[p.id]; if (isError(v)) throw new Error(v.error.startsWith("Error in ") || v.error.startsWith("Circular") ? v.error : `Error in "${n}": ${v.error}`); return row ? formulaValue(p, v) : null; } }); }, [expr, ctx.props, row]);
+  const syntax = expr.trim() ? formulaSyntaxError(expr) : null;
+  const err = syntax ? `Syntax: ${syntax}` : preview && typeof preview === "object" && "error" in preview ? preview.error : null;
   return (
     <div className="space-y-1.5">
       <Field label="Expression"><textarea value={expr} onChange={(e) => set({ expression: e.target.value })} rows={3} spellCheck={false} placeholder='if(prop("Done"), "✓", dateDiff(prop("Due"), today(), "days"))' className={cn(inputCls, "h-auto py-1.5 font-mono text-[12px] max-md:h-auto")} /></Field>
-      {expr.trim() && <div className={cn("rounded-md px-2 py-1.5 text-[12px]", err ? "bg-danger/10 text-danger" : "bg-bg-sunk text-fg-muted")}>{err ? err : <>Preview{row ? ` (${row.title || "first row"})` : ""}: <span className="font-medium text-fg">{preview == null ? "—" : displayValue({ id: "", databaseId: "", name: "", type: "formula", config: {}, position: 0, width: null }, preview)}</span></>}</div>}
+      {expr.trim() && <div data-testid="formula-preview" data-error={err ? "true" : undefined} className={cn("rounded-md px-2 py-1.5 text-[12px]", err ? "bg-danger/10 text-danger" : "bg-bg-sunk text-fg-muted")}>{err ? err : <>Preview{row ? ` (${row.title || "first row"})` : ""}: <span className="font-medium text-fg">{preview == null ? "—" : displayValue({ id: "", databaseId: "", name: "", type: "formula", config: {}, position: 0, width: null }, preview)}</span></>}</div>}
       <details className="text-[11px] text-fg-faint"><summary className="cursor-pointer select-none">Functions</summary><pre className="mt-1 whitespace-pre-wrap font-mono text-[10.5px] leading-4">{FORMULA_HELP}</pre><div className="mt-1">Properties: {ctx.props.filter((p) => p.type !== "formula" || p.config.expression !== expr).map((p) => `prop("${p.name}")`).join(" · ")}</div></details>
     </div>
   );

@@ -14,7 +14,7 @@ import { previewText, readMarkdown, relativeRefs } from "./markdown";
 import { csvPlan } from "./csv";
 import { bibDuplicates, parseBibtexSafe } from "./bibtex";
 import { checkBackupFormat, RESTORE_TABLES } from "./restore";
-import { openZip, pageEntries, readText, findOther, noExt, dirOf } from "./zip";
+import { openZip, pageEntries, readText, readCsvs, findOther, noExt, dirOf } from "./zip";
 import { JSON_FORMAT } from "@/lib/export/json";
 
 export interface PreviewCounts { pages: number; databases: number; rows: number; references: number; attachments: number }
@@ -53,7 +53,8 @@ export async function previewImport(input: { workspaceId: string; kind: ImportKi
     return parsed.length;
   };
   const database = (name: string, csv: string, depth: number) => {
-    const plan = csvPlan(csv); if (!plan.header.length) { out.warnings.push(`“${name}.csv” is empty and will be skipped.`); return; }
+    const plan = csvPlan(csv); if (!plan.header.length) { out.warnings.push(`“${name}.csv” is empty: nothing would be imported from it.`); return; }
+    for (const w of plan.warnings) out.warnings.push(`${name}.csv: ${w}`);
     const dup = existing.databases.get(dbKey(name, plan.rows.length));
     out.countsAll.databases++; out.countsAll.rows += plan.rows.length;
     if (dup) { out.duplicates.total++; if (out.duplicates.databases.length < LIST_MAX) out.duplicates.databases.push({ title: name, existingId: dup.pageId }); } else { out.counts.databases++; out.counts.rows += plan.rows.length; }
@@ -112,6 +113,8 @@ export async function previewImport(input: { workspaceId: string; kind: ImportKi
     }
     case "zip": {
       const plan = await openZip(buffer);
+      // same rule as the import: an empty CSV is skipped, and the Markdown files of its folder are ordinary pages
+      const { texts: csvTexts, empty: emptyCsv } = await readCsvs(plan); for (const name of emptyCsv) out.warnings.push(`“${name}” is empty and will be skipped.`);
       out.detected = plan.notion ? "Notion export (Markdown & CSV)" : plan.ownExport ? "Note SPBoucher AI export (ZIP)" : plan.obsidian ? "Obsidian vault (ZIP)" : "Markdown archive (ZIP)";
       const pages = pageEntries(plan); const keys = new Set(pages.map((e) => noExt(e.norm)));
       type Item = { key: string; title: string; kind: PreviewNode["kind"]; body?: string; csv?: string };
@@ -119,7 +122,7 @@ export async function previewImport(input: { workspaceId: string; kind: ImportKi
       const needFolder = (dirKey: string) => { for (let d = dirKey; d; d = dirOf(d)) { if (keys.has(d) || folders.has(d)) break; folders.add(d); } };
       const used = new Set<string>(); let missingImages = 0; const bodies = new Map<string, string>();
       for (const e of pages) { const key = noExt(e.norm); const r = readMarkdown(await readText(e), path.posix.basename(e.norm)); items.push({ key, title: r.title, kind: "page", body: r.body }); bodies.set(key, r.body); needFolder(dirOf(key)); }
-      for (const [key, csv] of plan.csvKeys) { items.push({ key, title: path.posix.basename(key), kind: "database", csv: await readText(csv) }); needFolder(dirOf(key)); }
+      for (const key of plan.csvKeys.keys()) { items.push({ key, title: path.posix.basename(key), kind: "database", csv: csvTexts.get(key) ?? "" }); needFolder(dirOf(key)); }
       for (const f of folders) items.push({ key: f, title: path.posix.basename(f), kind: "folder", body: "" });
       const seg = (k: string) => k.split("/");
       items.sort((a, b) => { const x = seg(a.key), y = seg(b.key); for (let i = 0; i < Math.min(x.length, y.length); i++) { const c = x[i].localeCompare(y[i]); if (c) return c; } return x.length - y.length || (a.kind === "database" ? 1 : -1); });

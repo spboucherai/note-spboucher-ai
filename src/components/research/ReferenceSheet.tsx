@@ -6,7 +6,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookMarked, ChevronRight, Copy, ExternalLink, FileText, FlaskConical, Paperclip, Pencil, Plus, Quote, ShieldCheck, TextQuote, Trash2, Unlink, X } from "lucide-react";
+import { BookMarked, ChevronRight, Copy, ExternalLink, FileText, FlaskConical, Paperclip, Pencil, Plus, Quote, ShieldCheck, TextQuote, Trash2, Unlink, X, Highlighter } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useOnline } from "@/lib/client/hooks";
 import { uploadFile } from "@/components/editor/Editor";
@@ -118,6 +118,8 @@ function PdfSection({ r, pdf, loading, pageId, onChanged }: { r: Ref; pdf: Links
         <div className="rounded-lg border border-line p-3">
           <div className="flex items-start gap-2"><FileText className="mt-0.5 size-5 shrink-0 text-fg-muted" /><div className="min-w-0 flex-1"><div className="break-words text-[13px] font-medium">{pdf.filename}</div><div className="text-[12px] text-fg-muted">{fmtBytes(pdf.size)}{pdf.pageCount != null ? ` · ${pdf.pageCount} page${pdf.pageCount === 1 ? "" : "s"}` : " · page count unknown"}</div></div></div>
           {pdf.available ? <FileActions id={pdf.id} filename={pdf.filename} mime={pdf.mime} size={pdf.size} primaryOpen className="mt-3" /> : <ErrorBox title="The file is missing on the server" message="The reference still points to it, but it cannot be opened. Attach the PDF again." className="mt-3"><TButton variant="outline" onClick={() => input.current?.click()}><Paperclip /> Replace</TButton></ErrorBox>}
+          {pageId && pdf.available && <TButton variant="outline" className="mt-2 justify-start" onClick={() => { window.dispatchEvent(new CustomEvent("note:insert-markdown", { detail: { markdown: " ", plain: true, nodes: [{ type: "pdf", attrs: { attachmentId: pdf.id, name: pdf.filename, page: 1, annotations: [] } }] } })); }}><Highlighter /> Annotate in this page</TButton>}
+          {pageId && pdf.available && <p className="mt-1 text-[12px] text-fg-faint">Adds the PDF as a block at the end of the page; what you highlight there is saved as extracts of this reference.</p>}
           <div className="mt-2 flex flex-wrap gap-2"><TButton variant="ghost" onClick={() => input.current?.click()} disabled={!!up}><Paperclip /> Replace</TButton><TButton variant="ghost" onClick={detach}><Unlink /> Detach</TButton></div>
         </div>
       ) : r.attachmentId && !loading ? <ErrorBox className="mt-0" title="The attached file no longer exists" message="It was deleted from the page files."><TButton variant="outline" onClick={() => input.current?.click()}><Paperclip /> Attach again</TButton></ErrorBox> : !up && (

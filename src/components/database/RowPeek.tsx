@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import * as DialogP from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { X, Maximize2, Trash2, ArrowRightLeft, Check } from "lucide-react";
+import { X, Maximize2, Trash2, ArrowRightLeft, Check, Copy, LayoutTemplate } from "lucide-react";
+import { useSaveAsTemplate } from "./RowTemplates";
 import { Dialog, SheetContent, Skeleton, Spinner } from "@/components/ui/primitives";
 import { Editor } from "@/components/editor/Editor";
 import { api } from "@/lib/client/api";
@@ -23,11 +24,13 @@ import { ResponsivePanel } from "./Responsive";
  */
 export function RowPeek({ rowId, onClose }: { rowId: string | null; onClose: () => void }) {
   const ctx = useDb();
-  const row = ctx.rows.find((r) => r.id === rowId);
   const open = !!rowId;
-
-  // The row left the loaded set (deleted, filtered out after an edit…): do not leave an endless spinner behind.
-  const gone = open && !row && !ctx.loading && !ctx.fetching;
+  // 3.0: the row comes from any loaded window; when it is in none (a row beyond the windows on screen, a row that no longer matches
+  // the view after an edit) it is fetched by id — only a deleted row is "gone".
+  const cached = rowId ? ctx.findRow(rowId) : undefined;
+  const one = useQuery<{ rows: RowOut[] }>({ queryKey: ["db-rows", ctx.db.id, "one", rowId], enabled: open && !cached, queryFn: () => api(`/api/databases/${ctx.db.id}/query`, { method: "POST", idempotencyKey: false, json: { rowIds: [rowId], filter: null, sorts: [], limit: 1 } }) });
+  const row = cached ?? one.data?.rows.find((r) => r.id === rowId);
+  const gone = open && !row && !one.isLoading && !one.isFetching && !ctx.loading;
 
   if (ctx.isMobile) {
     return (
@@ -64,8 +67,8 @@ function RowSkeleton() {
 function RowGone({ onClose }: { onClose: () => void }) {
   return (
     <div className="px-4 py-10 text-center">
-      <p className="text-[14px] font-semibold">This row is no longer in this view</p>
-      <p className="mt-1 text-[13px] leading-5 text-fg-muted">It was deleted, or it no longer matches the filters or the search.</p>
+      <p className="text-[14px] font-semibold">This row no longer exists</p>
+      <p className="mt-1 text-[13px] leading-5 text-fg-muted">It was deleted (it may still be in the trash).</p>
       <button type="button" onClick={onClose} className="mt-4 h-11 rounded-lg border border-line px-4 text-[14px] font-medium hover:bg-bg-sunk">Close</button>
     </div>
   );
@@ -75,6 +78,7 @@ function RowGone({ onClose }: { onClose: () => void }) {
 function RowActions({ row, onClose, touch }: { row: RowOut; onClose: () => void; touch?: boolean }) {
   const ctx = useDb();
   const btn = cn("flex shrink-0 items-center gap-1.5 rounded-md text-fg-muted hover:bg-bg-sunk hover:text-fg", touch ? "h-11 rounded-lg border border-line px-3 text-[14px]" : "h-8 px-2 text-[12px]");
+  const saveAsTemplate = useSaveAsTemplate();
   const remove = async () => {
     if (!confirm(`Move “${row.title || "Untitled"}” to the trash? You can undo this right after, or restore it later from the trash.`)) return;
     onClose();
@@ -84,6 +88,8 @@ function RowActions({ row, onClose, touch }: { row: RowOut; onClose: () => void;
     <>
       <Link href={`/p/${row.pageId}`} className={btn}><Maximize2 className="size-3.5" /> Open as page</Link>
       <MoveTo row={row} className={btn} />
+      <button type="button" onClick={async () => { const copy = await ctx.duplicateRow(row.id); if (copy) ctx.open(copy.id); }} className={btn}><Copy className="size-3.5" /> Duplicate</button>
+      <button type="button" onClick={() => { void saveAsTemplate(row); }} className={btn}><LayoutTemplate className="size-3.5" /> Save as template</button>
       <button type="button" onClick={remove} className={cn(btn, "ml-auto hover:text-danger", touch && "text-danger")}><Trash2 className="size-3.5" /> Delete</button>
     </>
   );
@@ -96,7 +102,7 @@ function RowActions({ row, onClose, touch }: { row: RowOut; onClose: () => void;
 export function MoveTo({ row, className }: { row: RowOut; className?: string }) {
   const ctx = useDb();
   const [open, setOpen] = useState(false);
-  const gb: Property | undefined = ctx.props.find((p) => p.id === ctx.view.config.groupBy);
+  const gb: Property | undefined = ctx.groupProp;
   const groups = useMemo(() => (gb ? groupRows([], gb) : []), [gb]);
   if (!gb) return null;
   const currentValue = row.values[gb.id] ?? (gb.type === "checkbox" ? false : null);

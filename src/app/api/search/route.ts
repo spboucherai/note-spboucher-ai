@@ -1,13 +1,15 @@
 import { handler, HttpError } from "@/lib/api";
 import { hybridSearch, quickSearch, type SearchFilters } from "@/lib/search";
+import { SEARCH_MAX_LIMIT } from "@/lib/paging";
 const KINDS = ["page", "entry", "file", "reference"] as const;
 /**
  * GET ?q=&mode=quick|hybrid&limit=&semantic=0|1&kinds=page,entry,file,reference&section=&since=YYYY-MM-DD&until=YYYY-MM-DD&archived=1&group=1
+ * `limit`: 1–120 (default 10 quick, 20 hybrid; the cap was 60 before "Show more"). There is no offset: a longer list is asked with a higher limit.
  * (legacy `types=page,attachment` still accepted). `semantic=1` sends the query text to the embedding provider; `semantic=0` stays local.
  */
 export const GET = handler(async ({ req, ws }) => {
   const u = new URL(req.url); const q = (u.searchParams.get("q") ?? "").slice(0, 500); const mode = u.searchParams.get("mode") ?? "quick";
-  const limit = Math.min(60, Math.max(1, Number(u.searchParams.get("limit") ?? (mode === "quick" ? 10 : 20)) || 10));
+  const limit = Math.min(SEARCH_MAX_LIMIT, Math.max(1, Number(u.searchParams.get("limit") ?? (mode === "quick" ? 10 : 20)) || 10));
   if (mode === "quick") return Response.json(await quickSearch(ws.id, q, limit));
   if (q.trim().length < 2) return Response.json([]);
   const date = (v: string | null, end = false) => { if (!v) return undefined; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new HttpError(400, "Dates must be YYYY-MM-DD"); return new Date(`${v}T${end ? "23:59:59.999" : "00:00:00"}Z`); };

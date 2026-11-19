@@ -11,7 +11,11 @@ import { isEmpty } from "@/lib/databases/values";
 import { useDb } from "../hooks";
 import { CellDisplay } from "../cells/Cell";
 import { MoveTo } from "../RowPeek";
-import { groupRows, type Group } from "../group";
+import type { ViewGroup } from "../group";
+import { rowsOfGroup } from "../growing";
+import { groupSummary } from "./TableView";
+import { ChevronsLeftRight } from "lucide-react";
+import { useEffect } from "react";
 import { OPTION_CLASS } from "../colors";
 
 /**
@@ -21,8 +25,13 @@ import { OPTION_CLASS } from "../colors";
  */
 export function BoardView() {
   const ctx = useDb();
-  const gb = ctx.props.find((p) => p.id === ctx.view.config.groupBy);
+  const gb = ctx.groupProp;
   const [active, setActive] = useState<RowOut | null>(null);
+  // 3.0: each column shows its first cards and loads more on demand; counts and sums are those of the whole database (server-side)
+  const [shown, setShown] = useState<Record<string, number>>({});
+  const groups = ctx.groups; const { ensure } = ctx.win; const per = (g: ViewGroup) => Math.min(g.count, shown[g.key] ?? 30);
+  const sig = groups.map((g) => `${g.key}:${g.offset}:${ctx.collapsed.has(g.key) ? 0 : per(g)}`).join("|");
+  useEffect(() => { if (gb) ensure(groups.filter((g) => g.count && !ctx.collapsed.has(g.key)).map((g): [number, number] => [g.offset, g.offset + per(g)])); }, [sig, ensure]); // eslint-disable-line react-hooks/exhaustive-deps
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }));
 
   if (!gb) {
@@ -34,14 +43,14 @@ export function BoardView() {
       />
     );
   }
-  const groups = groupRows(ctx.rows, gb);
+  const numCols = ctx.visibleProps.filter((p) => ctx.win.aggregates?.[p.id]);
 
   const onDragEnd = (e: DragEndEvent) => {
     setActive(null);
     const { active: dragged, over } = e;
     if (!over) return;
     const g = groups.find((x) => x.key === over.id);
-    const row = ctx.rows.find((r) => r.id === dragged.id);
+    const row = ctx.findRow(String(dragged.id));
     if (!g || !row) return;
     const previous = row.values[gb.id] ?? null;
     if (previous === (g.value ?? null)) return;
@@ -50,36 +59,46 @@ export function BoardView() {
   };
 
   return (
-    <DndContext sensors={sensors} onDragStart={(e) => setActive(ctx.rows.find((r) => r.id === e.active.id) ?? null)} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+    <DndContext sensors={sensors} onDragStart={(e) => setActive(ctx.findRow(String(e.active.id)) ?? null)} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
       <div
         role="region"
         aria-label={`Board grouped by ${gb.name}. ${groups.length} columns, scroll sideways.`}
         tabIndex={0}
         className="flex max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 sm:-mx-5 sm:px-5 md:-mx-10 md:snap-none md:px-10"
       >
-        {groups.map((g) => <Column key={g.key} g={g} dragDisabled={ctx.isMobile} onAdd={() => ctx.newRow(g.value === undefined ? {} : { [gb.id]: g.value })} />)}
+        {groups.map((g) => <Column key={g.key} g={g} rows={rowsOfGroup(ctx.win, g, g.offset + per(g))} summary={groupSummary(numCols, g.aggregates)} collapsed={ctx.collapsed.has(g.key)} onToggle={() => ctx.toggleGroup(g.key)} onMore={() => setShown((s) => ({ ...s, [g.key]: per(g) + 50 }))} dragDisabled={ctx.isMobile} onAdd={() => ctx.newRow(g.value === undefined ? {} : { [gb.id]: g.value })} />)}
       </div>
       <DragOverlay>{active ? <Card row={active} overlay /> : null}</DragOverlay>
     </DndContext>
   );
 }
 
-function Column({ g, onAdd, dragDisabled }: { g: Group; onAdd: () => void; dragDisabled: boolean }) {
+function Column({ g, rows, summary, collapsed, onToggle, onMore, onAdd, dragDisabled }: { g: ViewGroup; rows: RowOut[]; summary: string; collapsed: boolean; onToggle: () => void; onMore: () => void; onAdd: () => void; dragDisabled: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: g.key });
+  if (collapsed) return (
+    <section ref={setNodeRef} aria-label={`${g.label}, ${g.count} card${g.count === 1 ? "" : "s"}, collapsed`} className={cn("flex w-12 shrink-0 snap-start flex-col items-center gap-2 rounded-xl border border-line/60 bg-bg-sunk py-2 transition-colors motion-reduce:transition-none", isOver && "border-accent/40 bg-accent-soft")}>
+      <button type="button" aria-expanded={false} aria-label={`Expand column ${g.label}`} onClick={onToggle} className="grid size-8 place-items-center rounded-md text-fg-muted hover:bg-bg-elev max-md:size-11"><ChevronsLeftRight className="size-4" /></button>
+      <span className="text-[12px] tabular-nums text-fg-muted" data-group-count={g.key}>{g.count.toLocaleString("en-CA")}</span>
+      <span className={cn("rounded-md px-1 py-1.5 text-[12px] font-medium [writing-mode:vertical-rl]", OPTION_CLASS[g.color])}>{g.label}</span>
+    </section>
+  );
   return (
     <section
       ref={setNodeRef}
-      aria-label={`${g.label}, ${g.rows.length} card${g.rows.length === 1 ? "" : "s"}`}
+      aria-label={`${g.label}, ${g.count} card${g.count === 1 ? "" : "s"}`}
       className={cn("flex max-h-[min(75dvh,60rem)] w-[85%] max-w-[20rem] shrink-0 snap-start flex-col rounded-xl border border-line/60 bg-bg-sunk p-2 transition-colors md:w-[17.5rem]", isOver && "border-accent/40 bg-accent-soft")}
     >
       <div className="mb-2 flex h-8 items-center gap-1.5 px-1 max-md:h-11">
         <span className={cn("truncate rounded-md px-1.5 py-0.5 text-[12px] font-medium max-md:text-[13px]", OPTION_CLASS[g.color])}>{g.label}</span>
-        <span className="text-[12px] tabular-nums text-fg-faint max-md:text-[13px] max-md:text-fg-muted">{g.rows.length}</span>
-        <button type="button" aria-label={`New card in ${g.label}`} onClick={onAdd} className="ml-auto grid size-7 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg max-md:size-11 max-md:text-fg-muted"><Plus className="size-4 max-md:size-5" /></button>
+        <span className="text-[12px] tabular-nums text-fg-muted max-md:text-[13px]" data-group-count={g.key}>{g.count.toLocaleString("en-CA")}</span>
+        <button type="button" aria-expanded aria-label={`Collapse column ${g.label}`} onClick={onToggle} className="ml-auto grid size-7 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg max-md:size-11 max-md:text-fg-muted"><ChevronsLeftRight className="size-3.5 max-md:size-5" /></button>
+        <button type="button" aria-label={`New card in ${g.label}`} onClick={onAdd} className="grid size-7 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-bg-elev hover:text-fg max-md:size-11 max-md:text-fg-muted"><Plus className="size-4 max-md:size-5" /></button>
       </div>
+      {summary && <div className="-mt-1 mb-2 truncate px-1 text-[11px] tabular-nums text-fg-muted" data-group-agg={g.key}>{summary}</div>}
       <div className="flex min-h-12 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-y-contain max-md:gap-2">
-        {g.rows.map((r) => <Draggable key={r.id} row={r} disabled={dragDisabled} />)}
-        {!g.rows.length && <p className="px-1 py-2 text-[12px] text-fg-faint max-md:text-[13px] max-md:text-fg-muted">No card here.</p>}
+        {rows.map((r) => <Draggable key={r.id} row={r} disabled={dragDisabled} />)}
+        {!g.count && <p className="px-1 py-2 text-[12px] text-fg-muted max-md:text-[13px]">No card here.</p>}
+        {rows.length < g.count && <button type="button" onClick={onMore} className="flex h-8 shrink-0 items-center justify-center rounded-md border border-dashed border-line text-[12px] text-fg-muted hover:bg-bg-elev max-md:h-11 max-md:text-[14px]">Load more · {(g.count - rows.length).toLocaleString("en-CA")} more</button>}
       </div>
       <button type="button" onClick={onAdd} className="mt-1.5 flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-[12px] text-fg-faint hover:bg-bg-elev hover:text-fg max-md:h-11 max-md:text-[14px] max-md:text-fg-muted"><Plus className="size-3.5" /> New</button>
     </section>

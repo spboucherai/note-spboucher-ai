@@ -36,7 +36,7 @@ export function extractPageRefs(doc: PMNode | null | undefined): string[] {
 export function toMarkdown(doc: PMNode | null | undefined): string {
   if (!doc) return "";
   const inline = (n: PMNode): string => {
-    if (n.type === "text") { let t = n.text ?? ""; for (const m of n.marks ?? []) { if (m.type === "bold") t = `**${t}**`; else if (m.type === "italic") t = `*${t}*`; else if (m.type === "code") t = `\`${t}\``; else if (m.type === "strike") t = `~~${t}~~`; else if (m.type === "link") t = `[${t}](${m.attrs?.href})`; else if (m.type === "highlight") t = `==${t}==`; } return t; }
+    if (n.type === "text") { let t = n.text ?? ""; for (const m of n.marks ?? []) { if (m.type === "bold") t = `**${t}**`; else if (m.type === "italic") t = `*${t}*`; else if (m.type === "code") t = `\`${t}\``; else if (m.type === "strike") t = `~~${t}~~`; else if (m.type === "link") t = `[${t}](${m.attrs?.href})`; else if (m.type === "highlight") t = `==${t}==`; else if (m.type === "underline") t = `<u>${t}</u>`; else if (m.type === "subscript") t = `<sub>${t}</sub>`; else if (m.type === "superscript") t = `<sup>${t}</sup>`; } return t; }
     if (n.type === "hardBreak") return "  \n"; if (n.type === "mention") return `[[${n.attrs?.label ?? n.attrs?.id}]]`; if (n.type === "inlineMath" || n.type === "math") return `$${n.attrs?.latex ?? ""}$`; if (n.type === "footnoteRef") return `[^${n.attrs?.id}]`;
     if (n.type === "citation") return nextNodeMarkdown(n) ?? "";
     return (n.content ?? []).map(inline).join("");

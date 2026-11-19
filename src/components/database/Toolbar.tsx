@@ -1,5 +1,7 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { NewFromTemplate } from "./RowTemplates";
+import { GROUPABLE } from "@/lib/databases/group";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Search, Filter, ArrowUpDown, Layers, SlidersHorizontal, Plus, MoreHorizontal, Download, Upload, Copy, LayoutTemplate, X } from "lucide-react";
@@ -14,11 +16,14 @@ import { PropertyManager } from "./PropertyManager";
 import { ViewOptions } from "./ViewOptions";
 import { Sel } from "./meta";
 
-const GROUPABLE_TYPES = ["select", "status", "checkbox"];
 export const GROUPABLE_VIEWS = ["board", "table", "list"];
 
-export function Toolbar({ search, setSearch, onShowTemplates }: { search: string; setSearch: (s: string) => void; onShowTemplates: () => void }) {
+export function Toolbar({ search: applied, setSearch: apply, onShowTemplates }: { search: string; setSearch: (s: string) => void; onShowTemplates: () => void }) {
   const ctx = useDb();
+  // 3.0 (audit D5 / defect 13): the box keeps what is typed; the query runs 300 ms after the last keystroke, not once per character
+  const [search, setText] = useState(applied); const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setSearch = (s: string) => { setText(s); if (timer.current) clearTimeout(timer.current); if (s === "") apply(""); else timer.current = setTimeout(() => apply(s), 300); };
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const qc = useQueryClient();
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
@@ -27,7 +32,7 @@ export function Toolbar({ search, setSearch, onShowTemplates }: { search: string
 
   const nFilters = describeFilter(ctx.view.config.filter);
   const nSorts = ctx.view.config.sorts?.length ?? 0;
-  const groupable = ctx.props.filter((p) => GROUPABLE_TYPES.includes(p.type));
+  const groupable = ctx.props.filter((p) => GROUPABLE.has(p.type));
   const canGroup = GROUPABLE_VIEWS.includes(ctx.view.type);
   const gb = ctx.view.config.groupBy ?? "";
 
@@ -37,8 +42,8 @@ export function Toolbar({ search, setSearch, onShowTemplates }: { search: string
     fd.append("file", f);
     try {
       const res = await fetch(`/api/databases/${ctx.db.id}/import`, { method: "POST", body: fd, credentials: "same-origin" });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error);
+      const j = await res.json().catch(() => null); // an error page is not JSON: say what the server answered instead of a parser message
+      if (!res.ok || !j) throw new Error(j?.error ?? `The server answered ${res.status}`);
       toast(`Imported ${j.created} rows`, { description: j.properties.length ? `New properties: ${j.properties.join(", ")}` : undefined, tone: "success" });
       ctx.refresh();
     } catch (e: any) { toast("Import failed", { description: e?.message, tone: "danger" }); }
@@ -65,7 +70,7 @@ export function Toolbar({ search, setSearch, onShowTemplates }: { search: string
     <Menu>
       <MenuTrigger asChild>{trigger}</MenuTrigger>
       <MenuContent>
-        <MenuItem onSelect={() => window.open(`/api/databases/${ctx.db.id}/query?format=csv&viewId=${ctx.view.id}`, "_blank")}><Download /> Export CSV (this view)</MenuItem>
+        <MenuItem onSelect={() => window.open(`/api/databases/${ctx.db.id}/query?format=csv&viewId=${ctx.view.id}${applied ? `&q=${encodeURIComponent(applied)}` : ""}`, "_blank")}><Download /> Export CSV (this view{applied ? " + search" : ""}, all {ctx.total.toLocaleString("en-CA")} rows)</MenuItem>
         <MenuItem onSelect={() => file.current?.click()}><Upload /> Import CSV…</MenuItem>
         <MenuSeparator />
         <MenuItem onSelect={() => duplicate(false)}><Copy /> Duplicate (structure)</MenuItem>
@@ -97,7 +102,7 @@ export function Toolbar({ search, setSearch, onShowTemplates }: { search: string
             {nFilters > 0 && <span className="shrink-0 rounded-full bg-accent px-1.5 text-[12px] font-semibold leading-5 text-accent-fg" aria-hidden>{nFilters}</span>}
           </button>
           {menu(<button type="button" aria-label="More database actions" className={iconBtn}><MoreHorizontal /></button>)}
-          <Button className="ml-auto h-11 shrink-0 px-4 text-[15px]" onClick={() => ctx.newRow()}><Plus /> New</Button>
+          <span className="ml-auto flex shrink-0 items-center"><Button className="h-11 shrink-0 rounded-r-none px-4 text-[15px]" onClick={() => ctx.newRow()}><Plus /> New</Button><NewFromTemplate className="grid h-11 w-9 place-items-center rounded-r-md border-l border-accent-fg/25 bg-accent text-accent-fg" /></span>
         </div>
         {showSearch && (
           <div className="flex h-11 items-center gap-2 rounded-lg border border-line bg-bg-elev pl-3">
@@ -144,6 +149,8 @@ export function Toolbar({ search, setSearch, onShowTemplates }: { search: string
             <div className="mb-1 text-[12px] font-medium text-fg-muted">Group by</div>
             <Sel aria-label="Group by" value={gb} onChange={(e) => ctx.patchView({ groupBy: e.target.value || null })} className="w-full"><option value="">None</option>{groupable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Sel>
             {!groupable.length && <div className="mt-1 text-[11px] text-fg-faint">Add a select, status or checkbox property to group.</div>}
+            {/* with thousands of rows the groups are far apart: collapsing them all shows every group with its count and sums on one screen */}
+            {ctx.groupProp && <div className="mt-2 flex items-center gap-1 border-t border-line pt-2 text-[12px]"><button type="button" onClick={() => ctx.patchView({ collapsed: ctx.groups.map((g) => g.key) })} className="h-7 rounded-md px-2 text-fg-muted hover:bg-bg-sunk hover:text-fg">Collapse all</button><button type="button" onClick={() => ctx.patchView({ collapsed: [] })} className="h-7 rounded-md px-2 text-fg-muted hover:bg-bg-sunk hover:text-fg">Expand all</button></div>}
           </PopoverContent>
         </Popover>
       )}
@@ -153,7 +160,7 @@ export function Toolbar({ search, setSearch, onShowTemplates }: { search: string
       </Popover>
       {menu(<button type="button" aria-label="More database actions" className={pill(false)}><MoreHorizontal /></button>)}
       {fileInput}
-      <Button size="sm" className="ml-1 h-8" onClick={() => ctx.newRow()}><Plus /> New</Button>
+      <span className="ml-1 flex items-center"><Button size="sm" className="h-8 rounded-r-none" onClick={() => ctx.newRow()}><Plus /> New</Button><NewFromTemplate className="grid h-8 w-6 place-items-center rounded-r-md border-l border-accent-fg/25 bg-accent text-accent-fg hover:opacity-90" /></span>
     </div>
   );
 }

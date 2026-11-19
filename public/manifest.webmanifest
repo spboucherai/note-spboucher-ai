@@ -12,6 +12,7 @@
   "theme_color": "#12141c",
   "lang": "en",
   "categories": ["productivity"],
+  "share_target": { "action": "/share", "method": "GET", "params": { "title": "title", "text": "text", "url": "url" } },
   "icons": [
     { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

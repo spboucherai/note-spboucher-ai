@@ -11,6 +11,7 @@ import { cn, timeAgo } from "@/lib/utils";
 import { api } from "@/lib/client/api";
 import { outboxState, flushOutbox } from "@/lib/client/outbox";
 import { wipeLocalData } from "@/lib/client/offline";
+import { SyncStatus } from "@/components/offline/SyncStatus";
 import type { TreeNode } from "./types";
 
 const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", graph: "Connections", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents", browse: "Browse", archive: "Archive", databases: "Databases" };
@@ -40,6 +41,7 @@ export function MobileHeader({ tree }: { tree: TreeNode[] }) {
       {!root && here && <span className="pointer-events-none absolute inset-x-0 text-center text-[15px] font-semibold" aria-hidden>{here}</span>}
       <span className="flex-1" />
       <SyncPill />
+      <SyncStatus quiet />
       <button onClick={() => ui.set({ paletteOpen: true })} aria-label="Command center" className="grid size-11 place-items-center rounded-lg text-fg-muted"><Command className="size-5" /></button>
       <button onClick={() => ui.toggleAI()} aria-label="AI assistant" aria-pressed={ui.aiOpen} className={cn("grid size-11 place-items-center rounded-lg", ui.aiOpen ? "text-ai" : "text-fg-muted")}><Sparkles className="size-5" /></button>
     </header>
