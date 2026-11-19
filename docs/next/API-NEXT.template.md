@@ -43,11 +43,22 @@ milliseconds (`2026-11-19T18:22:18.475Z`). Ids are lower-case UUIDs unless state
 { "error": "human message (English)", "code": "machine_code", "...": "extra fields for some codes" }
 ```
 
-`code` is what clients test. A `500` is `{"error":"Internal error","requestId":"…"}` and always a server bug. Since 3.0 **malformed
-input never answers 500**: a path / query / body value that is not what the route expects (a non-UUID id, an unparsable date, an
-unknown enum value) answers `400` — with `code: "bad_request"` when the check is central (path and query ids), or without `code`
-when it comes from the body schema (`"error": "Validation: <field> <reason>; …"`). A well-formed id that does not exist answers `404`.
-The full list of codes is in [§5](#5-error-codes).
+**Every error answer carries a stable `code`** (integration pass, 2026-11-19: several 2.x and 3.0 answers had none). `code` is what
+clients test — never the English message. When the service gives no specific code, the code is the default of the HTTP status:
+
+| HTTP | default `code` | | HTTP | default `code` |
+|---|---|---|---|---|
+| 400 | `bad_request` | | 413 | `too_large` |
+| 401 | `unauthenticated` | | 415 | `unsupported_media_type` |
+| 403 | `forbidden` | | 422 | `unprocessable` |
+| 404 | `not_found` | | 429 | `rate_limited` |
+| 409 | `invalid_state` | | 500 | `internal` (`{"error":"Internal error","code":"internal","requestId":"…"}` — always a server bug) |
+| 410 | `gone` | | 501 / 502 / 503 | `not_implemented` / `upstream_error` / `unavailable` |
+
+Since 3.0 **malformed input never answers 500**: a path / query / body value that is not what the route expects (a non-UUID id, an
+unparsable date, an unknown enum value, a body that fails its schema — `"error": "Validation: <field> <reason>; …"` —, invalid JSON)
+answers `400 bad_request` unless a more specific code is documented. A well-formed id that does not exist answers `404 not_found`.
+The full list of specific codes is in [§5](#5-error-codes).
 
 ### 0.3 Idempotency
 
@@ -65,7 +76,7 @@ Two mechanisms, both usable together:
    | task | `POST /api/tasks` `{id}` | new |
    | edge (typed relation) | `POST /api/graph/relations` `{id}` | new |
    | concept | `POST /api/concepts` `{id}` | new |
-   | reference | `POST /api/research/references` `{id}` | new field; answers `201` both times (no `x-existing`) |
+   | reference | `POST /api/research/references` `{id}` | new field; a known id answers `200` + `x-existing: 1` with the stored row (it answered `201` before the integration pass); the id of a **deleted** reference → `409 reference_deleted` `{id, deletedAt}` — a retry never resurrects; bring it back with `POST /api/research/references/<id>?action=restore` |
    | database | created with its host page (`POST /api/pages` `{id, type:"database"}`); the database object gets a server id the first time the database is opened (`GET /api/databases/<pageId>`) | every database route accepts the host page id in place of the database id |
    | database_property | `POST /api/databases/<db>/properties` `{id}` | new field; answers `201` both times |
    | database_view | `POST /api/databases/<db>/views` `{id}` | new field; answers `201` both times |
@@ -90,6 +101,41 @@ pending local edit, keep the local copy and save it with the `baseVersion` you h
 Block ids are **stable** since 3.0: when a saved document contains a block without `id` (a client that never received the ids), the
 server gives it back the id the same block (same type, same text, document order) had in the stored document; only a really new block
 gets a fresh id. A client never needs to merge ids by hand.
+
+---
+
+### 0.5 DELETE is idempotent
+
+One rule for every `DELETE` (integration pass): **deleting something that is already gone — deleted by an earlier call, or never
+existing — answers the same `200` as the first call**, with the same body keys (`{"ok":true}`; routes that report what they did say
+so truthfully: `"deleted": false`, `"deleted": 0`, `"purged": 0`, `"extract": null`). Nothing is written the second time (no event,
+no audit entry, no new `rev`). A `DELETE` answers an error only when:
+
+- the id is malformed → `400 bad_request`;
+- a **container** named in the path does not exist → `404 not_found` (`/api/databases/<unknown>/…`, `/api/research/references/<unknown>/extracts`);
+- the object exists and may not be deleted this way → `409 derived_edge` (document link, citation, link suggestion),
+  `400 bad_request` (the title property of a database), `400 last_view` (the only view of a database);
+- permanent deletion without a recent passkey verification → `403 reauth_required`.
+
+Applies to: `/api/pages/<id>`, `/api/tasks/<id>`, `/api/graph/relations/<id>`, `/api/concepts/<id>`, `/api/research/tasks/<id>`,
+`/api/research/references/<id>`, `/api/research/experiments/<id>`, `/api/attachments?id=`, `/api/ai/conversations?id=`,
+`/api/databases/<db>/views|properties|rows|row-templates?id=`, `/api/trash`. **One frozen exception**: the 2.x query form
+`DELETE /api/tasks?id=<id>` still answers `404 not_found` for an unknown or already deleted task (kept byte-compatible; 3.0 clients
+use `DELETE /api/tasks/<id>`).
+
+### 0.6 Dates, numbers, bare dates, clamping
+
+- Every date in every JSON answer is an ISO-8601 UTC string with milliseconds and every count is a JSON number. The integration pass
+  removed the last raw PostgreSQL values (`"2026-11-19 13:45:47.060354-05"`, counts as strings): `updatedAt` of
+  `GET /api/search` (quick mode), `calls / errors / inputTokens / outputTokens` of `GET /api/ai/usage`, the counters and
+  `last_indexed` of `GET /api/search/index-state` (and `health.pending[].updatedAt`, `health.failed[].at`), `time` of `GET /api/health`.
+- **A bare date** (`"2026-12-05"`) given as a due date means « that day » and is stored at **12:00 UTC** of that day — the same
+  calendar day in every time zone from UTC−11 to UTC+11 — by every route: `POST | PATCH /api/tasks` (`dueAt` or `due`),
+  `POST | PATCH /api/research/tasks` (`dueAt`; it stored 00:00 UTC before), and the `due` attr of a `taskItem`. A datetime with an
+  offset is kept as given. Anything else → `400 bad_request`.
+- **Numeric query parameters are clamped, not refused**, when they are integers outside their range: the nearest bound is used
+  (`limit=0` → 1, `limit=999` → the maximum, `inactiveDays=0` → 1). The applied value is visible in the answer where the route
+  echoes it (`inactiveDays`, `limit`). A value that is not an integer → `400 bad_request`.
 
 ---
 
@@ -211,13 +257,17 @@ is its data table, a drawing / diagram its stored render, code is never executed
 Windowing is the one of pages, applied to every list together: each list is `since < rev ≤ head`, oldest first, at most `limit` rows;
 when at least one list was cut, `more` is `true`, `cursor` is the lowest last revision among the cut lists, and **every** list is
 trimmed to `rev ≤ cursor` — nothing is skipped, nothing is sent twice. Call again with `since=cursor` until `more` is `false`
-(`cursor == head`). `since > head` → `reset: true` (restart from 0), with `"entities": {}` when `kinds` was given.
+(`cursor == head`). `since > head` → `reset: true` (restart from 0); when `kinds` was given the answer still carries `"entities"` with **one empty
+list per requested kind** (`{"task":[],"canvas":[]}` — same keys as a normal answer, never `{}`).
 
 **A cursor is only valid for the set of kinds it was obtained with.** A client that starts asking for a kind it did not ask for
 before must read that kind from `since=0` (simplest: keep one cursor for `kinds=all` and, on first run of 2.0, restart from 0;
 pages already known are simply overwritten with identical data).
 
-Soft-deleted rows (tasks, databases, database rows, references) stay in the feed as rows with `deletedAt`. A **tombstone**
+Soft-deleted rows (tasks, databases, database rows, references) stay in the feed as rows with `deletedAt`. **A database follows its
+host page**: moving the host page to the trash sets the `deletedAt` of its `database` row to the same instant (new `rev`), restoring
+the page puts it back to `null` (new `rev`) — a native client hides / shows the database from that row alone. Its `database_row`s
+keep their own `deletedAt` (a row deleted on its own); the rows of a trashed database are hidden through the database. A **tombstone**
 `{id, kind, rev, deletedAt}` means the row no longer exists: permanent deletion, including by cascade (purging a database page emits
 tombstones for the page, the database, its properties, views and rows; purging a canvas page for the page and the canvas — the
 canvas tombstone's `id` is the page id). Re-creating an id removes its tombstone.
@@ -302,7 +352,7 @@ pageIcon`) followed by `blockId, deletedAt, rev`.
 - `PATCH` body: any of `title, status, priority, dueAt | due, project, pageId, blockId` (same types as POST) → the task.
   `404 not_found` (unknown or deleted), `400 bad_page`. Setting `pageId: null` without `blockId` also clears `blockId`.
 - `DELETE` → soft delete, `200 {"ok":true,"deleted":true}`; **idempotent**: on an already deleted task
-  `200 {"ok":true,"deleted":false}`; unknown id `404`.
+  `200 {"ok":true,"deleted":false}` — and the same for an unknown id (§0.5; it answered `404` before the integration pass).
 
 {{ex:task_patch}}
 
@@ -364,7 +414,7 @@ Body: `id?` uuid · `fromId` uuid · `toId` uuid · `sourceKind?` · `targetKind
 string ≤ 64 \| null.
 
 → `201` relation (`origin: "user"`, `status: "accepted"`, `decidedAt` set). Idempotent on `id` (`200`, `x-existing: 1`).
-Errors: `400` validation · `400 bad_node` (a node does not exist, is trashed, or both ends are the same node; `field` says which) ·
+Errors: `400` validation · `400 bad_node` (a node does not exist, is trashed, or both ends are the same node; `field` = `fromId` or `toId` — `toId` when both ends are the same node) ·
 `400 bad_request` (`validTo` before `validFrom`) · `409 relation_exists` (same from, to, relType; `id` and `status` of the existing one) ·
 `409 id_taken`.
 
@@ -385,7 +435,8 @@ the feed + `fromTitle`, `toTitle`.
 - `PATCH` body: any of `status` (`accepted|rejected|suggested`), `relType`, `note`, `validFrom`, `validTo` → relation. A status
   change sets `decidedAt` (null when put back to `suggested`). `409 derived_edge` for `link` / `cites`; an `ai_suggested` edge accepts
   only `status` (2.x behaviour kept: accepting it creates the backlink). `409 relation_exists` when the new `relType` collides.
-- `DELETE` → `{"ok":true}`; only kind `relation` (`409 derived_edge` otherwise; a link suggestion is rejected, not deleted).
+- `DELETE` → `{"ok":true}`, idempotent (§0.5: an unknown or already deleted id answers the same `200`, and writes no second
+  `relation.removed` event); only kind `relation` (`409 derived_edge` otherwise; a link suggestion is rejected, not deleted).
 
 {{ex:relation_patch}}
 
@@ -438,8 +489,9 @@ Answer: `{ view, nodes, edges, center, [range, buckets,] stats: {pages, referenc
 - `GET /api/concepts/<id>` → concept + `pageLinks: [{pageId, title, icon, origin, status, confidence, blockId, model, createdAt}]`.
 - `PATCH /api/concepts/<id>` (or `PATCH /api/concepts` with `id` in the body) — any of: `name`, `description`, `status`
   (`accepted|rejected|suggested`), `addPages` uuid[], `removePages` uuid[], `pageLinks: [{pageId, status}]` (accept / reject a
-  suggested link) → concept + `pageLinks`.
-- `DELETE /api/concepts/<id>` → `{"ok":true}` (its links and the relations touching it go with it).
+  suggested link) → concept + `pageLinks`. Renaming to the name of another concept → `409 concept_exists` with the `id` and
+  `status` of that concept (same body as on create).
+- `DELETE /api/concepts/<id>` → `{"ok":true}` (its links and the relations touching it go with it); idempotent (§0.5).
 
 {{ex:concept_create}}
 
@@ -447,8 +499,10 @@ Answer: `{ view, nodes, edges, center, [range, buckets,] stats: {pages, referenc
 
 ### Insights — `GET /api/graph/insights`, `POST /api/graph/insights/run`, `PATCH /api/graph/insights/<id>`
 
-`GET /api/graph/insights?status=suggested|accepted|dismissed|all&kind=&limit=<1..100, default 20>&intelligence=0`
-→ `{ intelligence, insights, counts }`.
+`GET /api/graph/insights?status=suggested|accepted|dismissed|all&kind=&limit=<1..100>&intelligence=0`
+→ `{ intelligence, insights, counts }`. **`limit` caps every list of the answer**: each list of `intelligence` *and* `insights`
+(newest first). Without `limit`: 20 per `intelligence` list, 200 `insights`. Out-of-range integers are clamped (`0` → 1, `500` → 100,
+§0.6); `counts` is never capped (totals per status).
 
 - `intelligence` — **computed from the data at each call, no model**, same data ⇒ same answer (`null` with `intelligence=0`):
   `stats`; `centralPages` (PageRank, damping 0.85, over accepted page → page edges and database relations; with `degree`, `in`,
@@ -585,7 +639,7 @@ Errors: `400 bad_kinds` · `400 bad_cursor` · `400 bad_request` · `404` (unkno
 | `current` | the page has not changed since `at`: its present state is the state at that date | `true` |
 | `version` | the most recent history entry taken at or before `at` (SPEC: nearest version ≤ at). History entries are taken every 10 minutes / 20 saves: edits between that entry and `at` are not in it | `false` |
 | `version_after` | no entry at or before `at`: the first one taken after it, i.e. the page as it was just before that later save (exact when nothing was saved in between — the usual case right after creation — but the server cannot prove it) | `false` |
-| `none` | `existed: false` (created after `at`), or it existed and no history covers that date | — |
+| `none` | **the page did not exist yet** (`existed: false`: created after `at` — `version`, `versionId`, `versionAt`, `wordCount` are `null`, no `content`), or it existed and no history covers that date (`existed: true`) | `false` (there is no state to be exact about; it said `true` for a page not yet created before the integration pass) |
 
 `relations[]`: edges touching the pages of the scope that were created by `at`, accepted by `at`, and valid at `at` when they carry a
 validity interval (edge keys + `fromTitle`, `toTitle`). `references[]`: references created by `at` (and not deleted by then) attached
@@ -608,7 +662,8 @@ malformed.
 
 ### `GET /api/health/knowledge`
 
-`?inactiveDays=<1..3650, default 30>`. Authenticated (the public liveness probe `GET /api/health` is unchanged). Computed from real
+`?inactiveDays=<1..3650, default 30>` — an integer outside the range is clamped and the applied value is echoed in `inactiveDays`
+(§0.6). Authenticated (the public liveness probe `GET /api/health` is unchanged). Computed from real
 data at each call, no model. Every section is `{ count, ids, items }` (`ids` ≤ 200 page / task ids, `items` ≤ 200 with details).
 
 | Section | Definition | Item |
@@ -638,7 +693,9 @@ section `projects` with a change in their subtree in the last 14 days: `pages`, 
 `tasks.dueSoon` (the 6 days after today), « today » being the calendar day in `tz` · `unfiledCaptures` `{count, items ≤ 10}` ·
 `linkSuggestions` `{count, items ≤ 5}` — suggested page ↔ page edges awaiting a decision, each **`ai: true`** · `toRevisit` (≤ 8
 connected pages nobody opened or edited for 30 days, most central first) · `aiSummary` — `null`, or the last summary explicitly
-requested `{ai: true, text, model, at}`.
+requested `{ai: true, text, model, at}`. `aiSummary` is **only ever present after a `POST /api/brief/summary`** made by the owner:
+`GET` never calls a model and never stores anything (a non-null `aiSummary` seen on the scratch instance during the Core live tests
+was a fixture left by a unit suite; the suites now put the stored summary back as they found it).
 
 {{ex:brief}}
 
@@ -750,9 +807,10 @@ format, its operations and the merge rules every client must match are in `docs/
   heading. `sections[]`: `blockId` (of the heading; of the first block for the leading section) · `level` 0…6 · `heading` ·
   `firstSentence` — of the first non-empty block of the section: up to the first `.`, `!`, `?` or `…` followed by whitespace or the
   end, at most 240 characters (cut on a word + `…`) · `words` · `blocks` (non-empty body blocks).
-- **1** → <!-- AI-WORKSTREAM --> AI synopsis, cached and marked `ai: true` (shape `ZoomSynopsis` in `src/lib/pages/zoom.ts`;
-  documented in `API-NEXT-AI.md`). Until the AI workstream provides it: `501 not_implemented`. Seam: assign
-  `zoomSynopsis.provider` in `src/lib/pages/zoom.ts`.
+- **1** → <!-- AI-WORKSTREAM --> AI synopsis, cached by content hash and always marked `ai: true` with `model` and `generatedAt`
+  (shape and the dedicated route `GET | POST /api/pages/<id>/zoom/ai` in `API-NEXT-AI.md`). **Without `cachedOnly=1` a missing
+  synopsis is generated: a paid model call.** With `?cachedOnly=1` no provider is ever called (`status: "missing"` when nothing
+  valid is cached) — what a client sends on first paint, and what every automated suite sends.
 
 Works on a trashed page. `400 bad_request` for another level.
 
@@ -820,34 +878,79 @@ itself (`400`) or one of its descendants (`409 cycle`). Nothing is written when 
 
 ---
 
+### Search — `GET /api/search` (2.x route; what a 3.0 client must know)
+
+`?q=&mode=quick|hybrid&limit=&semantic=0|1&kinds=&section=&since=&until=&archived=1&group=1`.
+
+- **`mode` absent = `quick`** (unchanged from 2.x): a title search in PostgreSQL, no provider, rows
+  `{id, title, icon, type, section, updatedAt}`.
+- > **`mode=hybrid` sends the query text to the embedding provider (a paid call, and the text leaves the server) unless
+  > `semantic=0`.** `semantic` defaults to `1`. A client that wants a local, free, private search sends
+  > `mode=hybrid&semantic=0` (full-text + trigram only). The automated suites and the perf probe always send `semantic=0`.
+
+### Database query filters — `POST /api/databases/<id>/query`, `POST /api/databases/<id>/rows/bulk`
+
+`filter` / `extraFilter` (and `all.filter` / `all.extraFilter` of a bulk action) accept: a group `{"and":[…]}` or `{"or":[…]}`
+(rules and nested groups, depth ≤ 4), `{}` or `null` (no filter), **or one bare rule** `{"property":"<id>","op":"<op>","value":…}`,
+read as `{"and":[rule]}` (it was silently dropped before the integration pass: the answer was every row — and a bulk action touched
+every row). Anything else → `400 bad_filter` (an object that is neither, a group that is also a rule, an unknown property or
+operator, a non-object). A filter is never ignored.
+
+### Research tasks and references (2.x routes)
+
+- `POST | PATCH /api/research/tasks`: `dueAt` follows the bare-date rule of §0.6 (12:00 UTC; an unparsable date → `400 bad_request`,
+  it used to answer 500).
+- `GET /api/research/references?ids=<uuid,…>` (≤ 200) → exactly those references, each with `label` (author–year) and `citation`
+  (formatted entry); ids that do not exist **or are deleted** are listed, comma-separated, in the response header `x-missing-ids`
+  (empty when none). `?projectId=<page id>` → the references attached to a page of that project or cited in its text.
+  `400 bad_id` for a malformed id, `400 too_many_ids`.
+- `POST /api/research/references` with a client `id`: see §0.3 (`200` + `x-existing: 1` on a replay, `409 reference_deleted`).
+
+### Capture kinds
+
+`POST /api/capture` accepts `kind`: `note | idea | tasks | link | photo | file | audio | screenshot | selection | document`
+(the last three since the productivity merge; details and examples in `API-NEXT-AI.md` §5.0). `400 bad_request` for another kind.
+
+### Liveness — `GET /api/health`
+
+Public, unchanged keys. `version` is now the same string as `GET /api/meta` (`3.0.0…`; it reported the raw `APP_VERSION` of the
+environment, e.g. `2.0.0-dev`), and `time` is ISO-8601 UTC.
+
+---
+
 ## 5. Error codes
 
 | HTTP | `code` | Where | Meaning |
 |---|---|---|---|
-| 400 | — | any body | `"error": "Validation: …"` (body schema) or `"Invalid JSON body"` |
-| 400 | `bad_request` | path / query values, a few body checks | malformed id, date, number or enum |
+| 400 | `bad_request` | everywhere | malformed id, date, number or enum; a body that fails its schema (`"error": "Validation: …"`); invalid JSON; a page set as its own parent |
+| 400 | `bad_filter` / `bad_sort` | database query, bulk | filter / sort not understood (unknown property or operator, wrong shape) |
+| 400 | `last_view` | `DELETE …/views` | the only view of a database cannot be deleted |
+| 400 | `bad_id` / `too_many_ids` | `/api/research/references` | malformed id in `ids`, `projectId`, `pageId`, `attachmentId`; more than 200 ids |
 | 400 | `bad_cursor` | `/api/sync`, `/api/events`, `/api/tasks?since=` | cursor not usable |
 | 400 | `bad_kinds` | `/api/sync`, `/api/events` | unknown kind; `kinds` lists the valid ones |
 | 400 | `bad_view` | `/api/graph` | unknown `view` |
 | 400 | `bad_page` | tasks, concepts | the page is not a (live) page of the workspace |
 | 400 | `bad_parent` | `PATCH /api/pages/<id>` | unknown parent |
-| 400 | `bad_node` | relations | a node does not exist / same node twice; `field` |
+| 400 | `bad_node` | relations | a node does not exist / same node twice; `field` (`fromId` \| `toId`) |
 | 400 | `bad_document` | pages | document refused (structure or attr limits) |
 | 400 / 413 | `bad_canvas` | canvas | canvas refused (413: too large) |
 | 401 | `unauthenticated` | everywhere | no valid session |
 | 403 | `csrf` | mutations | missing or foreign `Origin` |
 | 403 | `reauth_required` | purge | passkey verified more than 5 minutes ago |
-| 404 | `not_found` | everywhere | well-formed id, no such object (some 2.x routes answer 404 without `code`) |
+| 404 | `not_found` | everywhere | well-formed id, no such object (every 404 carries it now, 2.x routes included) |
 | 404 | `not_canvas` | canvas | the page exists and is not a canvas |
 | 409 | `conflict` | pages, canvases, restore | `baseVersion` is stale; `server` = current copy |
 | 409 | `cycle` | `PATCH /api/pages/<id>` | the parent is a descendant of the page |
 | 409 | `id_taken` | creates | the id belongs to another workspace / parent |
 | 409 | `relation_exists` | relations | same (from, to, relType); `id`, `status` |
-| 409 | `concept_exists` | concepts | same name; `id`, `status` |
+| 409 | `concept_exists` | concepts (create and rename) | same name; `id`, `status` |
+| 409 | `reference_deleted` | `POST /api/research/references` | the client id belongs to a deleted reference; `id`, `deletedAt` |
+| 409 | `invalid_state` | agents, inbox | default code of a 409: the object is not in a state that allows the action |
 | 409 | `derived_edge` | relations | the edge comes from a document (or is a link suggestion): not editable this way |
 | 409 | `row_deleted` | database rows | the client id belongs to a deleted row |
 | 410 | `gone` | files | file missing on disk |
 | 416 | — | files | unsatisfiable range (no JSON body) |
+| 500 | `internal` | everywhere | server bug; `requestId` |
 | 501 | `not_implemented` | zoom level 1 | feature not provided by this server yet |
 | 502 | `ai_empty` | brief summary | the model returned nothing |
 
@@ -881,6 +984,13 @@ itself (`400`) or one of its descendants (`409 cycle`). Nothing is written when 
 ---
 
 ## 7. Testing against the scratch instance
+
+**Integration instance (all web workstreams merged, the one the native live tests use):** worktree `~/dev/note-next-int` (branch
+`next-int`, database `note_next_int_dev`, `http://localhost:8486`), server **and worker** managed by
+`bash ~/dev/note-next-int-data/srv.sh start|stop|restart|build`; a session token:
+`set -a && . ./.env && set +a && node_modules/.bin/tsx scripts/dev-session.ts`. A full `pnpm test:e2e` run resets passkeys and
+**revokes every session** of the scratch database at its start (the auth journeys need a clean state): make a new token afterwards.
+The paragraphs below describe the foundation instance; the commands are the same with the paths and port above.
 
 On `M4M64c`, worktree `~/dev/note-next` (branch `next`, database `note_next_dev`, `http://localhost:8483`, bound to 127.0.0.1):
 

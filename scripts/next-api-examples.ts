@@ -6,7 +6,7 @@
 import "../tests/helpers/testdb";
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, eq, gte, inArray, like } from "drizzle-orm";
 import { db, schema, sql } from "../src/db/index";
 import { createSession, ownerRow } from "../src/lib/auth/sessions";
 import { ENTITIES, ENTITY_KINDS } from "../src/lib/sync/entities";
@@ -16,6 +16,7 @@ import { CANVAS_LIMITS } from "../src/lib/canvas/format";
 import { REL_TYPES } from "../src/lib/graph/relations";
 import { FEATURES } from "../src/lib/meta";
 
+const STARTED = new Date(Date.now() - 2000);
 const BASE = (process.env.APP_URL ?? "").replace(/\/$/, ""); const UA = "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) native";
 if (!["localhost", "127.0.0.1"].includes(new URL(BASE).hostname)) throw new Error("loopback only");
 const u = await ownerRow(); if (!u) throw new Error("no owner"); const s = await createSession({ userId: u.id, credentialId: null, userAgent: UA, ip: "127.0.0.1" });
@@ -79,7 +80,7 @@ try {
   const ins = (out.insights as any).body.insights.find((i: any) => i.kind === "recurring_topic"); if (ins) await call("insight_patch", "PATCH", `/api/graph/insights/${ins.id}`, { status: "dismissed" });
   await call("health", "GET", "/api/health/knowledge"); await call("brief", "GET", "/api/brief?tz=America/Toronto");
   await call("query_tasks", "POST", "/api/query", { source: "tasks", filter: { parentId: a.id, status: "all" }, limit: 10 }); await call("query_database", "POST", "/api/query", { source: "database", databaseId: dbPage.id, limit: 10 }); await call("query_backlinks", "POST", "/api/query", { source: "backlinks", pageId: b.id });
-  await call("zoom2", "GET", `/api/pages/${a.id}/zoom?level=2`); await call("zoom1", "GET", `/api/pages/${a.id}/zoom?level=1`);
+  await call("zoom2", "GET", `/api/pages/${a.id}/zoom?level=2`); await call("zoom1", "GET", `/api/pages/${a.id}/zoom?level=1&cachedOnly=1`); // cachedOnly: recording the examples never calls a model
   await call("error_bad_id", "GET", "/api/pages/not-a-uuid"); await call("error_cycle", "PATCH", `/api/pages/${project.id}`, { parentId: a.id }); await call("tags", "GET", "/api/tags");
   await call("export_md", "GET", `/api/export?format=md&pageId=${a.id}`);
   const versions = (await call(null, "GET", `/api/pages/${a.id}/versions`)).json; void versions;
@@ -89,8 +90,10 @@ try {
   if (made.tasks.length) await db.delete(schema.tasks).where(inArray(schema.tasks.id, made.tasks)); if (made.concepts.length) await db.delete(schema.concepts).where(inArray(schema.concepts.id, made.concepts));
   if (ids.length) { await db.delete(schema.tasks).where(inArray(schema.tasks.pageId, ids)); await db.delete(schema.knowledgeEdges).where(inArray(schema.knowledgeEdges.fromId, ids)); await db.delete(schema.attachments).where(inArray(schema.attachments.pageId, ids)); await db.delete(schema.pages).where(inArray(schema.pages.id, ids)); await db.delete(schema.knowledgeEvents).where(inArray(schema.knowledgeEvents.pageId, ids)); await db.delete(schema.syncTombstones).where(inArray(schema.syncTombstones.id, ids)); }
   if (made.atts.length) await db.delete(schema.attachments).where(inArray(schema.attachments.id, made.atts)); if (made.refs.length) { await db.delete(schema.researchReferences).where(inArray(schema.researchReferences.id, made.refs)); await db.delete(schema.knowledgeEvents).where(inArray(schema.knowledgeEvents.entityId, made.refs)); }
-  await db.delete(schema.knowledgeInsights).where(and(eq(schema.knowledgeInsights.origin, "system"))); await db.delete(schema.sessions).where(eq(schema.sessions.id, s.id)); await db.delete(schema.tags).where(inArray(schema.tags.name, ["garch", "thèse"]));
-  await db.delete(schema.syncTombstones).where(inArray(schema.syncTombstones.kind, ["task", "edge", "concept", "reference", "canvas", "database", "database_property", "database_view", "database_row", "attachment"]));
+  await db.delete(schema.knowledgeInsights).where(and(eq(schema.knowledgeInsights.origin, "system"), gte(schema.knowledgeInsights.createdAt, STARTED))); // only what this run produced await db.delete(schema.sessions).where(eq(schema.sessions.id, s.id)); await db.delete(schema.tags).where(inArray(schema.tags.name, ["garch", "thèse"]));
+  await db.delete(schema.syncTombstones).where(and(inArray(schema.syncTombstones.kind, ["task", "edge", "concept", "reference", "canvas", "database", "database_property", "database_view", "database_row", "attachment"]), gte(schema.syncTombstones.deletedAt, STARTED)));
   await sql.end();
 }
+// examples recorded by another workstream's scenario (e.g. `constellation`, which needs embedded pages) are kept as they are
+try { const prev = JSON.parse(fs.readFileSync("docs/next/examples.json", "utf8")) as Record<string, unknown>; for (const [k, v] of Object.entries(prev)) if (!(k in out)) out[k] = v; } catch { /* first run */ }
 fs.mkdirSync("docs/next", { recursive: true }); fs.writeFileSync("docs/next/examples.json", JSON.stringify(out, null, 2) + "\n"); console.log("docs/next/examples.json:", Object.keys(out).length, "entries");

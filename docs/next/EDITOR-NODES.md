@@ -69,9 +69,29 @@ the forms that identify their node:
 | pdf | `[PDF: name](/api/files/<id>)` + `> p.<page> — <text> — <note>` lines | yes (annotations without rects) |
 | audio | `[Audio: title](/api/files/<id>)` + `[mm:ss] text` lines | yes |
 | queryView | `[Vue: title]` | title only |
-| blockRef | `[[<pageId>#<blockId>]]` | yes |
+| blockRef | `[[<pageId>#<blockId>]]` | yes (also by the file importer: a uuid target is never read as a wiki link by title) |
 | citation | `[@<label or refId>, locator]` | yes (label + locator, or a reference uuid) |
 | bibliography | `## <title>` | no (a heading) |
 | canvasLink | `[Canvas](/p/<pageId>)` | yes |
 
 Server-side text / Markdown / HTML export of these nodes is owned by the backend workstream (`src/lib/editor/text.ts`, `src/lib/export/*`).
+
+
+## Integration pass (2026-11-19) — viewing a page never writes
+
+Opening a note must not create a save (a version, a new `rev`, a `page.edited` event) when the user edited nothing. Two node views
+used to write on view and no longer do:
+
+- **`chart` with a `source`** — the data snapshot (`columns`, `rows`) is written into the node only (1) on a click on **Refresh**,
+  or (2) together with a real user edit of the document (outside the undo history in both cases). Until then the live table is what
+  is drawn; the stored snapshot is what native clients and offline readers draw, and may be older than the database.
+- **`mermaid`** — the stored render (`preview`, `previewHash`) is uploaded and written only (1) after the user changed the source in
+  this view, (2) on **Save the render now**, or (3) together with a real user edit elsewhere in the document. A diagram written by a
+  native client (no `preview`) therefore shows « Render not saved yet » on the web until one of the three happens; natives keep
+  showing the source with their notice meanwhile.
+
+File import (`POST /api/import`, Markdown): the forms of the table above are read by the same parser as a paste. Two were pre-empted
+by the importer and are fixed: `[[<page uuid>#<block>]]` (was treated as a wiki link by title → plain text) and
+`![Dessin](/api/files/<id>)` (was imported as an image). A file with YAML front matter (SP Note's own export) no longer has a first
+paragraph of the form `Word: text` swallowed as a Notion-style property. Test: `tests/unit/next-int-import.test.ts`,
+`tests/e2e/next-integration.spec.ts`.

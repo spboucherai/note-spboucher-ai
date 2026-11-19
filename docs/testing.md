@@ -13,6 +13,41 @@ All automated tests run against a **scratch database** (`DATABASE_URL` ending in
 
 Set-up of a scratch environment on the node: a git worktree outside `~/apps`, its own `.env` (database `note_dev`, `PORT=8481`, `APP_URL=http://localhost:8481`, its own `DATA_DIR`/`BACKUP_DIR`, `BACKUP_OFFSITE` empty), `pnpm db:migrate`, `pnpm build`, `next start -p 8481`, `tsx src/worker/index.ts`.
 
+## Suite map (3.0, integration branch) — what exists, how to run it, what costs money
+
+PostgreSQL on the node is shared with production and the scratch database accepts 20 connections: **one server + one worker + one
+test run at a time**, always with `DB_POOL_MAX=2` (it is in the worktree's `.env`). Never two suites in parallel. On the integration
+worktree (`~/dev/note-next-int`, port 8486) the server and the worker are managed only by `bash ~/dev/note-next-int-data/srv.sh
+start|stop|restart|build`. Every command below starts with `set -a && . ./.env && set +a`.
+
+| Suite | Command | Needs | Notes |
+|---|---|---|---|
+| types | `pnpm typecheck` | — | |
+| contrast | `pnpm contrast` | — | WCAG pairs of the colour tokens, both themes (incl. the small-text variants) |
+| unit / service (`tests/unit`, 44 files) | `pnpm test` | scratch DB; **worker stopped** | a running worker takes the jobs of `jobs.test.ts`: `kill "$(cat ~/dev/note-next-int-data/worker.pid)"` first (PID file only, never `pkill`), `srv.sh restart` afterwards. Hermetic: provider keys removed, fake model |
+| HTTP contract (`tests/http`, 4 files) | `pnpm test:http` | running server | routes over real HTTP: auth, Origin on every mutating method of every `route.ts`, status codes and `code`s, idempotency, Range, feed. **No model call** (zoom level 1 is read with `cachedOnly=1`, search with `semantic=0`) |
+| end-to-end (`tests/e2e`, Playwright) | `E2E_BASE_URL=$APP_URL pnpm test:e2e` | running server + worker | ~180 tests, ~25 min, one worker. Its global set-up **resets passkeys and revokes every session** of the scratch database (dev tokens of other clients included) |
+| one e2e project | `E2E_BASE_URL=$APP_URL pnpm exec playwright test --project=next-integration` (add `-g "title"`) | same | the `auth` project always runs first (dependency). Projects: `auth`, `phone-360`, `iphone-se`, `iphone-max`, `desktop`, `next-desktop`, `next-phone-*`, `next-canvas`, `next-canvas-phone-*`, `next-p-offline`, `next-p-offline-phone-*`, `next-p-ra`, `next-p-cv`, `next-p-cv-phone-*`, `next-p-db`, `next-p-db-phone-*`, `next-k-desktop`, `next-k-phone-*`, `next-integration` |
+| performance probe | `node_modules/.bin/tsx scripts/next-perf.ts` | running server | first-load JS per screen (raw / gzip) with the heavy libraries found in it, and API timings. No model call |
+| API examples | `node_modules/.bin/tsx scripts/next-api-examples.ts && python3 scripts/next-api-doc.py` | running server | regenerates `docs/next/examples.json` and `API-NEXT.md` from the template. No model call |
+
+**Opt-in suites that call paid providers** (never run by the commands above; a fraction of a cent each):
+
+| What | How |
+|---|---|
+| `tests/unit/ai-live.test.ts` | `AI_LIVE=1 node_modules/.bin/tsx --test --test-force-exit tests/unit/ai-live.test.ts` (stop the worker first) |
+| e2e tests titled « REAL provider / REAL engine » (`next-p-cv`, `next-p-db`) | `E2E_REAL_AI=1 … playwright test --project=next-p-cv` |
+| brief summary, AI synopsis, insights and Ask against a real model (`next-k`) | `E2E_LIVE_AI=1 … playwright test --project=next-k-desktop` |
+| `node tests/e2e/live-ai.mjs` | by hand |
+
+**Leftovers.** Every suite removes what it creates (prefixed titles: `nx-…`, `E2E-…`, `Exemple ·`, `perf ·`) and only that: shared
+tables (`sync_tombstones`, `settings`, `sessions`, `knowledge_insights`) are cleaned by id or by the start time of the run, never
+wholesale, because native clients run live tests against the same instance. Assertions never assume an empty workspace: the feed is
+read from a cursor taken before the test created its rows (the workspace may hold far more than one window — e.g. the 20 000-row
+`BENCH 20k rows` database made by `scripts/db-seed-bench.ts`), task ids are random per run, and the stored brief summary is put back
+as it was found. `tests/e2e/next-integration.spec.ts` is the cross-feature scenario (one note with every new block through timeline,
+graph, health, brief, Ask, offline, canvas, Markdown export → import); it also asserts that **viewing a page writes nothing**.
+
 ## Unit / integration (`tests/unit`)
 - `webauthn.test.ts` — server-side WebAuthn verification attacked with a **software authenticator** written for the tests (`tests/helpers/softauthn.ts`, P-256, builds real attestation/assertion structures): valid registration and sign-in; wrong origin, sub-domain origin, wrong RP ID, wrong ceremony type, wrong challenge, missing user verification, missing user presence, forged signature, rewound signature counter, unknown credential; **replay** and **expired** challenges; challenge bound to its session / kind; sessions (random token, hash-only storage, revocation, rotation + grace, freshness expiry, idle expiry); enrollment windows (bootstrap refused once a passkey exists, single use, expiry, cap at 60 min, token stored hashed).
 - `pages.test.ts` — optimistic concurrency (stale save refused with the server copy, two simultaneous saves → exactly one wins), the three conflict resolutions keep both copies, history, trash/restore, document validation (structure, depth, unsafe URLs), capture kinds, every inbox action and its undo, tags.

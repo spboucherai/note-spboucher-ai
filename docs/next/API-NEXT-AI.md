@@ -6,6 +6,26 @@ smart database properties. Everything else is in `docs/next/API-NEXT.md` (founda
 Every example below is a **real response of the scratch instance** (`note_next_ai_dev`, 2026-11-19), shortened only where marked `…`.
 Prices are USD per 1M tokens as stored in the catalogue; costs are the catalogue price × the tokens the provider reported.
 
+## 0.0 Integration pass (2026-11-19, branch `next-int`) — what changed in the routes of this document
+
+The rules are written once in `API-NEXT.md` §0.2 (every error carries a `code`), §0.5 (DELETE is idempotent) and §0.6 (ISO dates,
+JSON numbers, bare dates at 12:00 UTC, clamping). For the routes documented here:
+
+| Route | Before | After |
+|---|---|---|
+| any error without a specific code (`/api/inbox/…`, `/api/audio/…`, `/api/research/…`, `/api/databases/…/ai…`) | `{"error": …}` | `{"error": …, "code": "<default of the status>"}` — `bad_request`, `not_found`, `invalid_state` (409), `too_large`, `upstream_error` (502), `internal` (500) |
+| `GET /api/ai/usage` | `byModel[].calls / errors / inputTokens / outputTokens`, `byDay[].calls`, `byTask[].calls` were strings (`"337"`) | JSON numbers (`337`); `costUsd` always a number |
+| `GET /api/search/index-state` | `pages, attachments, chunks, embedded, indexed_sources, stale` strings; `last_indexed`, `health.pending[].updatedAt`, `health.failed[].at` raw PostgreSQL timestamps | JSON numbers; ISO-8601 UTC strings (`last_indexed` may be `null`) |
+| `GET /api/search?mode=quick` (and no `mode`) | `updatedAt: "2026-11-19 13:45:47.060354-05"` when `q` is not empty | `updatedAt: "2026-11-19T18:45:47.060Z"` |
+| `POST /api/research/references` with a known `id` | `201`, the stored row (also for a deleted reference) | `200` + `x-existing: 1`, the stored row; a **deleted** reference → `409 {"code":"reference_deleted","id","deletedAt"}` (restore: `POST /api/research/references/<id>?action=restore`) |
+| `GET /api/research/references?ids=` | — | unchanged; `x-missing-ids` also lists the ids of deleted references (documented) |
+| `POST / PATCH /api/research/tasks` `dueAt: "2026-12-05"` | stored `2026-12-05T00:00:00.000Z`; an unparsable date → 500 | stored `2026-12-05T12:00:00.000Z` (same rule as `/api/tasks`); unparsable → `400 bad_request` |
+| `DELETE /api/research/tasks/<id>`, `/api/research/references/<id>`, `/api/research/experiments/<id>` | `200 {"ok":true}` for an unknown id | unchanged — this is now the documented rule for every DELETE |
+| `GET /api/pages/<id>/zoom?level=1` | — | unchanged; the automated suites call it with `cachedOnly=1` only (no model call) |
+
+No AI route gained or lost a field. `GET /api/search?mode=hybrid` embeds the query (paid, text sent to the provider) unless
+`semantic=0` — unchanged, now stated prominently in `API-NEXT.md` §4.15.
+
 ## 0. Conventions (unchanged from 2.x)
 
 - **Auth**: session cookie. Mutations (`POST`/`PUT`/`PATCH`/`DELETE`) need `Origin` = the app origin (or `Sec-Fetch-Site: same-origin`),
@@ -505,7 +525,7 @@ cited by key or by a `citation` node in its text. (`?pageId=` and the whole-libr
 - `?pageId=` and no parameter — unchanged.
 - ★ `?projectId=<page id>` → the same set as §8.2, as reference rows.
 - ★ `?ids=<uuid,uuid,…>` (≤ 200) → exactly those references, for resolving `citation` nodes; each row gains `label` (author–year)
-  and `citation` (formatted entry). Ids that do not exist are listed in the response header `x-missing-ids`.
+  and `citation` (formatted entry). Ids that do not exist — or belong to a deleted reference — are listed in the response header `x-missing-ids`.
 
 ```json
 [{"id":"54879947-9c63-455b-8e67-afa8cab80953","workspaceId":"…","pageId":"2eea0ded-b5b8-4abe-b560-75345504be80","citeKey":"doe2021prepayment","entryType":"article","title":"Mortgage Prepayment and the Term Structure","authors":["Jane Doe","John Roe"],"year":2021,"journal":"Journal of Housing Finance","doi":null,"url":null,"bibtex":"@article{doe2021prepayment,\n  author  = {Doe, Jane and Roe, John},\n  …}","fields":{"year":"2021","title":"…","author":"Doe, Jane and Roe, John","journal":"Journal of Housing Finance"},"verified":"user","attachmentId":null,"createdAt":"2026-11-19T18:22:41.721Z","updatedAt":"2026-11-19T18:22:41.721Z","deletedAt":null,"label":"Doe & Roe (2021)","citation":"Doe, J., & Roe, J. (2021). Mortgage Prepayment and the Term Structure. Journal of Housing Finance."}]

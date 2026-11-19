@@ -22,9 +22,18 @@
         "query",
         "zoom",
         "nodes-v3",
-        "files-range"
+        "files-range",
+        "zoom-synopsis",
+        "ask-scope",
+        "actions-v2",
+        "models-v2",
+        "inbox-suggestions",
+        "transcription",
+        "research-export",
+        "smart-properties",
+        "constellation"
       ],
-      "serverTime": "2026-11-19T18:30:22.138Z"
+      "serverTime": "2026-11-19T22:24:43.378Z"
     }
   },
   "reference_create": {
@@ -32,7 +41,7 @@
       "method": "POST",
       "path": "/api/research/references",
       "body": {
-        "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+        "id": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
         "title": "Generalized autoregressive conditional heteroskedasticity",
         "authors": [
           "Bollerslev, Tim"
@@ -44,8 +53,8 @@
     "status": 201,
     "headers": {},
     "body": {
-      "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
-      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "id": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
+      "workspaceId": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
       "pageId": null,
       "citeKey": "tim1986generalized",
       "entryType": "article",
@@ -66,10 +75,10 @@
       },
       "verified": "user",
       "attachmentId": null,
-      "createdAt": "2026-11-19T18:30:22.168Z",
-      "updatedAt": "2026-11-19T18:30:22.168Z",
+      "createdAt": "2026-11-19T22:24:43.410Z",
+      "updatedAt": "2026-11-19T22:24:43.410Z",
       "deletedAt": null,
-      "rev": 2618
+      "rev": 45664
     }
   },
   "page_create": {
@@ -80,9 +89,9 @@
     },
     "status": 201,
     "body": {
-      "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
-      "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+      "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+      "workspaceId": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
+      "parentId": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
       "databaseId": null,
       "type": "page",
       "section": "projects",
@@ -95,7 +104,7 @@
           {
             "type": "heading",
             "attrs": {
-              "id": "JnjiYbI3ze",
+              "id": "e3uw1c7wdJ",
               "level": 1
             },
             "content": [
@@ -108,7 +117,7 @@
           {
             "type": "paragraph",
             "attrs": {
-              "id": "UYapKgbhMk"
+              "id": "EmPFM2Vczv"
             },
             "content": [
               {
@@ -119,7 +128,7 @@
                 "type": "citation",
                 "attrs": {
                   "label": "Bollerslev 1986",
-                  "refId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+                  "refId": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
                   "locator": "p. 309"
                 }
               },
@@ -130,7 +139,7 @@
               {
                 "type": "mention",
                 "attrs": {
-                  "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+                  "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
                   "label": "Données"
                 }
               },
@@ -143,15 +152,15 @@
           {
             "type": "taskList",
             "attrs": {
-              "id": "FpCtkm7Mhd"
+              "id": "rzNkZHeCRK"
             },
             "content": [
               {
                 "type": "taskItem",
                 "attrs": {
-                  "id": "oGqPGUa4yB",
+                  "id": "10NqoVQPqn",
                   "due": "2026-11-25",
-                  "taskId": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+                  "taskId": "2749b41c-92d3-40d4-a1d9-49ab694553db",
                   "checked": false,
                   "priority": "high"
                 },
@@ -159,7 +168,7 @@
                   {
                     "type": "paragraph",
                     "attrs": {
-                      "id": "lrWg-fVW-c"
+                      "id": "jMJ0FKiAS6"
                     },
                     "content": [
                       {
@@ -175,7 +184,7 @@
           {
             "type": "callout",
             "attrs": {
-              "id": "fcwCcxSt_x",
+              "id": "JCJ80Sc3Ji",
               "icon": "✅",
               "kind": "decision"
             },
@@ -183,7 +192,7 @@
               {
                 "type": "paragraph",
                 "attrs": {
-                  "id": "vK6yUZ9Xtf"
+                  "id": "DnoGt4l5eu"
                 },
                 "content": [
                   {
@@ -197,7 +206,7 @@
           {
             "type": "mermaid",
             "attrs": {
-              "id": "rjBGEMbrnb",
+              "id": "XKz5U9Gvoh",
               "code": "graph LR\n  ARCH --> GARCH --> EGARCH",
               "preview": null,
               "previewHash": null
@@ -213,11 +222,11 @@
       "archived": false,
       "version": 1,
       "wordCount": 25,
-      "createdAt": "2026-11-19T18:30:22.180Z",
-      "updatedAt": "2026-11-19T18:30:22.180Z",
+      "createdAt": "2026-11-19T22:24:43.422Z",
+      "updatedAt": "2026-11-19T22:24:43.422Z",
       "lastOpenedAt": null,
       "deletedAt": null,
-      "rev": 2620,
+      "rev": 45666,
       "inboxAt": null,
       "captureKind": null
     }
@@ -227,29 +236,29 @@
       "method": "POST",
       "path": "/api/tasks",
       "body": {
-        "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+        "id": "58b3a709-fd1e-451f-9245-7e428da094ba",
         "title": "Envoyer le plan au directeur",
         "due": "2026-11-21",
         "priority": "medium",
-        "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+        "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d"
       }
     },
     "status": 201,
     "headers": {},
     "body": {
-      "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
-      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
-      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "id": "58b3a709-fd1e-451f-9245-7e428da094ba",
+      "workspaceId": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
+      "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "title": "Envoyer le plan au directeur",
       "status": "todo",
       "priority": "medium",
       "dueAt": "2026-11-21T12:00:00.000Z",
       "completedAt": null,
       "project": null,
-      "createdAt": "2026-11-19T18:30:22.188Z",
-      "updatedAt": "2026-11-19T18:30:22.188Z",
+      "createdAt": "2026-11-19T22:24:43.433Z",
+      "updatedAt": "2026-11-19T22:24:43.433Z",
       "deletedAt": null,
-      "rev": 2624,
+      "rev": 45670,
       "blockId": null
     }
   },
@@ -258,7 +267,7 @@
       "method": "POST",
       "path": "/api/tasks",
       "body": {
-        "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+        "id": "58b3a709-fd1e-451f-9245-7e428da094ba",
         "title": "Envoyer le plan au directeur"
       }
     },
@@ -267,26 +276,26 @@
       "x-existing": "1"
     },
     "body": {
-      "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
-      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
-      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "id": "58b3a709-fd1e-451f-9245-7e428da094ba",
+      "workspaceId": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
+      "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "title": "Envoyer le plan au directeur",
       "status": "todo",
       "priority": "medium",
       "dueAt": "2026-11-21T12:00:00.000Z",
       "completedAt": null,
       "project": null,
-      "createdAt": "2026-11-19T18:30:22.188Z",
-      "updatedAt": "2026-11-19T18:30:22.188Z",
+      "createdAt": "2026-11-19T22:24:43.433Z",
+      "updatedAt": "2026-11-19T22:24:43.433Z",
       "deletedAt": null,
-      "rev": 2624,
+      "rev": 45670,
       "blockId": null
     }
   },
   "task_patch": {
     "request": {
       "method": "PATCH",
-      "path": "/api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+      "path": "/api/tasks/58b3a709-fd1e-451f-9245-7e428da094ba",
       "body": {
         "status": "done"
       }
@@ -294,94 +303,94 @@
     "status": 200,
     "headers": {},
     "body": {
-      "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
-      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
-      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "id": "58b3a709-fd1e-451f-9245-7e428da094ba",
+      "workspaceId": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
+      "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "title": "Envoyer le plan au directeur",
       "status": "done",
       "priority": "medium",
       "dueAt": "2026-11-21T12:00:00.000Z",
-      "completedAt": "2026-11-19T18:30:22.194Z",
+      "completedAt": "2026-11-19T22:24:43.440Z",
       "project": null,
-      "createdAt": "2026-11-19T18:30:22.188Z",
-      "updatedAt": "2026-11-19T18:30:22.194Z",
+      "createdAt": "2026-11-19T22:24:43.433Z",
+      "updatedAt": "2026-11-19T22:24:43.440Z",
       "deletedAt": null,
-      "rev": 2625,
+      "rev": 45671,
       "blockId": null
     }
   },
   "task_get_linked": {
     "request": {
       "method": "GET",
-      "path": "/api/tasks/366a7cbd-5b77-478a-8562-29cc08bfdb89"
+      "path": "/api/tasks/2749b41c-92d3-40d4-a1d9-49ab694553db"
     },
     "status": 200,
     "headers": {},
     "body": {
-      "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
-      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
-      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "id": "2749b41c-92d3-40d4-a1d9-49ab694553db",
+      "workspaceId": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
+      "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "title": "Relire la section 2",
       "status": "todo",
       "priority": "high",
       "dueAt": "2026-11-25T12:00:00.000Z",
       "completedAt": null,
       "project": null,
-      "createdAt": "2026-11-19T18:30:22.181Z",
-      "updatedAt": "2026-11-19T18:30:22.181Z",
+      "createdAt": "2026-11-19T22:24:43.424Z",
+      "updatedAt": "2026-11-19T22:24:43.424Z",
       "deletedAt": null,
-      "rev": 2623,
-      "blockId": "oGqPGUa4yB"
+      "rev": 45669,
+      "blockId": "10NqoVQPqn"
     }
   },
   "tasks_list": {
     "request": {
       "method": "GET",
-      "path": "/api/tasks?pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&done=1"
+      "path": "/api/tasks?pageId=4c67832c-bbf0-442d-8ee3-178423b5877d&done=1"
     },
     "status": 200,
     "headers": {},
     "body": [
       {
-        "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+        "id": "2749b41c-92d3-40d4-a1d9-49ab694553db",
         "title": "Relire la section 2",
         "status": "todo",
         "priority": "high",
         "dueAt": "2026-11-25T12:00:00.000Z",
         "completedAt": null,
         "project": null,
-        "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-        "createdAt": "2026-11-19T18:30:22.181Z",
-        "updatedAt": "2026-11-19T18:30:22.181Z",
+        "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+        "createdAt": "2026-11-19T22:24:43.424Z",
+        "updatedAt": "2026-11-19T22:24:43.424Z",
         "pageTitle": "Exemple · Revue de littérature",
         "pageIcon": null,
-        "blockId": "oGqPGUa4yB",
+        "blockId": "10NqoVQPqn",
         "deletedAt": null,
-        "rev": 2623
+        "rev": 45669
       },
       {
-        "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+        "id": "58b3a709-fd1e-451f-9245-7e428da094ba",
         "title": "Envoyer le plan au directeur",
         "status": "done",
         "priority": "medium",
         "dueAt": "2026-11-21T12:00:00.000Z",
-        "completedAt": "2026-11-19T18:30:22.194Z",
+        "completedAt": "2026-11-19T22:24:43.440Z",
         "project": null,
-        "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-        "createdAt": "2026-11-19T18:30:22.188Z",
-        "updatedAt": "2026-11-19T18:30:22.194Z",
+        "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+        "createdAt": "2026-11-19T22:24:43.433Z",
+        "updatedAt": "2026-11-19T22:24:43.440Z",
         "pageTitle": "Exemple · Revue de littérature",
         "pageIcon": null,
         "blockId": null,
         "deletedAt": null,
-        "rev": 2625
+        "rev": 45671
       }
     ]
   },
   "task_delete": {
     "request": {
       "method": "DELETE",
-      "path": "/api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7"
+      "path": "/api/tasks/58b3a709-fd1e-451f-9245-7e428da094ba"
     },
     "status": 200,
     "headers": {},
@@ -393,7 +402,7 @@
   "task_delete_again": {
     "request": {
       "method": "DELETE",
-      "path": "/api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7"
+      "path": "/api/tasks/58b3a709-fd1e-451f-9245-7e428da094ba"
     },
     "status": 200,
     "headers": {},
@@ -408,7 +417,7 @@
       "path": "/api/tasks",
       "body": {
         "title": "x",
-        "pageId": "5007ba54-17f3-47b9-81c4-5e6985ea6958"
+        "pageId": "d9a6e498-ae2f-4a03-8672-af6d8938b425"
       }
     },
     "status": 400,
@@ -423,8 +432,8 @@
       "method": "POST",
       "path": "/api/graph/relations",
       "body": {
-        "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-        "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+        "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+        "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
         "relType": "supports",
         "note": "Les données appuient la revue",
         "validFrom": "2026-01-01T00:00:00Z"
@@ -433,9 +442,9 @@
     "status": 201,
     "headers": {},
     "body": {
-      "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
-      "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-      "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
+      "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+      "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "sourceKind": "page",
       "targetKind": "page",
       "kind": "relation",
@@ -450,10 +459,10 @@
       "validTo": null,
       "sourceBlockId": null,
       "targetBlockId": null,
-      "createdAt": "2026-11-19T18:30:22.220Z",
-      "updatedAt": "2026-11-19T18:30:22.220Z",
-      "decidedAt": "2026-11-19T18:30:22.221Z",
-      "rev": 2630,
+      "createdAt": "2026-11-19T22:24:43.467Z",
+      "updatedAt": "2026-11-19T22:24:43.467Z",
+      "decidedAt": "2026-11-19T22:24:43.467Z",
+      "rev": 45676,
       "fromTitle": "Exemple · Données",
       "toTitle": "Exemple · Revue de littérature"
     }
@@ -463,8 +472,8 @@
       "method": "POST",
       "path": "/api/graph/relations",
       "body": {
-        "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-        "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+        "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+        "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
         "relType": "supports"
       }
     },
@@ -473,14 +482,14 @@
     "body": {
       "error": "This relation already exists",
       "code": "relation_exists",
-      "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+      "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
       "status": "accepted"
     }
   },
   "relation_patch": {
     "request": {
       "method": "PATCH",
-      "path": "/api/graph/relations/e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+      "path": "/api/graph/relations/3ddf58ae-bdd5-4b45-b288-4148f63466a0",
       "body": {
         "relType": "extends",
         "note": null
@@ -489,9 +498,9 @@
     "status": 200,
     "headers": {},
     "body": {
-      "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
-      "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-      "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
+      "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+      "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "sourceKind": "page",
       "targetKind": "page",
       "kind": "relation",
@@ -506,10 +515,10 @@
       "validTo": null,
       "sourceBlockId": null,
       "targetBlockId": null,
-      "createdAt": "2026-11-19T18:30:22.220Z",
-      "updatedAt": "2026-11-19T18:30:22.228Z",
-      "decidedAt": "2026-11-19T18:30:22.221Z",
-      "rev": 2631,
+      "createdAt": "2026-11-19T22:24:43.467Z",
+      "updatedAt": "2026-11-19T22:24:43.475Z",
+      "decidedAt": "2026-11-19T22:24:43.467Z",
+      "rev": 45677,
       "fromTitle": "Exemple · Données",
       "toTitle": "Exemple · Revue de littérature"
     }
@@ -517,16 +526,16 @@
   "relations_list": {
     "request": {
       "method": "GET",
-      "path": "/api/graph/relations?nodeId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&include=cites"
+      "path": "/api/graph/relations?nodeId=4c67832c-bbf0-442d-8ee3-178423b5877d&include=cites"
     },
     "status": 200,
     "headers": {},
     "body": {
       "relations": [
         {
-          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
-          "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-          "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
+          "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+          "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "sourceKind": "page",
           "targetKind": "page",
           "kind": "relation",
@@ -541,17 +550,17 @@
           "validTo": null,
           "sourceBlockId": null,
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.220Z",
-          "updatedAt": "2026-11-19T18:30:22.228Z",
-          "decidedAt": "2026-11-19T18:30:22.221Z",
-          "rev": 2631,
+          "createdAt": "2026-11-19T22:24:43.467Z",
+          "updatedAt": "2026-11-19T22:24:43.475Z",
+          "decidedAt": "2026-11-19T22:24:43.467Z",
+          "rev": 45677,
           "fromTitle": "Exemple · Données",
           "toTitle": "Exemple · Revue de littérature"
         },
         {
-          "id": "0f9bf63b-6ddb-458d-8e3a-8071ebeb5eb8",
-          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "toId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "id": "425d39cb-c164-40dc-be44-aae27c6a7ec6",
+          "fromId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "toId": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
           "sourceKind": "page",
           "targetKind": "reference",
           "kind": "cites",
@@ -564,12 +573,12 @@
           "model": null,
           "validFrom": null,
           "validTo": null,
-          "sourceBlockId": "UYapKgbhMk",
+          "sourceBlockId": "EmPFM2Vczv",
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.181Z",
-          "updatedAt": "2026-11-19T18:30:22.181Z",
+          "createdAt": "2026-11-19T22:24:43.424Z",
+          "updatedAt": "2026-11-19T22:24:43.424Z",
           "decidedAt": null,
-          "rev": 2622,
+          "rev": 45668,
           "fromTitle": "Exemple · Revue de littérature",
           "toTitle": "Generalized autoregressive conditional heteroskedasticity"
         }
@@ -584,29 +593,29 @@
         "name": "Exemple · hétéroscédasticité",
         "description": "Variance non constante",
         "pageIds": [
-          "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "c511cd3f-a51e-4023-a806-752acb83ad7b"
+          "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
         ]
       }
     },
     "status": 201,
     "headers": {},
     "body": {
-      "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+      "id": "bc1ba4f8-8157-462a-822a-210aae71348b",
       "name": "Exemple · hétéroscédasticité",
       "description": "Variance non constante",
       "origin": "user",
       "status": "accepted",
       "model": null,
-      "createdAt": "2026-11-19T18:30:22.234Z",
-      "updatedAt": "2026-11-19T18:30:22.234Z",
-      "decidedAt": "2026-11-19T18:30:22.234Z",
-      "rev": 2632,
+      "createdAt": "2026-11-19T22:24:43.482Z",
+      "updatedAt": "2026-11-19T22:24:43.482Z",
+      "decidedAt": "2026-11-19T22:24:43.482Z",
+      "rev": 45678,
       "pages": 2,
       "suggestedPages": 0,
       "pageLinks": [
         {
-          "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "pageId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "title": "Exemple · Données",
           "icon": null,
           "origin": "user",
@@ -614,10 +623,10 @@
           "confidence": null,
           "blockId": null,
           "model": null,
-          "createdAt": "2026-11-19T18:30:22.234Z"
+          "createdAt": "2026-11-19T22:24:43.482Z"
         },
         {
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "title": "Exemple · Revue de littérature",
           "icon": null,
           "origin": "user",
@@ -625,7 +634,7 @@
           "confidence": null,
           "blockId": null,
           "model": null,
-          "createdAt": "2026-11-19T18:30:22.234Z"
+          "createdAt": "2026-11-19T22:24:43.482Z"
         }
       ]
     }
@@ -633,31 +642,31 @@
   "concept_patch": {
     "request": {
       "method": "PATCH",
-      "path": "/api/concepts/95be9154-7a3a-4f50-9d65-ce42e149b429",
+      "path": "/api/concepts/bc1ba4f8-8157-462a-822a-210aae71348b",
       "body": {
         "removePages": [
-          "c511cd3f-a51e-4023-a806-752acb83ad7b"
+          "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
         ]
       }
     },
     "status": 200,
     "headers": {},
     "body": {
-      "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+      "id": "bc1ba4f8-8157-462a-822a-210aae71348b",
       "name": "Exemple · hétéroscédasticité",
       "description": "Variance non constante",
       "origin": "user",
       "status": "accepted",
       "model": null,
-      "createdAt": "2026-11-19T18:30:22.234Z",
-      "updatedAt": "2026-11-19T18:30:22.239Z",
-      "decidedAt": "2026-11-19T18:30:22.234Z",
-      "rev": 2633,
+      "createdAt": "2026-11-19T22:24:43.482Z",
+      "updatedAt": "2026-11-19T22:24:43.489Z",
+      "decidedAt": "2026-11-19T22:24:43.482Z",
+      "rev": 45679,
       "pages": 1,
       "suggestedPages": 0,
       "pageLinks": [
         {
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "title": "Exemple · Revue de littérature",
           "icon": null,
           "origin": "user",
@@ -665,7 +674,7 @@
           "confidence": null,
           "blockId": null,
           "model": null,
-          "createdAt": "2026-11-19T18:30:22.234Z"
+          "createdAt": "2026-11-19T22:24:43.482Z"
         }
       ]
     }
@@ -673,23 +682,23 @@
   "concepts_list": {
     "request": {
       "method": "GET",
-      "path": "/api/concepts?pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+      "path": "/api/concepts?pageId=4c67832c-bbf0-442d-8ee3-178423b5877d"
     },
     "status": 200,
     "headers": {},
     "body": {
       "concepts": [
         {
-          "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "id": "bc1ba4f8-8157-462a-822a-210aae71348b",
           "name": "Exemple · hétéroscédasticité",
           "description": "Variance non constante",
           "origin": "user",
           "status": "accepted",
           "model": null,
-          "createdAt": "2026-11-19T18:30:22.234Z",
-          "updatedAt": "2026-11-19T18:30:22.239Z",
-          "decidedAt": "2026-11-19T18:30:22.234Z",
-          "rev": 2633,
+          "createdAt": "2026-11-19T22:24:43.482Z",
+          "updatedAt": "2026-11-19T22:24:43.489Z",
+          "decidedAt": "2026-11-19T22:24:43.482Z",
+          "rev": 45679,
           "pages": 1,
           "suggestedPages": 0
         }
@@ -699,12 +708,12 @@
   "canvas_get": {
     "request": {
       "method": "GET",
-      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19"
+      "path": "/api/canvases/4da155db-bb34-4543-8d65-7b22e5e23b3e"
     },
     "status": 200,
     "headers": {},
     "body": {
-      "pageId": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "pageId": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
       "title": "Exemple · Carte du projet",
       "data": {
         "edges": [],
@@ -717,14 +726,14 @@
         }
       },
       "version": 1,
-      "rev": 2635,
-      "updatedAt": "2026-11-19T18:30:22.247Z"
+      "rev": 45681,
+      "updatedAt": "2026-11-19T22:24:43.496Z"
     }
   },
   "canvas_put": {
     "request": {
       "method": "PUT",
-      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "path": "/api/canvases/4da155db-bb34-4543-8d65-7b22e5e23b3e",
       "body": {
         "data": {
           "format": "spn-canvas-1",
@@ -737,7 +746,7 @@
               "w": 240,
               "h": 120,
               "z": 0,
-              "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+              "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d"
             },
             {
               "id": "n2",
@@ -773,15 +782,15 @@
     "headers": {},
     "body": {
       "version": 2,
-      "rev": 2636,
-      "updatedAt": "2026-11-19T18:30:22.256Z",
+      "rev": 45682,
+      "updatedAt": "2026-11-19T22:24:43.506Z",
       "unchanged": false
     }
   },
   "canvas_conflict": {
     "request": {
       "method": "PUT",
-      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "path": "/api/canvases/4da155db-bb34-4543-8d65-7b22e5e23b3e",
       "body": {
         "data": {
           "format": "spn-canvas-1",
@@ -822,7 +831,7 @@
               "z": 0,
               "id": "n1",
               "kind": "page",
-              "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+              "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d"
             },
             {
               "h": 80,
@@ -843,14 +852,14 @@
             "zoom": 1
           }
         },
-        "updatedAt": "2026-11-19T18:30:22.256Z"
+        "updatedAt": "2026-11-19T22:24:43.506Z"
       }
     }
   },
   "canvas_bad": {
     "request": {
       "method": "PUT",
-      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "path": "/api/canvases/4da155db-bb34-4543-8d65-7b22e5e23b3e",
       "body": {
         "data": {
           "format": "v0"
@@ -868,7 +877,7 @@
   "canvas_not_canvas": {
     "request": {
       "method": "GET",
-      "path": "/api/canvases/461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+      "path": "/api/canvases/4c67832c-bbf0-442d-8ee3-178423b5877d"
     },
     "status": 404,
     "headers": {},
@@ -880,30 +889,30 @@
   "row_create": {
     "request": {
       "method": "POST",
-      "path": "/api/databases/6c821f6a-3d37-4dbc-aaeb-632b9691bcf0/rows",
+      "path": "/api/databases/e1a35b12-6754-49ad-9a16-900a68a9b0ac/rows",
       "body": {
-        "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
-        "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+        "id": "38c847e4-61c5-4d94-a2cd-32bb6190fc92",
+        "pageId": "87ba224a-991d-4130-a84b-2c17bdd29c96",
         "title": "Engle (1982)",
         "values": {
-          "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+          "18862461-af59-4756-b83f-4326e76a77d7": 1982
         }
       }
     },
     "status": 201,
     "headers": {},
     "body": {
-      "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
-      "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+      "id": "38c847e4-61c5-4d94-a2cd-32bb6190fc92",
+      "pageId": "87ba224a-991d-4130-a84b-2c17bdd29c96",
       "title": "Engle (1982)",
       "icon": null,
       "values": {
-        "32c6dda6-0db0-4084-a38d-207305dcb0a7": "Engle (1982)",
-        "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+        "18862461-af59-4756-b83f-4326e76a77d7": 1982,
+        "5f8c03f0-c9dc-4317-9e11-2049f7d24510": "Engle (1982)"
       },
       "position": 1,
-      "createdAt": "2026-11-19T18:30:22.288Z",
-      "updatedAt": "2026-11-19T18:30:22.288Z"
+      "createdAt": "2026-11-19T22:24:43.541Z",
+      "updatedAt": "2026-11-19T22:24:43.541Z"
     }
   },
   "attachment_upload": {
@@ -914,8 +923,8 @@
     "status": 201,
     "headers": {},
     "body": {
-      "id": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
-      "url": "/api/files/62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "id": "99eb559e-7976-406b-a0f1-d7a0ee3efb74",
+      "url": "/api/files/99eb559e-7976-406b-a0f1-d7a0ee3efb74",
       "name": "memo.mp3",
       "size": 200,
       "mime": "audio/mpeg",
@@ -926,7 +935,7 @@
   "file_range": {
     "request": {
       "method": "GET",
-      "path": "/api/files/62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "path": "/api/files/99eb559e-7976-406b-a0f1-d7a0ee3efb74",
       "headers": {
         "range": "bytes=0-9"
       }
@@ -944,7 +953,7 @@
   "file_range_416": {
     "request": {
       "method": "GET",
-      "path": "/api/files/62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "path": "/api/files/99eb559e-7976-406b-a0f1-d7a0ee3efb74",
       "headers": {
         "range": "bytes=500-"
       }
@@ -961,18 +970,18 @@
   "sync_entities": {
     "request": {
       "method": "GET",
-      "path": "/api/sync?kinds=all&since=0&limit=500"
+      "path": "/api/sync?kinds=all&since=45662&limit=500"
     },
     "status": 200,
     "headers": {},
     "body": {
-      "cursor": 2645,
-      "head": 2645,
+      "cursor": 45691,
+      "head": 45691,
       "more": false,
       "reset": false,
-      "serverTime": "2026-11-19T18:30:22.306Z",
+      "serverTime": "2026-11-19T22:24:43.560Z",
       "workspace": {
-        "id": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+        "id": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
         "name": "Note SPBoucher AI"
       },
       "user": {
@@ -981,22 +990,30 @@
       "pages": "[… 6 pages, same shape as 2.x …]",
       "attachments": [
         {
-          "id": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "99eb559e-7976-406b-a0f1-d7a0ee3efb74",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "filename": "memo.mp3",
           "mime": "audio/mpeg",
           "size": 200,
           "sha256": "295cbb667c2d2380418d4c7576c666c4f1690de2a2433f0e301bd5923377f8ed",
           "pageCount": null,
-          "createdAt": "2026-11-19T18:30:22.293Z",
+          "createdAt": "2026-11-19T22:24:43.547Z",
           "deletedAt": null,
-          "rev": 2645
+          "rev": 45691
         }
       ],
       "tombstones": [],
       "tags": [
         {
           "name": "garch",
+          "color": "gray"
+        },
+        {
+          "name": "journal",
+          "color": "gray"
+        },
+        {
+          "name": "offline",
           "color": "gray"
         },
         {
@@ -1007,85 +1024,85 @@
       "entities": {
         "task": [
           {
-            "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
-            "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-            "blockId": "oGqPGUa4yB",
+            "id": "2749b41c-92d3-40d4-a1d9-49ab694553db",
+            "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+            "blockId": "10NqoVQPqn",
             "title": "Relire la section 2",
             "status": "todo",
             "priority": "high",
             "dueAt": "2026-11-25T12:00:00.000Z",
             "completedAt": null,
             "project": null,
-            "createdAt": "2026-11-19T18:30:22.181Z",
-            "updatedAt": "2026-11-19T18:30:22.181Z",
+            "createdAt": "2026-11-19T22:24:43.424Z",
+            "updatedAt": "2026-11-19T22:24:43.424Z",
             "deletedAt": null,
-            "rev": 2623
+            "rev": 45669
           },
           "… 1 more"
         ],
         "database": [
           {
-            "id": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
-            "pageId": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+            "id": "b58bb7a2-ccdb-44d8-80d0-b968a02d7e58",
+            "pageId": "e1a35b12-6754-49ad-9a16-900a68a9b0ac",
             "name": "Exemple · Lectures",
             "description": null,
             "icon": null,
             "isTemplate": false,
             "templateOf": null,
-            "createdAt": "2026-11-19T18:30:22.276Z",
-            "updatedAt": "2026-11-19T18:30:22.276Z",
+            "createdAt": "2026-11-19T22:24:43.527Z",
+            "updatedAt": "2026-11-19T22:24:43.527Z",
             "deletedAt": null,
-            "rev": 2639
+            "rev": 45685
           }
         ],
         "database_property": [
           {
-            "id": "32c6dda6-0db0-4084-a38d-207305dcb0a7",
-            "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+            "id": "5f8c03f0-c9dc-4317-9e11-2049f7d24510",
+            "databaseId": "b58bb7a2-ccdb-44d8-80d0-b968a02d7e58",
             "name": "Name",
             "type": "title",
             "config": {},
             "position": 0,
             "width": 260,
-            "createdAt": "2026-11-19T18:30:22.277Z",
-            "rev": 2640
+            "createdAt": "2026-11-19T22:24:43.528Z",
+            "rev": 45686
           },
           "… 1 more"
         ],
         "database_view": [
           {
-            "id": "c7d9e78b-3565-45f9-aefe-4820c1a9336f",
-            "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+            "id": "16966a04-52e8-49c5-9215-7544c43efe40",
+            "databaseId": "b58bb7a2-ccdb-44d8-80d0-b968a02d7e58",
             "name": "Table",
             "type": "table",
             "config": {},
             "position": 0,
             "isDefault": true,
-            "createdAt": "2026-11-19T18:30:22.278Z",
-            "rev": 2641
+            "createdAt": "2026-11-19T22:24:43.529Z",
+            "rev": 45687
           }
         ],
         "database_row": [
           {
-            "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
-            "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
-            "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+            "id": "38c847e4-61c5-4d94-a2cd-32bb6190fc92",
+            "databaseId": "b58bb7a2-ccdb-44d8-80d0-b968a02d7e58",
+            "pageId": "87ba224a-991d-4130-a84b-2c17bdd29c96",
             "values": {
-              "32c6dda6-0db0-4084-a38d-207305dcb0a7": "Engle (1982)",
-              "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+              "18862461-af59-4756-b83f-4326e76a77d7": 1982,
+              "5f8c03f0-c9dc-4317-9e11-2049f7d24510": "Engle (1982)"
             },
             "position": 1,
-            "createdAt": "2026-11-19T18:30:22.288Z",
-            "updatedAt": "2026-11-19T18:30:22.288Z",
+            "createdAt": "2026-11-19T22:24:43.541Z",
+            "updatedAt": "2026-11-19T22:24:43.541Z",
             "deletedAt": null,
-            "rev": 2644
+            "rev": 45690
           }
         ],
         "edge": [
           {
-            "id": "2a243406-6449-4835-895f-a16304cc5167",
-            "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-            "toId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+            "id": "cd604201-5785-46f5-8c02-d493481dc987",
+            "fromId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+            "toId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
             "sourceKind": "page",
             "targetKind": "page",
             "kind": "link",
@@ -1098,18 +1115,18 @@
             "model": null,
             "validFrom": null,
             "validTo": null,
-            "sourceBlockId": "UYapKgbhMk",
+            "sourceBlockId": "EmPFM2Vczv",
             "targetBlockId": null,
-            "createdAt": "2026-11-19T18:30:22.181Z",
-            "updatedAt": "2026-11-19T18:30:22.181Z",
+            "createdAt": "2026-11-19T22:24:43.424Z",
+            "updatedAt": "2026-11-19T22:24:43.424Z",
             "decidedAt": null,
-            "rev": 2621
+            "rev": 45667
           },
           "… 2 more"
         ],
         "reference": [
           {
-            "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+            "id": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
             "pageId": null,
             "citeKey": "tim1986generalized",
             "entryType": "article",
@@ -1130,16 +1147,16 @@
             },
             "verified": "user",
             "attachmentId": null,
-            "createdAt": "2026-11-19T18:30:22.168Z",
-            "updatedAt": "2026-11-19T18:30:22.168Z",
+            "createdAt": "2026-11-19T22:24:43.410Z",
+            "updatedAt": "2026-11-19T22:24:43.410Z",
             "deletedAt": null,
-            "rev": 2618
+            "rev": 45664
           }
         ],
         "canvas": [
           {
-            "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
-            "pageId": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "id": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
+            "pageId": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
             "data": {
               "edges": [
                 {
@@ -1159,7 +1176,7 @@
                   "z": 0,
                   "id": "n1",
                   "kind": "page",
-                  "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+                  "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d"
                 },
                 {
                   "h": 80,
@@ -1181,23 +1198,23 @@
               }
             },
             "version": 2,
-            "createdAt": "2026-11-19T18:30:22.247Z",
-            "updatedAt": "2026-11-19T18:30:22.256Z",
-            "rev": 2636
+            "createdAt": "2026-11-19T22:24:43.496Z",
+            "updatedAt": "2026-11-19T22:24:43.506Z",
+            "rev": 45682
           }
         ],
         "concept": [
           {
-            "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+            "id": "bc1ba4f8-8157-462a-822a-210aae71348b",
             "name": "Exemple · hétéroscédasticité",
             "description": "Variance non constante",
             "origin": "user",
             "status": "accepted",
             "model": null,
-            "createdAt": "2026-11-19T18:30:22.234Z",
-            "updatedAt": "2026-11-19T18:30:22.239Z",
-            "decidedAt": "2026-11-19T18:30:22.234Z",
-            "rev": 2633
+            "createdAt": "2026-11-19T22:24:43.482Z",
+            "updatedAt": "2026-11-19T22:24:43.489Z",
+            "decidedAt": "2026-11-19T22:24:43.482Z",
+            "rev": 45679
           }
         ]
       }
@@ -1206,18 +1223,18 @@
   "sync_2x": {
     "request": {
       "method": "GET",
-      "path": "/api/sync?since=2645&limit=5"
+      "path": "/api/sync?since=45691&limit=5"
     },
     "status": 200,
     "headers": {},
     "body": {
-      "cursor": 2645,
-      "head": 2645,
+      "cursor": 45691,
+      "head": 45691,
       "more": false,
       "reset": false,
-      "serverTime": "2026-11-19T18:30:22.310Z",
+      "serverTime": "2026-11-19T22:24:43.563Z",
       "workspace": {
-        "id": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+        "id": "75bbf9cf-0dad-4ae6-b50c-021e50b12457",
         "name": "Note SPBoucher AI"
       },
       "user": {
@@ -1229,6 +1246,14 @@
       "tags": [
         {
           "name": "garch",
+          "color": "gray"
+        },
+        {
+          "name": "journal",
+          "color": "gray"
+        },
+        {
+          "name": "offline",
           "color": "gray"
         },
         {
@@ -1264,21 +1289,21 @@
   "events": {
     "request": {
       "method": "GET",
-      "path": "/api/events?pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&limit=4"
+      "path": "/api/events?pageId=4c67832c-bbf0-442d-8ee3-178423b5877d&limit=4"
     },
     "status": 200,
     "headers": {},
     "body": {
       "events": [
         {
-          "id": "ea467abe-3ad8-461d-9efa-4533caf5bb41",
-          "at": "2026-11-19T18:30:22.294Z",
+          "id": "051e37b3-3f82-4bc7-9233-eab3abe8b1fc",
+          "at": "2026-11-19T22:24:43.548Z",
           "kind": "attachment.added",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "pageTitle": "Exemple · Revue de littérature",
           "pageIcon": null,
           "entityKind": "attachment",
-          "entityId": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "entityId": "99eb559e-7976-406b-a0f1-d7a0ee3efb74",
           "actor": "user",
           "device": "SP Notes · Mac",
           "summary": "memo.mp3",
@@ -1288,10 +1313,10 @@
           }
         },
         {
-          "id": "775660b1-2c30-4ef4-a386-a334a610180c",
-          "at": "2026-11-19T18:30:22.211Z",
+          "id": "4c546009-a5b4-4273-aeb3-605905328b9c",
+          "at": "2026-11-19T22:24:43.457Z",
           "kind": "tag.added",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "pageTitle": "Exemple · Revue de littérature",
           "pageIcon": null,
           "entityKind": "tag",
@@ -1304,10 +1329,10 @@
           }
         },
         {
-          "id": "1cbe5f93-86eb-4999-8de4-6fe575a6c50c",
-          "at": "2026-11-19T18:30:22.211Z",
+          "id": "3bc61f8e-6a41-4f7a-ad33-76e7b838c407",
+          "at": "2026-11-19T22:24:43.457Z",
           "kind": "tag.added",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "pageTitle": "Exemple · Revue de littérature",
           "pageIcon": null,
           "entityKind": "tag",
@@ -1320,79 +1345,79 @@
           }
         },
         {
-          "id": "24c3051f-f5e4-4f05-8832-26da48b9ea9b",
-          "at": "2026-11-19T18:30:22.194Z",
+          "id": "97ec4f19-0d32-4e3a-89ca-ee3d068fbc44",
+          "at": "2026-11-19T22:24:43.440Z",
           "kind": "task.completed",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "pageTitle": "Exemple · Revue de littérature",
           "pageIcon": null,
           "entityKind": "task",
-          "entityId": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+          "entityId": "58b3a709-fd1e-451f-9245-7e428da094ba",
           "actor": "user",
           "device": "SP Notes · Mac",
           "summary": "Envoyer le plan au directeur",
           "data": {}
         }
       ],
-      "nextCursor": "MjAyNi0xMS0xOVQxODozMDoyMi4xOTRafDI0YzMwNTFmLWY1ZTQtNGYwNS04ODMyLTI2ZGE0OGI5ZWE5Yg"
+      "nextCursor": "MjAyNi0xMS0xOVQyMjoyNDo0My40NDBafDk3ZWM0ZjE5LTBkMzItNGUzYS04OWNhLWVlM2QwNjhmYmM0NA"
     }
   },
   "events_project": {
     "request": {
       "method": "GET",
-      "path": "/api/events?projectId=ba54fc28-a1e0-4f7f-a544-4329ac1df694&kinds=relation.*,task.*&limit=3"
+      "path": "/api/events?projectId=b46cdfb8-99fd-4c45-8228-0ff1e36febad&kinds=relation.*,task.*&limit=3"
     },
     "status": 200,
     "headers": {},
     "body": {
       "events": [
         {
-          "id": "d52b805e-b573-49ff-887d-bc6dee9e006c",
-          "at": "2026-11-19T18:30:22.220Z",
+          "id": "a953c330-73f7-49b6-9716-9e3bd5995196",
+          "at": "2026-11-19T22:24:43.467Z",
           "kind": "relation.created",
-          "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "pageId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "pageTitle": "Exemple · Données",
           "pageIcon": null,
           "entityKind": "edge",
-          "entityId": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+          "entityId": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
           "actor": "user",
           "device": "SP Notes · Mac",
           "summary": "Exemple · Données — supports → Exemple · Revue de littérature",
           "data": {
-            "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-            "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+            "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+            "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
             "origin": "user",
             "relType": "supports",
             "toTitle": "Exemple · Revue de littérature",
             "fromTitle": "Exemple · Données",
-            "relationId": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+            "relationId": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
             "sourceKind": "page",
             "targetKind": "page"
           }
         },
         {
-          "id": "24c3051f-f5e4-4f05-8832-26da48b9ea9b",
-          "at": "2026-11-19T18:30:22.194Z",
+          "id": "97ec4f19-0d32-4e3a-89ca-ee3d068fbc44",
+          "at": "2026-11-19T22:24:43.440Z",
           "kind": "task.completed",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "pageTitle": "Exemple · Revue de littérature",
           "pageIcon": null,
           "entityKind": "task",
-          "entityId": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+          "entityId": "58b3a709-fd1e-451f-9245-7e428da094ba",
           "actor": "user",
           "device": "SP Notes · Mac",
           "summary": "Envoyer le plan au directeur",
           "data": {}
         },
         {
-          "id": "2d92c699-93a6-4b3d-88f8-9f5ce4521fa7",
-          "at": "2026-11-19T18:30:22.188Z",
+          "id": "4238116a-47b7-4afe-b4df-e4763917242f",
+          "at": "2026-11-19T22:24:43.433Z",
           "kind": "task.created",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "pageTitle": "Exemple · Revue de littérature",
           "pageIcon": null,
           "entityKind": "task",
-          "entityId": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+          "entityId": "58b3a709-fd1e-451f-9245-7e428da094ba",
           "actor": "user",
           "device": "SP Notes · Mac",
           "summary": "Envoyer le plan au directeur",
@@ -1402,27 +1427,27 @@
           }
         }
       ],
-      "nextCursor": "MjAyNi0xMS0xOVQxODozMDoyMi4xODhafDJkOTJjNjk5LTkzYTYtNGIzZC04OGY4LTlmNWNlNDUyMWZhNw"
+      "nextCursor": "MjAyNi0xMS0xOVQyMjoyNDo0My40MzNafDQyMzgxMTZhLTQ3YjctNGFmZS1iNGRmLWU0NzYzOTE3MjQyZg"
     }
   },
   "timemachine_page": {
     "request": {
       "method": "GET",
-      "path": "/api/timemachine?at=2026-11-19T18%3A30%3A22.318Z&pageId=c511cd3f-a51e-4023-a806-752acb83ad7b"
+      "path": "/api/timemachine?at=2026-11-19T22%3A24%3A43.584Z&pageId=ab3eb2b6-0d8e-490b-acba-145e8c09f682"
     },
     "status": 200,
     "headers": {},
     "body": {
-      "at": "2026-11-19T18:30:22.318Z",
+      "at": "2026-11-19T22:24:43.584Z",
       "scope": {
-        "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b"
+        "pageId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
       },
       "pages": [
         {
-          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "icon": null,
           "section": "projects",
-          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "parentId": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "trashedAt": null,
           "currentTitle": "Exemple · Données",
           "currentVersion": 1,
@@ -1432,7 +1457,7 @@
           "exact": true,
           "version": 1,
           "versionId": null,
-          "versionAt": "2026-11-19T18:30:22.173Z",
+          "versionAt": "2026-11-19T22:24:43.416Z",
           "wordCount": 6,
           "changedSince": false,
           "content": {
@@ -1441,7 +1466,7 @@
               {
                 "type": "paragraph",
                 "attrs": {
-                  "id": "cDO12-4dJX"
+                  "id": "iajQrDbENa"
                 },
                 "content": [
                   {
@@ -1457,9 +1482,9 @@
       ],
       "relations": [
         {
-          "id": "2a243406-6449-4835-895f-a16304cc5167",
-          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "toId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "cd604201-5785-46f5-8c02-d493481dc987",
+          "fromId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "toId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "sourceKind": "page",
           "targetKind": "page",
           "kind": "link",
@@ -1468,16 +1493,16 @@
           "note": null,
           "validFrom": null,
           "validTo": null,
-          "sourceBlockId": "UYapKgbhMk",
+          "sourceBlockId": "EmPFM2Vczv",
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.181Z",
+          "createdAt": "2026-11-19T22:24:43.424Z",
           "fromTitle": "Exemple · Revue de littérature",
           "toTitle": "Exemple · Données"
         },
         {
-          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
-          "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-          "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
+          "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+          "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "sourceKind": "page",
           "targetKind": "page",
           "kind": "relation",
@@ -1488,31 +1513,31 @@
           "validTo": null,
           "sourceBlockId": null,
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.220Z",
+          "createdAt": "2026-11-19T22:24:43.467Z",
           "fromTitle": "Exemple · Données",
           "toTitle": "Exemple · Revue de littérature"
         }
       ],
       "references": [],
       "removedSince": [],
-      "journalSince": "2026-11-19T18:30:22.159Z"
+      "journalSince": "2026-11-19T21:42:40.365Z"
     }
   },
   "timemachine_project": {
     "request": {
       "method": "GET",
-      "path": "/api/timemachine?at=2026-11-19T18%3A30%3A22.322Z&projectId=ba54fc28-a1e0-4f7f-a544-4329ac1df694"
+      "path": "/api/timemachine?at=2026-11-19T22%3A24%3A43.589Z&projectId=b46cdfb8-99fd-4c45-8228-0ff1e36febad"
     },
     "status": 200,
     "headers": {},
     "body": {
-      "at": "2026-11-19T18:30:22.322Z",
+      "at": "2026-11-19T22:24:43.589Z",
       "scope": {
-        "projectId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694"
+        "projectId": "b46cdfb8-99fd-4c45-8228-0ff1e36febad"
       },
       "pages": [
         {
-          "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "id": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "icon": null,
           "section": "projects",
           "parentId": null,
@@ -1525,15 +1550,15 @@
           "exact": true,
           "version": 1,
           "versionId": null,
-          "versionAt": "2026-11-19T18:30:22.159Z",
+          "versionAt": "2026-11-19T22:24:43.398Z",
           "wordCount": 0,
           "changedSince": false
         },
         {
-          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "icon": null,
           "section": "projects",
-          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "parentId": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "trashedAt": null,
           "currentTitle": "Exemple · Données",
           "currentVersion": 1,
@@ -1543,15 +1568,15 @@
           "exact": true,
           "version": 1,
           "versionId": null,
-          "versionAt": "2026-11-19T18:30:22.173Z",
+          "versionAt": "2026-11-19T22:24:43.416Z",
           "wordCount": 6,
           "changedSince": false
         },
         {
-          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "icon": null,
           "section": "projects",
-          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "parentId": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "trashedAt": null,
           "currentTitle": "Exemple · Revue de littérature",
           "currentVersion": 1,
@@ -1561,15 +1586,15 @@
           "exact": true,
           "version": 1,
           "versionId": null,
-          "versionAt": "2026-11-19T18:30:22.180Z",
+          "versionAt": "2026-11-19T22:24:43.422Z",
           "wordCount": 25,
           "changedSince": false
         },
         {
-          "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "id": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
           "icon": null,
           "section": "projects",
-          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "parentId": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "trashedAt": null,
           "currentTitle": "Exemple · Carte du projet",
           "currentVersion": 1,
@@ -1579,16 +1604,16 @@
           "exact": true,
           "version": 1,
           "versionId": null,
-          "versionAt": "2026-11-19T18:30:22.257Z",
-          "wordCount": 0,
+          "versionAt": "2026-11-19T22:24:43.507Z",
+          "wordCount": 3,
           "changedSince": false
         }
       ],
       "relations": [
         {
-          "id": "0f9bf63b-6ddb-458d-8e3a-8071ebeb5eb8",
-          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "toId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "id": "425d39cb-c164-40dc-be44-aae27c6a7ec6",
+          "fromId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "toId": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
           "sourceKind": "page",
           "targetKind": "reference",
           "kind": "cites",
@@ -1597,16 +1622,16 @@
           "note": null,
           "validFrom": null,
           "validTo": null,
-          "sourceBlockId": "UYapKgbhMk",
+          "sourceBlockId": "EmPFM2Vczv",
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.181Z",
+          "createdAt": "2026-11-19T22:24:43.424Z",
           "fromTitle": "Exemple · Revue de littérature",
           "toTitle": "Generalized autoregressive conditional heteroskedasticity"
         },
         {
-          "id": "2a243406-6449-4835-895f-a16304cc5167",
-          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "toId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "cd604201-5785-46f5-8c02-d493481dc987",
+          "fromId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "toId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "sourceKind": "page",
           "targetKind": "page",
           "kind": "link",
@@ -1615,16 +1640,16 @@
           "note": null,
           "validFrom": null,
           "validTo": null,
-          "sourceBlockId": "UYapKgbhMk",
+          "sourceBlockId": "EmPFM2Vczv",
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.181Z",
+          "createdAt": "2026-11-19T22:24:43.424Z",
           "fromTitle": "Exemple · Revue de littérature",
           "toTitle": "Exemple · Données"
         },
         {
-          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
-          "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-          "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
+          "fromId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+          "toId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "sourceKind": "page",
           "targetKind": "page",
           "kind": "relation",
@@ -1635,14 +1660,14 @@
           "validTo": null,
           "sourceBlockId": null,
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.220Z",
+          "createdAt": "2026-11-19T22:24:43.467Z",
           "fromTitle": "Exemple · Données",
           "toTitle": "Exemple · Revue de littérature"
         }
       ],
       "references": [
         {
-          "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "id": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
           "citeKey": "tim1986generalized",
           "title": "Generalized autoregressive conditional heteroskedasticity",
           "authors": [
@@ -1650,17 +1675,17 @@
           ],
           "year": 1986,
           "pageId": null,
-          "createdAt": "2026-11-19T18:30:22.168Z"
+          "createdAt": "2026-11-19T22:24:43.410Z"
         }
       ],
       "removedSince": [],
-      "journalSince": "2026-11-19T18:30:22.159Z"
+      "journalSince": "2026-11-19T21:42:40.365Z"
     }
   },
   "graph_local": {
     "request": {
       "method": "GET",
-      "path": "/api/graph?view=local&pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&depth=1"
+      "path": "/api/graph?view=local&pageId=4c67832c-bbf0-442d-8ee3-178423b5877d&depth=1"
     },
     "status": 200,
     "headers": {},
@@ -1668,42 +1693,42 @@
       "view": "local",
       "nodes": [
         {
-          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "entityId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "entityId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "kind": "page",
           "title": "Exemple · Revue de littérature",
           "icon": null,
           "section": "projects",
-          "createdAt": "2026-11-19T18:30:22.180Z",
-          "updatedAt": "2026-11-19T18:30:22.180Z",
+          "createdAt": "2026-11-19T22:24:43.422Z",
+          "updatedAt": "2026-11-19T22:24:43.422Z",
           "databaseId": null,
           "degree": 5,
           "in": 1,
           "out": 4
         },
         {
-          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-          "entityId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+          "entityId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "kind": "page",
           "title": "Exemple · Données",
           "icon": null,
           "section": "projects",
-          "createdAt": "2026-11-19T18:30:22.173Z",
-          "updatedAt": "2026-11-19T18:30:22.173Z",
+          "createdAt": "2026-11-19T22:24:43.416Z",
+          "updatedAt": "2026-11-19T22:24:43.416Z",
           "databaseId": null,
           "degree": 2,
           "in": 1,
           "out": 1
         },
         {
-          "id": "concept:95be9154-7a3a-4f50-9d65-ce42e149b429",
-          "entityId": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "id": "concept:bc1ba4f8-8157-462a-822a-210aae71348b",
+          "entityId": "bc1ba4f8-8157-462a-822a-210aae71348b",
           "kind": "concept",
           "title": "Exemple · hétéroscédasticité",
           "icon": null,
           "section": null,
-          "createdAt": "2026-11-19T18:30:22.234Z",
-          "updatedAt": "2026-11-19T18:30:22.239Z",
+          "createdAt": "2026-11-19T22:24:43.482Z",
+          "updatedAt": "2026-11-19T22:24:43.489Z",
           "databaseId": null,
           "degree": 1,
           "in": 1,
@@ -1712,42 +1737,42 @@
           "origin": "user"
         },
         {
-          "id": "ref:a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
-          "entityId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "id": "ref:cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
+          "entityId": "cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
           "kind": "reference",
           "title": "Generalized autoregressive conditional heteroskedasticity",
           "icon": null,
           "section": null,
-          "createdAt": "2026-11-19T18:30:22.168Z",
-          "updatedAt": "2026-11-19T18:30:22.168Z",
+          "createdAt": "2026-11-19T22:24:43.410Z",
+          "updatedAt": "2026-11-19T22:24:43.410Z",
           "databaseId": null,
           "degree": 1,
           "in": 1,
           "out": 0
         },
         {
-          "id": "att:62e21717-4ba3-4fc1-9809-02ce27c940f5",
-          "entityId": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "id": "att:99eb559e-7976-406b-a0f1-d7a0ee3efb74",
+          "entityId": "99eb559e-7976-406b-a0f1-d7a0ee3efb74",
           "kind": "attachment",
           "title": "memo.mp3",
           "icon": null,
           "section": null,
-          "createdAt": "2026-11-19T18:30:22.293Z",
-          "updatedAt": "2026-11-19T18:30:22.293Z",
+          "createdAt": "2026-11-19T22:24:43.547Z",
+          "updatedAt": "2026-11-19T22:24:43.547Z",
           "databaseId": null,
           "degree": 1,
           "in": 1,
           "out": 0
         },
         {
-          "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
-          "entityId": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "id": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
+          "entityId": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
           "kind": "canvas",
           "title": "Exemple · Carte du projet",
           "icon": null,
           "section": "projects",
-          "createdAt": "2026-11-19T18:30:22.247Z",
-          "updatedAt": "2026-11-19T18:30:22.257Z",
+          "createdAt": "2026-11-19T22:24:43.496Z",
+          "updatedAt": "2026-11-19T22:24:43.507Z",
           "databaseId": null,
           "degree": 0,
           "in": 0,
@@ -1767,17 +1792,17 @@
           "validTo": null,
           "sourceBlockId": null,
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.234Z",
+          "createdAt": "2026-11-19T22:24:43.482Z",
           "sub": null,
-          "id": "e-about-461702e8-7111-46a8-a8a0-6eb8d5bfd044-95be9154-7a3a-4f50-9d65-ce42e149b429",
-          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "target": "concept:95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "id": "e-about-4c67832c-bbf0-442d-8ee3-178423b5877d-bc1ba4f8-8157-462a-822a-210aae71348b",
+          "source": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "target": "concept:bc1ba4f8-8157-462a-822a-210aae71348b",
           "kind": "about"
         },
         {
-          "id": "2a243406-6449-4835-895f-a16304cc5167",
-          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "target": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "cd604201-5785-46f5-8c02-d493481dc987",
+          "source": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "target": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "kind": "link",
           "relType": "related",
           "origin": "system",
@@ -1788,15 +1813,15 @@
           "model": null,
           "validFrom": null,
           "validTo": null,
-          "sourceBlockId": "UYapKgbhMk",
+          "sourceBlockId": "EmPFM2Vczv",
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.181Z",
+          "createdAt": "2026-11-19T22:24:43.424Z",
           "sub": null
         },
         {
-          "id": "0f9bf63b-6ddb-458d-8e3a-8071ebeb5eb8",
-          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "target": "ref:a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "id": "425d39cb-c164-40dc-be44-aae27c6a7ec6",
+          "source": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "target": "ref:cf18e145-6915-4e67-9a37-bb9d20e0b2eb",
           "kind": "cites",
           "relType": "cites",
           "origin": "system",
@@ -1807,15 +1832,15 @@
           "model": null,
           "validFrom": null,
           "validTo": null,
-          "sourceBlockId": "UYapKgbhMk",
+          "sourceBlockId": "EmPFM2Vczv",
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.181Z",
+          "createdAt": "2026-11-19T22:24:43.424Z",
           "sub": null
         },
         {
-          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
-          "source": "c511cd3f-a51e-4023-a806-752acb83ad7b",
-          "target": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "3ddf58ae-bdd5-4b45-b288-4148f63466a0",
+          "source": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
+          "target": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "kind": "typed",
           "relType": "extends",
           "origin": "user",
@@ -1828,7 +1853,7 @@
           "validTo": null,
           "sourceBlockId": null,
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.220Z",
+          "createdAt": "2026-11-19T22:24:43.467Z",
           "sub": null
         },
         {
@@ -1843,15 +1868,15 @@
           "validTo": null,
           "sourceBlockId": null,
           "targetBlockId": null,
-          "createdAt": "2026-11-19T18:30:22.293Z",
+          "createdAt": "2026-11-19T22:24:43.547Z",
           "sub": null,
-          "id": "e-att-62e21717-4ba3-4fc1-9809-02ce27c940f5",
-          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "target": "att:62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "id": "e-att-99eb559e-7976-406b-a0f1-d7a0ee3efb74",
+          "source": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "target": "att:99eb559e-7976-406b-a0f1-d7a0ee3efb74",
           "kind": "attachment"
         }
       ],
-      "center": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "center": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "stats": {
         "pages": 3,
         "references": 1,
@@ -1864,29 +1889,29 @@
   "graph_timeline": {
     "request": {
       "method": "GET",
-      "path": "/api/graph?view=timeline&from=2026-11-19T17%3A30%3A22.332Z"
+      "path": "/api/graph?view=timeline&from=2026-11-19T21%3A24%3A43.622Z"
     },
     "status": 200,
     "headers": {},
     "body": {
       "view": "timeline",
-      "nodes": "[… 8 nodes …]",
+      "nodes": "[… 20009 nodes …]",
       "edges": "[… 4 edges …]",
       "center": null,
       "range": {
-        "from": "2026-11-19T17:30:22.332Z",
-        "to": "2026-11-19T18:30:22.334Z"
+        "from": "2026-11-19T21:24:43.622Z",
+        "to": "2026-11-19T22:24:43.624Z"
       },
       "buckets": [
         {
           "date": "2026-11-19",
-          "created": 6,
+          "created": 20007,
           "updated": 0,
           "edges": 4
         }
       ],
       "stats": {
-        "pages": 6,
+        "pages": 20007,
         "references": 1,
         "concepts": 1,
         "edges": 4,
@@ -1923,38 +1948,38 @@
     "headers": {},
     "body": {
       "intelligence": {
-        "computedAt": "2026-11-19T18:30:22.342Z",
+        "computedAt": "2026-11-19T22:24:43.852Z",
         "stats": {
-          "pages": 5,
+          "pages": 6,
           "edges": 2,
-          "orphans": 3,
+          "orphans": 4,
           "clusters": 1,
           "concepts": 1,
           "tags": 2
         },
         "centralPages": [
           {
-            "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
             "title": "Exemple · Revue de littérature",
             "icon": null,
             "degree": 1,
             "in": 1,
             "out": 1,
-            "pagerank": 0.408163
+            "pagerank": 0.384615
           },
           {
-            "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+            "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
             "title": "Exemple · Données",
             "icon": null,
             "degree": 1,
             "in": 1,
             "out": 1,
-            "pagerank": 0.408163
+            "pagerank": 0.384615
           }
         ],
         "centralConcepts": [
           {
-            "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+            "id": "bc1ba4f8-8157-462a-822a-210aae71348b",
             "name": "Exemple · hétéroscédasticité",
             "status": "accepted",
             "origin": "user",
@@ -1963,44 +1988,51 @@
         ],
         "orphans": [
           {
-            "id": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+            "id": "e1a35b12-6754-49ad-9a16-900a68a9b0ac",
             "title": "Exemple · Lectures",
             "icon": null,
             "section": "databases",
-            "updatedAt": "2026-11-19T18:30:22.269Z"
+            "updatedAt": "2026-11-19T22:24:43.520Z"
           },
           {
-            "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "id": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
             "title": "Exemple · Carte du projet",
             "icon": null,
             "section": "projects",
-            "updatedAt": "2026-11-19T18:30:22.257Z"
+            "updatedAt": "2026-11-19T22:24:43.507Z"
           },
           {
-            "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+            "id": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
             "title": "Exemple · Thèse",
             "icon": null,
             "section": "projects",
-            "updatedAt": "2026-11-19T18:30:22.159Z"
+            "updatedAt": "2026-11-19T22:24:43.398Z"
+          },
+          {
+            "id": "7ac59715-2dcc-43b0-b7f1-5895e5c25182",
+            "title": "BENCH 20k rows",
+            "icon": "🧪",
+            "section": "databases",
+            "updatedAt": "2026-11-19T21:52:41.845Z"
           }
         ],
         "clusters": [
           {
-            "id": "1f7f8b405512ce8032b7027e75cdcfa386ec110c",
+            "id": "80b3cd85426bbb678688680a69dcac5578019233",
             "size": 2,
             "label": "Exemple · Revue de littérature",
             "pageIds": [
-              "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-              "c511cd3f-a51e-4023-a806-752acb83ad7b"
+              "4c67832c-bbf0-442d-8ee3-178423b5877d",
+              "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
             ],
             "top": [
               {
-                "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+                "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
                 "title": "Exemple · Revue de littérature",
                 "icon": null
               },
               {
-                "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+                "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
                 "title": "Exemple · Données",
                 "icon": null
               }
@@ -2010,21 +2042,21 @@
         "recurringTopics": [
           {
             "kind": "tag",
-            "id": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+            "id": "e31f9c2e-00f0-4218-8e19-bb8004d5b7a4",
             "name": "thèse",
             "pages": 2,
             "pageIds": [
-              "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-              "c511cd3f-a51e-4023-a806-752acb83ad7b"
+              "4c67832c-bbf0-442d-8ee3-178423b5877d",
+              "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
             ],
-            "lastActivityAt": "2026-11-19T18:30:22.180Z"
+            "lastActivityAt": "2026-11-19T22:24:43.422Z"
           }
         ],
         "duplicates": []
       },
       "insights": [
         {
-          "id": "a6a2d1b4-5a8f-42e1-9985-dcf7f34afabc",
+          "id": "d555127a-6434-4a73-8490-f09286790bcc",
           "kind": "recurring_topic",
           "status": "suggested",
           "title": "#thèse",
@@ -2033,15 +2065,15 @@
             "name": "thèse",
             "pages": 2,
             "pageIds": [
-              "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-              "c511cd3f-a51e-4023-a806-752acb83ad7b"
+              "4c67832c-bbf0-442d-8ee3-178423b5877d",
+              "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
             ],
-            "topicId": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+            "topicId": "e31f9c2e-00f0-4218-8e19-bb8004d5b7a4",
             "topicKind": "tag"
           },
           "origin": "system",
           "model": null,
-          "createdAt": "2026-11-19T18:30:22.339Z",
+          "createdAt": "2026-11-19T22:24:43.844Z",
           "decidedAt": null
         }
       ],
@@ -2055,7 +2087,7 @@
   "insight_patch": {
     "request": {
       "method": "PATCH",
-      "path": "/api/graph/insights/a6a2d1b4-5a8f-42e1-9985-dcf7f34afabc",
+      "path": "/api/graph/insights/d555127a-6434-4a73-8490-f09286790bcc",
       "body": {
         "status": "dismissed"
       }
@@ -2063,7 +2095,7 @@
     "status": 200,
     "headers": {},
     "body": {
-      "id": "a6a2d1b4-5a8f-42e1-9985-dcf7f34afabc",
+      "id": "d555127a-6434-4a73-8490-f09286790bcc",
       "kind": "recurring_topic",
       "status": "dismissed",
       "title": "#thèse",
@@ -2072,16 +2104,16 @@
         "name": "thèse",
         "pages": 2,
         "pageIds": [
-          "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "c511cd3f-a51e-4023-a806-752acb83ad7b"
+          "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
         ],
-        "topicId": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+        "topicId": "e31f9c2e-00f0-4218-8e19-bb8004d5b7a4",
         "topicKind": "tag"
       },
       "origin": "system",
       "model": null,
-      "createdAt": "2026-11-19T18:30:22.339Z",
-      "decidedAt": "2026-11-19T18:30:22.345Z",
+      "createdAt": "2026-11-19T22:24:43.844Z",
+      "decidedAt": "2026-11-19T22:24:43.855Z",
       "relationId": null
     }
   },
@@ -2093,40 +2125,48 @@
     "status": 200,
     "headers": {},
     "body": {
-      "computedAt": "2026-11-19T18:30:22.347Z",
+      "computedAt": "2026-11-19T22:24:43.858Z",
       "inactiveDays": 30,
       "score": {
-        "pages": 6,
-        "issues": 3
+        "pages": 20000,
+        "issues": 4
       },
       "orphans": {
-        "count": 3,
+        "count": 4,
         "ids": [
-          "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
-          "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
-          "ba54fc28-a1e0-4f7f-a544-4329ac1df694"
+          "e1a35b12-6754-49ad-9a16-900a68a9b0ac",
+          "4da155db-bb34-4543-8d65-7b22e5e23b3e",
+          "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
+          "7ac59715-2dcc-43b0-b7f1-5895e5c25182"
         ],
         "items": [
           {
-            "id": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+            "id": "e1a35b12-6754-49ad-9a16-900a68a9b0ac",
             "title": "Exemple · Lectures",
             "icon": null,
             "section": "databases",
-            "updatedAt": "2026-11-19T18:30:22.269Z"
+            "updatedAt": "2026-11-19T22:24:43.520Z"
           },
           {
-            "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "id": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
             "title": "Exemple · Carte du projet",
             "icon": null,
             "section": "projects",
-            "updatedAt": "2026-11-19T18:30:22.257Z"
+            "updatedAt": "2026-11-19T22:24:43.507Z"
           },
           {
-            "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+            "id": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
             "title": "Exemple · Thèse",
             "icon": null,
             "section": "projects",
-            "updatedAt": "2026-11-19T18:30:22.159Z"
+            "updatedAt": "2026-11-19T22:24:43.398Z"
+          },
+          {
+            "id": "7ac59715-2dcc-43b0-b7f1-5895e5c25182",
+            "title": "BENCH 20k rows",
+            "icon": "🧪",
+            "section": "databases",
+            "updatedAt": "2026-11-19T21:52:41.845Z"
           }
         ]
       },
@@ -2160,14 +2200,14 @@
         "overdue": 0,
         "withoutDate": 0,
         "ids": [
-          "366a7cbd-5b77-478a-8562-29cc08bfdb89"
+          "2749b41c-92d3-40d4-a1d9-49ab694553db"
         ],
         "items": [
           {
-            "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+            "id": "2749b41c-92d3-40d4-a1d9-49ab694553db",
             "title": "Relire la section 2",
             "dueAt": "2026-11-25T12:00:00.000Z",
-            "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
             "priority": "high",
             "overdue": false
           }
@@ -2183,62 +2223,71 @@
     "status": 200,
     "headers": {},
     "body": {
-      "generatedAt": "2026-11-19T18:30:22.350Z",
+      "generatedAt": "2026-11-19T22:24:44.100Z",
       "date": "2026-11-19",
       "timeZone": "America/Toronto",
       "recentNotes": [
         {
-          "id": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+          "id": "e1a35b12-6754-49ad-9a16-900a68a9b0ac",
           "title": "Exemple · Lectures",
           "icon": null,
           "section": "databases",
           "type": "database",
-          "updatedAt": "2026-11-19T18:30:22.269Z",
+          "updatedAt": "2026-11-19T22:24:43.520Z",
           "wordCount": 0
         },
         {
-          "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "id": "4da155db-bb34-4543-8d65-7b22e5e23b3e",
           "title": "Exemple · Carte du projet",
           "icon": null,
           "section": "projects",
           "type": "canvas",
-          "updatedAt": "2026-11-19T18:30:22.257Z",
-          "wordCount": 0
+          "updatedAt": "2026-11-19T22:24:43.507Z",
+          "wordCount": 3
         },
         {
-          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "title": "Exemple · Revue de littérature",
           "icon": null,
           "section": "projects",
           "type": "page",
-          "updatedAt": "2026-11-19T18:30:22.180Z",
+          "updatedAt": "2026-11-19T22:24:43.422Z",
           "wordCount": 25
         },
         {
-          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "id": "ab3eb2b6-0d8e-490b-acba-145e8c09f682",
           "title": "Exemple · Données",
           "icon": null,
           "section": "projects",
           "type": "page",
-          "updatedAt": "2026-11-19T18:30:22.173Z",
+          "updatedAt": "2026-11-19T22:24:43.416Z",
           "wordCount": 6
         },
         {
-          "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "id": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "title": "Exemple · Thèse",
           "icon": null,
           "section": "projects",
           "type": "page",
-          "updatedAt": "2026-11-19T18:30:22.159Z",
+          "updatedAt": "2026-11-19T22:24:43.398Z",
+          "wordCount": 0
+        },
+        {
+          "id": "7ac59715-2dcc-43b0-b7f1-5895e5c25182",
+          "title": "BENCH 20k rows",
+          "icon": "🧪",
+          "section": "databases",
+          "type": "database",
+          "updatedAt": "2026-11-19T21:52:41.845Z",
           "wordCount": 0
         }
       ],
       "activeProjects": [
         {
-          "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "id": "b46cdfb8-99fd-4c45-8228-0ff1e36febad",
           "title": "Exemple · Thèse",
           "icon": null,
-          "lastActivityAt": "2026-11-19T18:30:22.257Z",
+          "lastActivityAt": "2026-11-19T22:24:43.507Z",
           "pages": 4,
           "openTasks": 1
         }
@@ -2248,14 +2297,14 @@
         "dueToday": [],
         "dueSoon": [
           {
-            "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+            "id": "2749b41c-92d3-40d4-a1d9-49ab694553db",
             "title": "Relire la section 2",
             "status": "todo",
             "priority": "high",
             "dueAt": "2026-11-25T12:00:00.000Z",
-            "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
             "pageTitle": "Exemple · Revue de littérature",
-            "blockId": "oGqPGUa4yB",
+            "blockId": "10NqoVQPqn",
             "project": null
           }
         ]
@@ -2269,12 +2318,7 @@
         "items": []
       },
       "toRevisit": [],
-      "aiSummary": {
-        "ai": true,
-        "text": "Résumé factice.",
-        "model": "fake-brief-1",
-        "at": "2026-11-19T18:30:13.591Z"
-      }
+      "aiSummary": null
     }
   },
   "query_tasks": {
@@ -2284,7 +2328,7 @@
       "body": {
         "source": "tasks",
         "filter": {
-          "parentId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "parentId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "status": "all"
         },
         "limit": 10
@@ -2328,9 +2372,9 @@
       ],
       "rows": [
         {
-          "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "blockId": "oGqPGUa4yB",
+          "id": "2749b41c-92d3-40d4-a1d9-49ab694553db",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "blockId": "10NqoVQPqn",
           "title": "Relire la section 2",
           "status": "todo",
           "priority": "high",
@@ -2362,7 +2406,7 @@
           ]
         ]
       },
-      "resolvedAt": "2026-11-19T18:30:22.355Z"
+      "resolvedAt": "2026-11-19T22:24:44.137Z"
     }
   },
   "query_database": {
@@ -2371,7 +2415,7 @@
       "path": "/api/query",
       "body": {
         "source": "database",
-        "databaseId": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+        "databaseId": "e1a35b12-6754-49ad-9a16-900a68a9b0ac",
         "limit": 10
       }
     },
@@ -2381,24 +2425,24 @@
       "source": "database",
       "columns": [
         {
-          "key": "32c6dda6-0db0-4084-a38d-207305dcb0a7",
+          "key": "5f8c03f0-c9dc-4317-9e11-2049f7d24510",
           "label": "Name",
           "type": "page"
         },
         {
-          "key": "6bd4009e-c6cb-4a62-9247-da4caacd8705",
+          "key": "18862461-af59-4756-b83f-4326e76a77d7",
           "label": "Année",
           "type": "number"
         }
       ],
       "rows": [
         {
-          "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
-          "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+          "id": "38c847e4-61c5-4d94-a2cd-32bb6190fc92",
+          "pageId": "87ba224a-991d-4130-a84b-2c17bdd29c96",
           "title": "Engle (1982)",
           "icon": null,
-          "32c6dda6-0db0-4084-a38d-207305dcb0a7": "Engle (1982)",
-          "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+          "5f8c03f0-c9dc-4317-9e11-2049f7d24510": "Engle (1982)",
+          "18862461-af59-4756-b83f-4326e76a77d7": 1982
         }
       ],
       "total": 1,
@@ -2415,9 +2459,9 @@
           ]
         ]
       },
-      "resolvedAt": "2026-11-19T18:30:22.358Z",
-      "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
-      "viewId": "c7d9e78b-3565-45f9-aefe-4820c1a9336f",
+      "resolvedAt": "2026-11-19T22:24:44.142Z",
+      "databaseId": "b58bb7a2-ccdb-44d8-80d0-b968a02d7e58",
+      "viewId": "16966a04-52e8-49c5-9215-7544c43efe40",
       "name": "Exemple · Lectures"
     }
   },
@@ -2427,7 +2471,7 @@
       "path": "/api/query",
       "body": {
         "source": "backlinks",
-        "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b"
+        "pageId": "ab3eb2b6-0d8e-490b-acba-145e8c09f682"
       }
     },
     "status": 200,
@@ -2453,12 +2497,12 @@
       ],
       "rows": [
         {
-          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
-          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "id": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+          "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
           "title": "Exemple · Revue de littérature",
           "icon": null,
           "section": "projects",
-          "updatedAt": "2026-11-19T18:30:22.180Z",
+          "updatedAt": "2026-11-19T22:24:43.422Z",
           "via": [
             "link"
           ]
@@ -2476,30 +2520,30 @@
           [
             "Exemple · Revue de littérature",
             "projects",
-            "2026-11-19T18:30:22.180Z"
+            "2026-11-19T22:24:43.422Z"
           ]
         ]
       },
-      "resolvedAt": "2026-11-19T18:30:22.360Z"
+      "resolvedAt": "2026-11-19T22:24:44.144Z"
     }
   },
   "zoom2": {
     "request": {
       "method": "GET",
-      "path": "/api/pages/461702e8-7111-46a8-a8a0-6eb8d5bfd044/zoom?level=2"
+      "path": "/api/pages/4c67832c-bbf0-442d-8ee3-178423b5877d/zoom?level=2"
     },
     "status": 200,
     "headers": {},
     "body": {
       "level": 2,
-      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
       "title": "Exemple · Revue de littérature",
       "version": 1,
-      "updatedAt": "2026-11-19T18:30:22.180Z",
+      "updatedAt": "2026-11-19T22:24:43.422Z",
       "ai": false,
       "sections": [
         {
-          "blockId": "JnjiYbI3ze",
+          "blockId": "e3uw1c7wdJ",
           "level": 1,
           "heading": "Volatilité conditionnelle",
           "firstSentence": "Le modèle fondateur est Bollerslev 1986.",
@@ -2512,13 +2556,24 @@
   "zoom1": {
     "request": {
       "method": "GET",
-      "path": "/api/pages/461702e8-7111-46a8-a8a0-6eb8d5bfd044/zoom?level=1"
+      "path": "/api/pages/4c67832c-bbf0-442d-8ee3-178423b5877d/zoom?level=1&cachedOnly=1"
     },
-    "status": 501,
+    "status": 200,
     "headers": {},
     "body": {
-      "error": "Semantic zoom level 1 (AI synopsis) is not available on this server",
-      "code": "not_implemented"
+      "pageId": "4c67832c-bbf0-442d-8ee3-178423b5877d",
+      "level": 1,
+      "contentHash": "f170bd35bf5f766fe7fa0a3cf609276d",
+      "ai": false,
+      "status": "missing",
+      "synopsis": null,
+      "model": null,
+      "provider": null,
+      "generatedAt": null,
+      "cached": false,
+      "costUsd": null,
+      "title": "Exemple · Revue de littérature",
+      "version": 1
     }
   },
   "error_bad_id": {
@@ -2536,9 +2591,9 @@
   "error_cycle": {
     "request": {
       "method": "PATCH",
-      "path": "/api/pages/ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+      "path": "/api/pages/b46cdfb8-99fd-4c45-8228-0ff1e36febad",
       "body": {
-        "parentId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+        "parentId": "4c67832c-bbf0-442d-8ee3-178423b5877d"
       }
     },
     "status": 409,
@@ -2557,13 +2612,25 @@
     "headers": {},
     "body": [
       {
-        "id": "1145c4b2-3fe7-4f3f-bfc3-fedf2eab46ea",
+        "id": "dedf187a-bae4-4e64-bc08-27b617f2c768",
         "name": "garch",
         "color": "gray",
         "pages": 1
       },
       {
-        "id": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+        "id": "17a8d9b4-7a87-4327-ad6c-e808f6586440",
+        "name": "journal",
+        "color": "gray",
+        "pages": 0
+      },
+      {
+        "id": "20cbf6ed-2a1e-480d-a0ad-07c168109cee",
+        "name": "offline",
+        "color": "gray",
+        "pages": 0
+      },
+      {
+        "id": "e31f9c2e-00f0-4218-8e19-bb8004d5b7a4",
         "name": "thèse",
         "color": "gray",
         "pages": 2
@@ -2573,7 +2640,7 @@
   "export_md": {
     "request": {
       "method": "GET",
-      "path": "/api/export?format=md&pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+      "path": "/api/export?format=md&pageId=4c67832c-bbf0-442d-8ee3-178423b5877d"
     },
     "status": 200,
     "headers": {
@@ -2779,7 +2846,16 @@
       "query",
       "zoom",
       "nodes-v3",
-      "files-range"
+      "files-range",
+      "zoom-synopsis",
+      "ask-scope",
+      "actions-v2",
+      "models-v2",
+      "inbox-suggestions",
+      "transcription",
+      "research-export",
+      "smart-properties",
+      "constellation"
     ],
     "nodeLimits": {
       "codeChars": 200000,
@@ -2804,8 +2880,8 @@
       "textChars": 100000,
       "idChars": 64
     },
-    "generatedAt": "2026-11-19T18:30:22.390Z",
-    "base": "http://localhost:8483"
+    "generatedAt": "2026-11-19T22:24:44.174Z",
+    "base": "http://localhost:8486"
   },
   "constellation": {
     "request": {
