@@ -31,7 +31,7 @@ export function RoutingTable({ routes, defaults, labels, models, onSave, saving 
               <td className="px-2 py-1.5"><Picker task={task} value={r.fallback} onChange={(v) => set(task, { fallback: v })} /></td>
               <td className="px-2 py-1.5"><div className="flex h-8 items-center rounded-md bg-bg-sunk p-0.5">{EFFORTS.map((e) => <button key={e} onClick={() => set(task, { effort: e })} className={cn("h-7 rounded px-2 text-[11.5px]", r.effort === e ? "bg-bg-elev font-medium shadow-card" : "text-fg-muted")}>{e}</button>)}</div></td>
               <td className="px-2 py-1.5 text-fg-muted">{why(r.primary, r.categories ?? [])}</td>
-              <td className="px-2 py-1.5"><div className="flex flex-wrap gap-1">{(r.categories ?? []).map((c) => <span key={c} className="rounded bg-bg-sunk px-1 py-0.5 font-mono text-[10.5px] text-fg-muted">{c}</span>)}{r.avoid?.length ? <span className="rounded bg-danger/10 px-1 py-0.5 text-[10.5px] text-danger" title={r.avoid.join(", ")}>avoid {r.avoid.length}</span> : null}</div></td>
+              <td className="px-2 py-1.5"><div className="flex flex-wrap gap-1">{(r.categories ?? []).map((c) => <span key={c} className="rounded bg-bg-sunk px-1 py-0.5 font-mono text-[10.5px] text-fg-muted">{c}</span>)}{r.avoid?.length ? <span className="rounded bg-danger/10 px-1 py-0.5 text-[10.5px] text-danger-text" title={r.avoid.join(", ")}>avoid {r.avoid.length}</span> : null}</div></td>
             </tr>); })}</tbody>
         </table>
       </div>

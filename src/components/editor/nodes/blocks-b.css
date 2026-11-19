@@ -9,7 +9,7 @@
 /* ---------- runCode ---------- */
 .rc { min-width: 0; }
 .rc-hint { display: inline-flex; align-items: center; gap: .3rem; min-width: 0; font-weight: 400; font-size: 0.75rem; color: var(--fg-muted); }
-.rc-hint svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--success); }
+.rc-hint svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--success-text); }
 .rc-lang { display: inline-flex; align-items: center; gap: .375rem; min-width: 0; }
 .rc-note { margin-left: auto; min-width: 0; text-align: right; overflow-wrap: anywhere; }
 .rc-code { max-height: 28rem; border-radius: 0; }
@@ -18,10 +18,10 @@
 .rc-out { border-top: 1px solid var(--line); min-width: 0; }
 .rc-out-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .25rem .5rem .25rem 1rem; min-height: 2rem; }
 .rc-out-label { font-size: 0.6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-faint); }
-.rc-out[data-error="true"] .rc-out-label { color: var(--danger); }
+.rc-out[data-error="true"] .rc-out-label { color: var(--danger-text); }
 .rc-clear { margin-left: auto; }
 .rc-out-text { margin: 0; padding: .25rem 1rem .75rem; max-height: 20rem; overflow: auto; overscroll-behavior: contain; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; background: transparent; border: 0; border-radius: 0; }
-.rc-out[data-error="true"] .rc-out-text { color: var(--danger); }
+.rc-out[data-error="true"] .rc-out-text { color: var(--danger-text); }
 .rc-out-text:focus-visible, .rc-code-ro:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
 
 /* ---------- pdf ---------- */
@@ -110,7 +110,7 @@ button.au-wave-load:focus-visible { outline: 2px solid var(--ring); }
 .au-line-text { min-width: 0; overflow-wrap: anywhere; }
 @media (pointer: coarse) { .au-line { min-height: 2.75rem; align-items: center; } }
 .au-tr { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; min-width: 0; }
-.au-failed { color: var(--danger); }
+.au-failed { color: var(--danger-text); }
 .au-summary { border: 1px solid color-mix(in oklab, var(--ai) 26%, transparent); border-radius: var(--r-md); background: color-mix(in oklab, var(--ai-soft) 55%, transparent); padding: .625rem .75rem; min-width: 0; }
 .au-summary-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .375rem; }
 .au-ai-mark { display: inline-flex; align-items: center; gap: .25rem; border-radius: var(--r-xs); background: var(--ai-soft); color: var(--ai); padding: 0 .375rem; font-size: 0.6875rem; line-height: 1.125rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }

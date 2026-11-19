@@ -39,7 +39,7 @@ export function AgentsConsole({ initialPageId }: { initialPageId?: string | null
   }
 
   if (isLoading) return <div className="mx-auto grid max-w-3xl gap-3 px-4 py-6"><Skeleton className="h-8 w-40" /><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div>;
-  if (isError || !data) return <div className="mx-auto max-w-3xl px-4 py-10 text-center" role="alert"><p className="text-[14px] text-danger">{(error as Error)?.message ?? "Could not load the agents."}</p><Button variant="outline" className="mt-3 h-11" onClick={() => refetch()}><RotateCcw />Retry</Button></div>;
+  if (isError || !data) return <div className="mx-auto max-w-3xl px-4 py-10 text-center" role="alert"><p className="text-[14px] text-danger-text">{(error as Error)?.message ?? "Could not load the agents."}</p><Button variant="outline" className="mt-3 h-11" onClick={() => refetch()}><RotateCcw />Retry</Button></div>;
   const agentsById = Object.fromEntries(data.agents.map((a) => [a.id, { name: a.name, icon: a.icon }]));
   const target = data.target ? `${data.target.provider} · ${data.target.model}` : null; const needsPage = launch?.page === "required" && !page;
   const blocked = !online || !data.configured || !data.target;

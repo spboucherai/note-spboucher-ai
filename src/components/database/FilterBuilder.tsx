@@ -20,7 +20,7 @@ export { describeFilter, MAX_DEPTH, ruleProblem, validFilter };
 
 /** Shared touch sizing: 44 px targets below `md`, the dense desktop size above. */
 const actionCls = "flex h-7 items-center gap-1 rounded-md px-1.5 text-fg-muted hover:bg-bg-sunk hover:text-fg max-md:h-11 max-md:px-3 max-md:text-[14px]";
-const removeCls = "grid size-7 shrink-0 place-items-center rounded text-fg-faint hover:bg-bg-sunk hover:text-danger max-md:size-11 max-md:rounded-lg";
+const removeCls = "grid size-7 shrink-0 place-items-center rounded text-fg-faint hover:bg-bg-sunk hover:text-danger-text max-md:size-11 max-md:rounded-lg";
 
 /** `fluid`: take the width of the container (phone "View options" sheet) instead of the popover width; the heading is then provided by the sheet. */
 export function FilterBuilder({ fluid }: { fluid?: boolean } = {}) {
@@ -40,7 +40,7 @@ export function FilterBuilder({ fluid }: { fluid?: boolean } = {}) {
       {(!fluid || active) && (
         <div className="mb-1 flex items-center justify-between text-[12px] font-medium text-fg-muted">
           {fluid ? <span className="sr-only">Filters</span> : "Filters"}
-          {active && <button type="button" onClick={() => change({ and: [] }, true)} className="ml-auto rounded-md text-fg-faint hover:text-danger max-md:h-11 max-md:px-3 max-md:text-[14px] max-md:text-danger">Clear all</button>}
+          {active && <button type="button" onClick={() => change({ and: [] }, true)} className="ml-auto rounded-md text-fg-faint hover:text-danger-text max-md:h-11 max-md:px-3 max-md:text-[14px] max-md:text-danger-text">Clear all</button>}
         </div>
       )}
       {fluid && !active && <p className="mb-1 text-[13px] leading-5 text-fg-muted">No filter: every row of the database is shown.</p>}
@@ -63,7 +63,7 @@ function Group({ g, onChange, depth, onRemove }: { g: FilterGroup; onChange: (g:
       <div className="flex flex-wrap items-center gap-2 pl-14 text-[12px] max-md:pl-0">
         <button type="button" onClick={() => first && setItems([...items, { property: first.id, op: kind(first) === "checkbox" ? "eq" : OPS[kind(first)][0][0], value: kind(first) === "checkbox" ? true : "" }])} className={cn(actionCls, "max-md:border max-md:border-line")}><Plus className="size-3.5" /> Add filter</button>
         {depth < MAX_DEPTH && <button type="button" onClick={() => setItems([...items, (mode === "and" ? { or: [] } : { and: [] }) as FilterGroup])} className={cn(actionCls, "max-md:border max-md:border-line")}><Plus className="size-3.5" /> Add group</button>}
-        {onRemove && <button type="button" onClick={onRemove} className={cn(actionCls, "ml-auto text-fg-faint hover:bg-transparent hover:text-danger")}><X className="size-3.5" /> Remove group</button>}
+        {onRemove && <button type="button" onClick={onRemove} className={cn(actionCls, "ml-auto text-fg-faint hover:bg-transparent hover:text-danger-text")}><X className="size-3.5" /> Remove group</button>}
       </div>
     </div>
   );

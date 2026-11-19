@@ -170,7 +170,7 @@ function TextField({ p, value, onChange, commit, labelId }: { p: Property; value
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
             className={cn(fieldCls, "h-11", invalidNumber && "border-danger")}
           />}
-      {invalidNumber && <p role="alert" className="mt-1 text-[12px] text-danger">Enter a number — this value has not been saved.</p>}
+      {invalidNumber && <p role="alert" className="mt-1 text-[12px] text-danger-text">Enter a number — this value has not been saved.</p>}
     </div>
   );
 }

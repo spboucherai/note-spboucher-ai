@@ -61,7 +61,7 @@ function TemplateList() {
           <input aria-label={`Name of the template ${t.name}`} defaultValue={t.name} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.name) void patch(t, { name: v }); }} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className={cn(inputCls, "min-w-0 flex-1")} />
           <span className="shrink-0 text-[11px] tabular-nums text-fg-muted">{Object.keys(t.values).length} value{Object.keys(t.values).length === 1 ? "" : "s"}{t.content ? " · body" : ""}</span>
           <Button size="xs" variant={t.isDefault ? "outline" : "ghost"} aria-pressed={t.isDefault} className="max-md:h-11" onClick={() => patch(t, { isDefault: !t.isDefault })} title="The default template is used by the New button"><Star /> {t.isDefault ? "Default" : "Make default"}</Button>
-          <Button size="xs" variant="ghost" className="text-danger max-md:h-11" aria-label={`Delete the template ${t.name}`} onClick={() => { if (confirm(`Delete the template “${t.name}”? Rows created from it are not touched.`)) void call(() => api(`/api/databases/${ctx.db.id}/row-templates?id=${t.id}`, { method: "DELETE" }), "Could not delete the template"); }}><Trash2 /></Button>
+          <Button size="xs" variant="ghost" className="text-danger-text max-md:h-11" aria-label={`Delete the template ${t.name}`} onClick={() => { if (confirm(`Delete the template “${t.name}”? Rows created from it are not touched.`)) void call(() => api(`/api/databases/${ctx.db.id}/row-templates?id=${t.id}`, { method: "DELETE" }), "Could not delete the template"); }}><Trash2 /></Button>
         </li>
       ))}
     </ul>

@@ -15,7 +15,7 @@ export const errorMessage = (e: unknown) => (e instanceof Error && e.message ? e
 export function ErrorState({ title, error, onRetry, retrying, testId }: { title: string; error: unknown; onRetry: () => void; retrying?: boolean; testId?: string }) {
   return (
     <div role="alert" data-testid={testId} className="flex flex-col items-center justify-center gap-2 px-4 py-14 text-center">
-      <div aria-hidden className="mb-1 grid size-12 place-items-center rounded-2xl border border-danger/30 bg-danger/10 text-danger [&_svg]:size-5"><TriangleAlert /></div>
+      <div aria-hidden className="mb-1 grid size-12 place-items-center rounded-2xl border border-danger/30 bg-danger/10 text-danger-text [&_svg]:size-5"><TriangleAlert /></div>
       <div className="text-[14px] font-semibold tracking-[-0.01em]">{title}</div>
       <div className="max-w-sm break-words text-[13px] leading-5 text-fg-muted [overflow-wrap:anywhere]">{errorMessage(error)}</div>
       <div className="mt-3"><Button variant="outline" className="h-11 px-5 md:h-9" onClick={onRetry} disabled={retrying}>{retrying ? <Spinner className="size-3.5" /> : <RotateCw />} Retry</Button></div>

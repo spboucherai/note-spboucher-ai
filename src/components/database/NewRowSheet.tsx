@@ -118,9 +118,9 @@ export function NewRowSheet({ open, preset, onClose }: { open: boolean; preset: 
           ))}
           {ctx.props.length - 1 > fields.length && <p className="text-[12px] leading-5 text-fg-faint">The other properties, files and notes can be filled in after creation (open the row).</p>}
           {!online && <p role="status" className="rounded-lg border border-warning/30 bg-warning/15 px-3 py-2 text-[13px] leading-5">You are offline. The draft is saved on this device; create the row when the connection is back.</p>}
-          {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-5 text-danger">{error}</p>}
+          {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] leading-5 text-danger-text">{error}</p>}
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" className="h-11 px-3 text-[15px] text-danger hover:text-danger" disabled={!dirty || saving} onClick={discard}>Discard draft</Button>
+            <Button type="button" variant="ghost" className="h-11 px-3 text-[15px] text-danger-text hover:text-danger-text" disabled={!dirty || saving} onClick={discard}>Discard draft</Button>
             <Button type="submit" className="ml-auto h-11 min-w-28 px-5 text-[15px]" disabled={saving}>{saving ? <Spinner className="border-t-white" /> : null}{saving ? "Creating…" : "Create row"}</Button>
           </div>
         </form>

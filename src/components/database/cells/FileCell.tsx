@@ -61,7 +61,7 @@ export function FilePopover({ value, pageId, onChange, open, onOpenChange, child
               <span className="min-w-0 flex-1 truncate">{f.name}</span>
               <ExternalLink className="size-3.5 shrink-0 text-fg-faint" />
             </a>
-            <button type="button" aria-label={`Remove ${f.name}`} onClick={() => onChange(files.filter((x) => x.id !== f.id))} className="grid size-9 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-bg-sunk hover:text-danger max-md:size-11">
+            <button type="button" aria-label={`Remove ${f.name}`} onClick={() => onChange(files.filter((x) => x.id !== f.id))} className="grid size-9 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-bg-sunk hover:text-danger-text max-md:size-11">
               <X className="size-4" />
             </button>
           </li>

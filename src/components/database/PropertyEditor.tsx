@@ -44,7 +44,7 @@ export function PropertyEditor({ prop, onClose, onBack }: { prop?: Property; onC
     <div className="w-64">
       <div className="mb-1.5 flex items-center gap-1 text-[12px] font-medium text-fg-muted">{prop && <button type="button" onClick={() => setPickType(false)} className="rounded p-0.5 hover:bg-bg-sunk"><ChevronLeft className="size-4" /></button>}{prop ? "Change type" : "Property type"}</div>
       <div className="max-h-72 overflow-y-auto">{CREATABLE.map((t) => <button key={t} type="button" onClick={() => changeType(t)} className={cn("flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] hover:bg-bg-sunk", t === type && "bg-bg-sunk")}><TypeIcon type={t} />{TYPE_META[t].label}</button>)}</div>
-      {prop && prop.type !== type && <div className="mt-1 text-[11px] text-warning">Changing the type converts existing values when possible.</div>}
+      {prop && prop.type !== type && <div className="mt-1 text-[11px] text-warning-text">Changing the type converts existing values when possible.</div>}
     </div>
   );
   return (
@@ -53,12 +53,12 @@ export function PropertyEditor({ prop, onClose, onBack }: { prop?: Property; onC
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Property name" autoFocus className={inputCls} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } if (e.key === "Escape") onClose(); }} />
       <button type="button" disabled={prop?.type === "title"} onClick={() => setPickType(true)} className="flex h-8 w-full items-center gap-2 rounded-md border border-line px-2 text-[13px] hover:bg-bg-sunk disabled:opacity-60"><TypeIcon type={type} />{TYPE_META[type].label}<span className="ml-auto text-[11px] text-fg-faint">{prop?.type === "title" ? "fixed" : "change"}</span></button>
       <ConfigEditor type={type} config={config} set={set} prop={prop} />
-      {cycle && <p role="alert" data-testid="formula-cycle" className="rounded-md bg-danger/10 px-2 py-1.5 text-[12px] text-danger">Circular reference: {cycle.join(" → ")}. A formula cannot read itself, directly or through other formulas.</p>}
+      {cycle && <p role="alert" data-testid="formula-cycle" className="rounded-md bg-danger/10 px-2 py-1.5 text-[12px] text-danger-text">Circular reference: {cycle.join(" → ")}. A formula cannot read itself, directly or through other formulas.</p>}
       {type === "ai" && aiProblem(aiConfigOf(config)) && <p className="text-[11px] text-fg-muted">You can save now and complete the configuration later; cells will show the problem until then.</p>}
       <div className="flex items-center gap-1.5 pt-1">
         <Button size="sm" onClick={save} disabled={m.create.isPending || m.update.isPending || (type === "relation" && !config.targetDatabaseId) || !!cycle}>{prop ? "Save" : "Add property"}</Button>
         <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
-        {prop && prop.type !== "title" && (confirm ? <Button size="sm" variant="danger" className="ml-auto" onClick={async () => { try { await m.remove.mutateAsync(prop.id); onClose(); } catch { /* toast shown by the mutation */ } }}>Confirm delete</Button> : <Button size="sm" variant="ghost" className="ml-auto text-danger" onClick={() => setConfirm(true)}><Trash2 /></Button>)}
+        {prop && prop.type !== "title" && (confirm ? <Button size="sm" variant="danger" className="ml-auto" onClick={async () => { try { await m.remove.mutateAsync(prop.id); onClose(); } catch { /* toast shown by the mutation */ } }}>Confirm delete</Button> : <Button size="sm" variant="ghost" className="ml-auto text-danger-text" onClick={() => setConfirm(true)}><Trash2 /></Button>)}
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ function OptionsEditor({ options, status, onChange }: { options: SelectOption[];
           <ColorDot color={o.color} onChange={(color) => upd(o.id, { color })} />
           <input value={o.name} onChange={(e) => upd(o.id, { name: e.target.value })} className={cn(inputCls, "h-7 min-w-0 flex-1")} />
           {status && <Sel value={o.group ?? "todo"} onChange={(e) => upd(o.id, { group: e.target.value as any })} className="h-7 w-24 px-1 text-[12px]"><option value="todo">To-do</option><option value="in_progress">In progress</option><option value="done">Done</option></Sel>}
-          <button type="button" onClick={() => onChange(options.filter((x) => x.id !== o.id))} className="grid size-7 shrink-0 place-items-center rounded text-fg-faint hover:bg-bg-sunk hover:text-danger"><X className="size-3.5" /></button>
+          <button type="button" onClick={() => onChange(options.filter((x) => x.id !== o.id))} className="grid size-7 shrink-0 place-items-center rounded text-fg-faint hover:bg-bg-sunk hover:text-danger-text"><X className="size-3.5" /></button>
         </div>))}</div>
       <div className="flex items-center gap-1"><input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="New option" className={cn(inputCls, "h-7")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /><Button size="iconXs" variant="outline" onClick={add}><Plus /></Button></div>
     </div>
@@ -115,7 +115,7 @@ function RollupConfig({ config, set, prop }: { config: PropertyConfig; set: (c: 
   const { data: target } = useRemoteDatabase(rel?.config.targetDatabaseId as string | undefined);
   return (
     <div className="space-y-2">
-      <Field label="Relation"><Sel value={config.relationPropertyId ?? ""} onChange={(e) => set({ relationPropertyId: e.target.value || undefined, targetPropertyId: undefined })} className="w-full"><option value="">Choose…</option>{rels.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Sel>{!rels.length && <span className="text-[11px] text-warning">Add a relation property first.</span>}</Field>
+      <Field label="Relation"><Sel value={config.relationPropertyId ?? ""} onChange={(e) => set({ relationPropertyId: e.target.value || undefined, targetPropertyId: undefined })} className="w-full"><option value="">Choose…</option>{rels.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Sel>{!rels.length && <span className="text-[11px] text-warning-text">Add a relation property first.</span>}</Field>
       <Field label="Property of the related rows"><Sel value={config.targetPropertyId ?? ""} onChange={(e) => set({ targetPropertyId: e.target.value || undefined })} className="w-full" disabled={!target}><option value="">Choose…</option>{(target?.properties ?? []).filter((p) => p.type !== "file" && p.id !== prop?.id).map((p) => <option key={p.id} value={p.id}>{p.name}{["relation", "rollup", "formula"].includes(p.type) ? ` (${p.type})` : ""}</option>)}</Sel></Field>
       <Field label="Calculate"><Sel value={config.aggregate ?? "count"} onChange={(e) => set({ aggregate: e.target.value as any })} className="w-full">{AGGREGATES.map((a) => <option key={a} value={a}>{AGG_LABEL[a]}</option>)}</Sel></Field>
     </div>
@@ -129,7 +129,7 @@ function FormulaConfig({ config, set }: { config: PropertyConfig; set: (c: Parti
   return (
     <div className="space-y-1.5">
       <Field label="Expression"><textarea value={expr} onChange={(e) => set({ expression: e.target.value })} rows={3} spellCheck={false} placeholder='if(prop("Done"), "✓", dateDiff(prop("Due"), today(), "days"))' className={cn(inputCls, "h-auto py-1.5 font-mono text-[12px] max-md:h-auto")} /></Field>
-      {expr.trim() && <div data-testid="formula-preview" data-error={err ? "true" : undefined} className={cn("rounded-md px-2 py-1.5 text-[12px]", err ? "bg-danger/10 text-danger" : "bg-bg-sunk text-fg-muted")}>{err ? err : <>Preview{row ? ` (${row.title || "first row"})` : ""}: <span className="font-medium text-fg">{preview == null ? "—" : displayValue({ id: "", databaseId: "", name: "", type: "formula", config: {}, position: 0, width: null }, preview)}</span></>}</div>}
+      {expr.trim() && <div data-testid="formula-preview" data-error={err ? "true" : undefined} className={cn("rounded-md px-2 py-1.5 text-[12px]", err ? "bg-danger/10 text-danger-text" : "bg-bg-sunk text-fg-muted")}>{err ? err : <>Preview{row ? ` (${row.title || "first row"})` : ""}: <span className="font-medium text-fg">{preview == null ? "—" : displayValue({ id: "", databaseId: "", name: "", type: "formula", config: {}, position: 0, width: null }, preview)}</span></>}</div>}
       <details className="text-[11px] text-fg-faint"><summary className="cursor-pointer select-none">Functions</summary><pre className="mt-1 whitespace-pre-wrap font-mono text-[10.5px] leading-4">{FORMULA_HELP}</pre><div className="mt-1">Properties: {ctx.props.filter((p) => p.type !== "formula" || p.config.expression !== expr).map((p) => `prop("${p.name}")`).join(" · ")}</div></details>
     </div>
   );

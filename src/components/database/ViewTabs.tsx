@@ -94,7 +94,7 @@ export function ViewTabs({ db, view, onSelect, settingsOpen, onSettingsOpenChang
               </button>
             ))}
           </div>
-          {m.createView.isError && <p role="alert" className="text-[12px] text-danger max-md:text-[13px]">The view was not created: {(m.createView.error as any)?.message ?? "unknown error"}. Try again.</p>}
+          {m.createView.isError && <p role="alert" className="text-[12px] text-danger-text max-md:text-[13px]">The view was not created: {(m.createView.error as any)?.message ?? "unknown error"}. Try again.</p>}
           <Button size="sm" className="w-full max-md:h-11 max-md:text-[15px]" onClick={create} disabled={m.createView.isPending}>{m.createView.isPending ? "Creating…" : "Create view"}</Button>
         </div>
       </ResponsivePanel>
@@ -159,7 +159,7 @@ function ViewSettings({ db, view, onClose, onDeleted }: { db: Database; view: Vi
         {view.isDefault
           ? <span className="flex items-center gap-1 text-[12px] text-fg-muted max-md:text-[13px]"><Star className="size-3.5" /> Default view</span>
           : <Button size="xs" variant="ghost" className={actionCls} onClick={() => m.patchView.mutate({ id: view.id, isDefault: true })}><Star /> Make default</Button>}
-        {db.views.length > 1 && <Button size="xs" variant="ghost" className={cn("ml-auto text-danger", actionCls)} onClick={remove}><Trash2 /> Delete view</Button>}
+        {db.views.length > 1 && <Button size="xs" variant="ghost" className={cn("ml-auto text-danger-text", actionCls)} onClick={remove}><Trash2 /> Delete view</Button>}
       </div>
     </div>
   );

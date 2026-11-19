@@ -16,7 +16,7 @@ function Side({ p, tone }: { p: Preview | null | undefined; tone: "before" | "af
   if (!p) return null;
   return (
     <div className={cn("min-w-0 rounded-lg border-l-[3px] px-3 py-2", tone === "before" ? "border-danger/50 bg-danger/5" : "border-success/60 bg-success/5")}>
-      <div className={cn("text-[11px] font-semibold uppercase tracking-wide", tone === "before" ? "text-danger" : "text-success")}>{tone === "before" ? "Before" : "After"} · {p.label}</div>
+      <div className={cn("text-[11px] font-semibold uppercase tracking-wide", tone === "before" ? "text-danger-text" : "text-success-text")}>{tone === "before" ? "Before" : "After"} · {p.label}</div>
       {(p.lines ?? []).map((l, i) => <p key={i} className="mt-0.5 text-[13.5px] leading-5 [overflow-wrap:anywhere]">{l}</p>)}
       {p.markdown && <div className="chat-md mt-1 max-h-56 min-w-0 overflow-y-auto rounded-md bg-bg-elev/70 px-2 py-1 text-[13.5px]"><Markdown text={p.markdown} /></div>}
     </div>
@@ -34,11 +34,11 @@ export function ProposalCard({ p, busy, onApprove, onReject, onUndo }: { p: Prop
         <Badge tone={TONE[p.status] ?? "neutral"}>{p.status === "proposed" ? "to review" : p.status}</Badge>
       </header>
       <div className="grid min-w-0 gap-2 px-3 pb-3 pt-2">
-        {p.destructive && <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-danger"><Trash2 className="size-4 shrink-0" />Moves the page to the trash — asks for a second confirmation.</p>}
+        {p.destructive && <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-danger-text"><Trash2 className="size-4 shrink-0" />Moves the page to the trash — asks for a second confirmation.</p>}
         {p.rationale && <p className="text-[13px] leading-5 text-fg-muted"><span className="font-medium text-fg">Why: </span>{p.rationale}</p>}
         {supported ? <><Side p={p.before} tone="before" />{p.before && <ArrowDown aria-hidden className="mx-auto size-4 text-fg-faint" />}<Side p={p.after} tone="after" /></> : <p className="text-[13px] text-fg-muted">This proposal comes from an older version and cannot be applied.</p>}
         {p.pageId && <a href={`/p/${p.pageId}`} className="inline-flex min-h-11 items-center gap-1.5 self-start text-[13px] font-medium text-accent sm:min-h-0"><ExternalLink className="size-3.5" />Open the page concerned</a>}
-        {p.error && <p role="alert" className="text-[13px] text-danger [overflow-wrap:anywhere]">Not applied: {p.error}</p>}
+        {p.error && <p role="alert" className="text-[13px] text-danger-text [overflow-wrap:anywhere]">Not applied: {p.error}</p>}
         {p.status === "applied" && <div className="flex flex-wrap items-center gap-2"><span className="text-[12.5px] text-fg-muted">Applied{p.appliedAt ? ` ${new Date(p.appliedAt).toLocaleString()}` : ""}. The previous state is kept.</span><Button variant="outline" className="ml-auto h-11 sm:h-9" disabled={busy} onClick={onUndo}><Undo2 />Undo</Button></div>}
         {p.status === "undone" && <p className="text-[12.5px] text-fg-muted">Undone{p.undoneAt ? ` ${new Date(p.undoneAt).toLocaleString()}` : ""}: the previous state was restored.</p>}
         {p.status === "proposed" && supported && <div className="grid grid-cols-2 gap-2"><Button variant="outline" className="h-11 sm:h-9" disabled={busy} onClick={onReject}><X />Reject</Button><Button variant={p.destructive ? "danger" : "default"} className="h-11 sm:h-9" disabled={busy} onClick={onApprove}><Check />{p.destructive ? "Approve…" : "Approve"}</Button></div>}

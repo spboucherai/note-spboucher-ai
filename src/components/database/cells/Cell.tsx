@@ -18,7 +18,7 @@ const toLocalInput = (v: unknown, time: boolean) => { if (typeof v !== "string" 
 /** Read-only rendering used by every view. */
 export function CellDisplay({ p, value, row, compact }: { p: Property; value: unknown; row?: RowOut; compact?: boolean }) {
   if (isPending(value)) return <span className="inline-flex items-center gap-1 text-[12px] text-ai"><Spinner className="size-3" /> generating…</span>;
-  if (isError(value)) return <Tip label={value.error}><span data-cell-error title={value.error} className="inline-flex max-w-full items-center gap-1 text-[12px] text-danger"><AlertCircle className="size-3 shrink-0" /><span className="truncate">{p.type === "formula" || p.type === "rollup" ? value.error : "error"}</span></span></Tip>;
+  if (isError(value)) return <Tip label={value.error}><span data-cell-error title={value.error} className="inline-flex max-w-full items-center gap-1 text-[12px] text-danger-text"><AlertCircle className="size-3 shrink-0" /><span className="truncate">{p.type === "formula" || p.type === "rollup" ? value.error : "error"}</span></span></Tip>;
   if (isEmpty(value)) return null;
   switch (p.type) {
     case "title": return <span className="font-medium">{row?.icon ? `${row.icon} ` : ""}{String(value)}</span>;

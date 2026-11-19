@@ -87,7 +87,7 @@ export function TasksDue({ data, refresh }: WidgetProps) {
           <button onClick={() => complete(t.id)} className="grid size-5 shrink-0 place-items-center rounded border border-line-strong hover:border-accent hover:bg-accent-soft" aria-label="Complete task"><Check className="size-3 opacity-0 hover:opacity-100" /></button>
           <div className="min-w-0 flex-1"><div className="truncate text-[13px]">{t.title}</div>{(t.project || t.pageTitle) && <div className="truncate text-[11px] text-fg-faint">{t.project && <span>#{t.project}</span>}{t.project && t.pageTitle && " · "}{t.pageId && <Link href={`/p/${t.pageId}`} className="hover:text-accent">{t.pageTitle}</Link>}</div>}</div>
           {t.priority === "high" && <Badge tone="danger">high</Badge>}
-          {due && <span className={cn("shrink-0 text-[11px]", overdue ? "font-medium text-danger" : isToday ? "text-accent" : "text-fg-faint")}>{overdue ? "overdue · " : ""}{fmtDate(due, { month: "short", day: "numeric" })}</span>}
+          {due && <span className={cn("shrink-0 text-[11px]", overdue ? "font-medium text-danger-text" : isToday ? "text-accent" : "text-fg-faint")}>{overdue ? "overdue · " : ""}{fmtDate(due, { month: "short", day: "numeric" })}</span>}
         </div>); }) : <EmptyLine>Nothing due in the next 7 days.</EmptyLine>}
       <More href="/tasks"><Inbox className="size-3.5" /> Open tasks</More>
     </div>
@@ -142,7 +142,7 @@ export function Usage({ data }: WidgetProps) {
   const u = data.usage; const pct = u.budgetUsd > 0 ? Math.min(100, (u.today.costUsd / u.budgetUsd) * 100) : 0;
   return (
     <div className="flex flex-1 flex-col gap-3">
-      <div className="flex items-end gap-4"><div><div className="text-2xl font-semibold tabular-nums tracking-tight">{money(u.today.costUsd)}</div><div className="text-[11px] text-fg-muted">spent today</div></div><div><div className="text-2xl font-semibold tabular-nums tracking-tight">{u.today.calls}</div><div className="text-[11px] text-fg-muted">call{u.today.calls === 1 ? "" : "s"}{u.today.errors ? <span className="text-danger"> · {u.today.errors} failed</span> : null}</div></div></div>
+      <div className="flex items-end gap-4"><div><div className="text-2xl font-semibold tabular-nums tracking-tight">{money(u.today.costUsd)}</div><div className="text-[11px] text-fg-muted">spent today</div></div><div><div className="text-2xl font-semibold tabular-nums tracking-tight">{u.today.calls}</div><div className="text-[11px] text-fg-muted">call{u.today.calls === 1 ? "" : "s"}{u.today.errors ? <span className="text-danger-text"> · {u.today.errors} failed</span> : null}</div></div></div>
       <div><div className="mb-1 flex justify-between text-[11px] text-fg-muted"><span>Daily budget</span><span className="tabular-nums">{pct.toFixed(0)}% of ${u.budgetUsd.toFixed(2)}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-bg-sunk"><div className={cn("h-full rounded-full transition-[width]", pct >= 90 ? "bg-danger" : pct >= 60 ? "bg-warning" : "bg-accent")} style={{ width: `${pct}%` }} /></div></div>
       <More href="/ai/models"><ExternalLink className="size-3.5" /> Models, routes and usage</More>
     </div>

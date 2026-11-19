@@ -65,7 +65,7 @@ export function BulkBar({ sel, setSel }: { sel: Selection; setSel: (s: Selection
         </ResponsivePanel>
       )}
       <button type="button" disabled={busy || n > LIMIT.duplicate} title={n > LIMIT.duplicate ? `Duplicate at most ${LIMIT.duplicate} rows at a time` : undefined} onClick={() => run({ type: "duplicate" }, "Duplicate")} className={btn}><Copy /> Duplicate</button>
-      <button type="button" disabled={busy || n > LIMIT.delete} title={n > LIMIT.delete ? `Delete at most ${LIMIT.delete.toLocaleString("en-CA")} rows at a time` : undefined} onClick={() => { if (n > 1 && !confirm(`Move ${n.toLocaleString("en-CA")} rows to the trash? You can undo this right after.`)) return; void run({ type: "delete" }, "Delete"); }} className={cn(btn, "text-danger hover:bg-danger/10")}><Trash2 /> Delete</button>
+      <button type="button" disabled={busy || n > LIMIT.delete} title={n > LIMIT.delete ? `Delete at most ${LIMIT.delete.toLocaleString("en-CA")} rows at a time` : undefined} onClick={() => { if (n > 1 && !confirm(`Move ${n.toLocaleString("en-CA")} rows to the trash? You can undo this right after.`)) return; void run({ type: "delete" }, "Delete"); }} className={cn(btn, "text-danger-text hover:bg-danger/10")}><Trash2 /> Delete</button>
       <button type="button" onClick={clear} aria-label="Clear the selection" className={cn(btn, "text-fg-muted")}><X /> Clear</button>
       {undoBtns}
     </div>

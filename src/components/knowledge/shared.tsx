@@ -66,5 +66,5 @@ export function PagePicker({ open, onOpenChange, onPick, title = "Choose a page"
 }
 /** Inline state blocks used by every screen: loading rows and a retry-able error. */
 export function LoadError({ what, error, onRetry }: { what: string; error: unknown; onRetry: () => void }) {
-  return <div role="alert" className="rounded-card border border-danger/30 bg-danger/5 p-3 text-ui"><p className="text-danger">Could not load {what}: {(error as Error)?.message ?? "unknown error"}</p><button type="button" onClick={onRetry} className="mt-2 h-11 rounded-control border border-line bg-bg-elev px-3 font-medium sm:h-8">Retry</button></div>;
+  return <div role="alert" className="rounded-card border border-danger/30 bg-danger/5 p-3 text-ui"><p className="text-danger-text">Could not load {what}: {(error as Error)?.message ?? "unknown error"}</p><button type="button" onClick={onRetry} className="mt-2 h-11 rounded-control border border-line bg-bg-elev px-3 font-medium sm:h-8">Retry</button></div>;
 }

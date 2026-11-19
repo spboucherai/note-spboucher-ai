@@ -41,6 +41,10 @@ const PAIRS = [
   ["accent", "bg", 4.5, "links"], ["accent", "bg-elev", 4.5, "links on cards"], ["accent", "accent-soft", 4.5, "accent text on its soft chip"], ["accent-fg", "accent", 4.5, "primary button label"],
   ["ai", "bg", 4.5, "AI text"], ["ai", "ai-soft", 4.5, "AI text on its soft surface"], ["ai", "bg-elev", 4.5, "AI text on cards"],
   ["danger", "bg", 4.5, "error text"], ["success", "bg", 3, "success icons / large text"], ["warning", "bg", 0, "warning hue — informational: paired with a text label in fg, never used alone as text"],
+  // SPEC §7: small semantic text uses the *-text variants (darker in light mode, the base hue in dark mode)
+  ["success-text", "bg", 4.5, "small success text"], ["success-text", "bg-elev", 4.5, "small success text on cards"], ["success-text", "bg-sunk", 4.5, "small success text on sunken surfaces"],
+  ["warning-text", "bg", 4.5, "small warning text"], ["warning-text", "bg-elev", 4.5, "small warning text on cards"], ["warning-text", "bg-sunk", 4.5, "small warning text on sunken surfaces"],
+  ["danger-text", "bg", 4.5, "small error text"], ["danger-text", "bg-elev", 4.5, "small error text on cards"], ["danger-text", "bg-sunk", 4.5, "small error text on sunken surfaces"],
   ["focus", "bg", 3, "focus ring (non-text: 3:1)"], ["focus", "bg-elev", 3, "focus ring on cards"], ["focus", "bg-side", 3, "focus ring in the sidebar"],
   ["line-strong", "bg", 0, "decorative separators — informational"],
 ];

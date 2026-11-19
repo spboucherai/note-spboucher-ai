@@ -60,7 +60,7 @@ export function RelationPopover({ p, value, onChange, open, onOpenChange, childr
         </div>
       )}
       {!target ? (
-        <div role="alert" className="px-2 py-2 text-[12px] text-danger max-md:text-[14px]">No target database configured for this relation. Edit the property to choose one.</div>
+        <div role="alert" className="px-2 py-2 text-[12px] text-danger-text max-md:text-[14px]">No target database configured for this relation. Edit the property to choose one.</div>
       ) : (
         <>
           <input
@@ -74,7 +74,7 @@ export function RelationPopover({ p, value, onChange, open, onOpenChange, childr
           <div role="listbox" aria-label={`Rows for ${p.name}`} aria-multiselectable={!p.config.single} className="mt-1 max-h-60 overflow-y-auto max-md:max-h-none">
             {query.isLoading && <div className="space-y-2 p-2" role="status" aria-label="Loading rows"><Skeleton className="h-6" /><Skeleton className="h-6" /><Skeleton className="h-6" /></div>}
             {query.isError && (
-              <div role="alert" className="flex items-center gap-2 px-2 py-2 text-[12px] text-danger max-md:text-[14px]">
+              <div role="alert" className="flex items-center gap-2 px-2 py-2 text-[12px] text-danger-text max-md:text-[14px]">
                 <span className="min-w-0 flex-1">Could not load rows.</span>
                 <button type="button" onClick={() => query.refetch()} className="h-8 shrink-0 rounded-md border border-line px-2 text-fg max-md:h-11 max-md:px-3">Retry</button>
               </div>

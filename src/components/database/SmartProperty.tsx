@@ -58,14 +58,14 @@ export function AiConfigEditor({ value, onChange }: { value: AiConfig; onChange:
       {usesChoices && (
         <div className="space-y-1">
           <div className="text-[12px] font-medium text-fg-muted">Choices</div>
-          {value.choices.length > 0 && <ul className="flex flex-wrap gap-1" aria-label="Choices">{value.choices.map((c) => <li key={c} className="flex items-center gap-1 rounded-md bg-bg-sunk py-0.5 pl-2 pr-1 text-[12px] max-md:text-[14px]">{c}<button type="button" aria-label={`Remove choice ${c}`} onClick={() => set({ choices: value.choices.filter((x) => x !== c) })} className="grid size-5 place-items-center rounded text-fg-muted hover:text-danger max-md:size-9"><X className="size-3" /></button></li>)}</ul>}
+          {value.choices.length > 0 && <ul className="flex flex-wrap gap-1" aria-label="Choices">{value.choices.map((c) => <li key={c} className="flex items-center gap-1 rounded-md bg-bg-sunk py-0.5 pl-2 pr-1 text-[12px] max-md:text-[14px]">{c}<button type="button" aria-label={`Remove choice ${c}`} onClick={() => set({ choices: value.choices.filter((x) => x !== c) })} className="grid size-5 place-items-center rounded text-fg-muted hover:text-danger-text max-md:size-9"><X className="size-3" /></button></li>)}</ul>}
           <div className="flex items-center gap-1"><input aria-label="New choice" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="New choice" className={cn(inputCls, "h-7")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); add(); } }} /><Button size="iconXs" variant="outline" aria-label="Add choice" onClick={add}><Plus /></Button></div>
         </div>
       )}
       <div className="space-y-1"><div className="text-[12px] font-medium text-fg-muted">Model</div><ModelPicker aria-label="Model of this AI property" value={value.model} onChange={(id) => set({ model: id })} className="w-full" compact /></div>
       <label className="flex items-start justify-between gap-3 text-[13px]"><span>Run automatically<span className="block text-[11px] leading-4 text-fg-muted">Recomputes the cell when another value of the row changes. Each run calls the model (see the runs log for the cost).</span></span><Switch aria-label="Run automatically" checked={value.autoRun} onCheckedChange={(v) => set({ autoRun: v })} /></label>
       <label className="flex items-start justify-between gap-3 text-[13px]"><span>AI-managed<span className="block text-[11px] leading-4 text-fg-muted">Off (default): a value typed by hand is never overwritten by the AI. On: the AI may replace it.</span></span><Switch aria-label="AI-managed" checked={value.managed} onCheckedChange={(v) => set({ managed: v })} /></label>
-      {problem && <p role="status" data-testid="ai-problem" className="flex items-center gap-1 rounded-md bg-danger/10 px-2 py-1.5 text-[12px] text-danger"><AlertCircle className="size-3.5 shrink-0" /> {problem}</p>}
+      {problem && <p role="status" data-testid="ai-problem" className="flex items-center gap-1 rounded-md bg-danger/10 px-2 py-1.5 text-[12px] text-danger-text"><AlertCircle className="size-3.5 shrink-0" /> {problem}</p>}
     </div>
   );
 }
@@ -146,7 +146,7 @@ export function AiRunsDrawer({ open, onClose, propertyId }: { open: boolean; onC
                     <span className="tabular-nums" data-run-cost>{usd(r.costUsd)}</span>
                     {r.status === "failed" && <button type="button" onClick={() => { void ctx.regenerate(r.rowId, r.propertyId); }} className="flex h-6 items-center gap-1 rounded px-1.5 text-ai hover:bg-ai-soft max-md:h-9"><RefreshCw className="size-3" /> Retry</button>}
                   </div>
-                  {r.error && <p className={cn("mt-1 [overflow-wrap:anywhere]", r.status === "failed" ? "text-danger" : "text-fg-muted")} data-run-error>{r.error}</p>}
+                  {r.error && <p className={cn("mt-1 [overflow-wrap:anywhere]", r.status === "failed" ? "text-danger-text" : "text-fg-muted")} data-run-error>{r.error}</p>}
                 </li>))}</ul>}
           </div>
         </DialogP.Content>

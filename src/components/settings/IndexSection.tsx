@@ -12,7 +12,7 @@ import { timeAgo } from "@/lib/utils";
 export function IndexSection() {
   const { data: s, refetch, error } = useQuery({ queryKey: ["index-stats"], queryFn: () => api<any>("/api/search/index-state"), refetchInterval: 8000 });
   async function run(scope: "all" | "pending") { try { const r = await api<{ queued: number }>("/api/search/index-state", { method: "POST", json: { scope } }); toast(scope === "all" ? "Full re-index queued" : `${r.queued} item${r.queued === 1 ? "" : "s"} queued`); setTimeout(() => refetch(), 2500); } catch (e: any) { toast("Could not queue", { description: e.message, tone: "danger" }); } }
-  if (error) return <p className="text-[13px] text-danger">Could not read the index state. <button className="underline" onClick={() => refetch()}>Retry</button></p>;
+  if (error) return <p className="text-[13px] text-danger-text">Could not read the index state. <button className="underline" onClick={() => refetch()}>Retry</button></p>;
   if (!s) return <Skeleton className="h-40 rounded-2xl" />;
   const pending = s.health.pending.length + s.health.pendingFiles; const failed = s.health.failed.length;
   return (

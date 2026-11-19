@@ -27,7 +27,7 @@ export const TButton = React.forwardRef<HTMLButtonElement, ButtonProps>(({ class
 TButton.displayName = "TButton";
 /** Icon-only button: 44 px on phones, always labelled. */
 export function IconBtn({ label, className, danger, children, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string; danger?: boolean }) {
-  return <button type="button" aria-label={label} title={label} className={cn("grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-bg-sunk hover:text-fg disabled:opacity-40 md:size-8 [&_svg]:size-[18px] md:[&_svg]:size-4", danger && "hover:text-danger", className)} {...p}>{children}</button>;
+  return <button type="button" aria-label={label} title={label} className={cn("grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-bg-sunk hover:text-fg disabled:opacity-40 md:size-8 [&_svg]:size-[18px] md:[&_svg]:size-4", danger && "hover:text-danger-text", className)} {...p}>{children}</button>;
 }
 export function Select({ className, children, ...p }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return <select className={cn("h-11 min-w-0 rounded-md border border-line bg-bg-elev px-2 text-[16px] shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 md:h-8 md:text-[13px]", className)} {...p}>{children}</select>;

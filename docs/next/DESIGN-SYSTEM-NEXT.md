@@ -167,3 +167,18 @@ before), `animate-in` (overlay fade — the utility did not exist before).
 - Do keep wide content scrolling inside its block (`.nb-scroll`); don't let a block widen the page (phones: one scroll container, `--kb` inset).
 - Don't put text on the Lumen gradient or use glass under long-form text; glass is for chrome that floats over content.
 - Don't remove or rename a token: the native apps mirror these names.
+
+
+## Small semantic text (SPEC §7 amendment, applied in the integration pass)
+
+Semantic hues used as **small text** have their own tokens; fills, icons and borders keep the base hues.
+
+| CSS variable | Tailwind class | light | dark | contrast on `bg` / `bg-elev` / `bg-sunk` (light) |
+|---|---|---|---|---|
+| `--success-text` | `text-success-text` | `#006B3C` | `#5BC083` (= `--success`) | 6.39 / 6.63 / 5.95 |
+| `--warning-text` | `text-warning-text` | `#8A5A00` | `#F2AF48` (= `--warning`) | 5.71 / 5.93 / 5.33 |
+| `--danger-text` | `text-danger-text` | `#B0181F` | `#F26A64` (= `--danger`) | 6.75 / 7.01 / 6.30 |
+
+Rule: a `text-success|warning|danger` class on an HTML element that holds text is written `text-…-text`; on an icon component it stays
+the base hue. In CSS, `color: var(--danger)` for text is `color: var(--danger-text)`. `pnpm contrast` checks the nine light and nine
+dark pairs at 4.5:1.

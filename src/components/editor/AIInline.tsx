@@ -182,7 +182,7 @@ export function AIInline({ state, editor, onClose }: { state: AIInlineState; edi
           )}
           {error && (
             <div role="alert" className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-[13px] leading-5">
-              <p className="font-medium text-danger">{error.code === "not_configured" ? "AI is not configured." : "The action failed."}</p><p className="mt-0.5 [overflow-wrap:anywhere]">{error.message}</p>
+              <p className="font-medium text-danger-text">{error.code === "not_configured" ? "AI is not configured." : "The action failed."}</p><p className="mt-0.5 [overflow-wrap:anywhere]">{error.message}</p>
               <p className="mt-0.5 text-fg-muted">Your text was not changed.</p>
               <div className="mt-2 flex flex-wrap gap-2">{error.retryable && last && <Button variant="outline" className="h-11 sm:h-9" onClick={() => run(last.act, last.opts)}><RotateCcw />Retry</Button>}<Button variant="ghost" className="h-11 sm:h-9" onClick={() => { setError(null); setOut(""); setDone(false); }}>Choose another action</Button></div>
             </div>

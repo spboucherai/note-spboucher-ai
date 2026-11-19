@@ -74,7 +74,7 @@ function DoiPane({ pageId, onDone, onOpenRef, toManual, toBibtex }: { pageId: st
           {preview.duplicate && <div className="mt-2 rounded-md bg-warning/10 p-2.5 text-[13px]" role="status"><b>Already in your library</b> as <span className="font-mono">{preview.duplicate.citeKey}</span> (same DOI){preview.duplicate.pageId && preview.duplicate.pageId !== pageId ? ", on another page" : ""}. Nothing will be added twice.{pageId && !preview.duplicate.pageId ? " “Use it here” attaches it to this page." : ""}</div>}
         </div>
       )}
-      {err && (err.code === "invalid_doi" ? <p role="alert" className="text-[13px] text-danger">{err.message}</p> : err.code === "doi_not_found" ? (
+      {err && (err.code === "invalid_doi" ? <p role="alert" className="text-[13px] text-danger-text">{err.message}</p> : err.code === "doi_not_found" ? (
         <ErrorBox className="mt-0" title="Crossref does not know this DOI" message={err.message}><TButton type="button" variant="outline" onClick={() => toManual(doi)}>Enter it manually</TButton><TButton type="button" variant="outline" onClick={toBibtex}>Paste BibTeX</TButton></ErrorBox>
       ) : <ErrorBox className="mt-0" title={retryable ? "Crossref could not be reached" : "The reference was not added"} message={`${err.message} Your DOI is still in the field.`} onRetry={err.retry === "add" ? add : lookup} />)}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -117,10 +117,10 @@ function BibtexPane({ pageId, onDone, onClose }: { pageId: string | null; onDone
           <ul className="mt-1 space-y-0.5 text-fg-muted">
             <li><b className="text-fg">{result ? report.counts.created : report.counts.wouldCreate}</b> {result ? "imported" : "new — will be imported"}</li>
             <li><b className="text-fg">{report.counts.skipped}</b> already in your library or repeated — skipped, never overwritten</li>
-            {report.counts.failed > 0 && <li className="text-danger"><b>{report.counts.failed}</b> could not be read — not imported</li>}
+            {report.counts.failed > 0 && <li className="text-danger-text"><b>{report.counts.failed}</b> could not be read — not imported</li>}
           </ul>
           {report.skipped.length > 0 && <details className="mt-2"><summary className="flex min-h-11 cursor-pointer items-center text-fg-muted md:min-h-8">Why {report.counts.skipped} were skipped</summary><ul className="max-h-48 space-y-1 overflow-y-auto">{report.skipped.slice(0, 100).map((s, i) => <li key={`${s.citeKey}-${i}`} className="break-words"><span className="font-mono">{s.citeKey}</span> — {s.reason}</li>)}</ul></details>}
-          {report.failed.length > 0 && <details className="mt-1" open><summary className="flex min-h-11 cursor-pointer items-center text-danger md:min-h-8">Entries to fix</summary><ul className="max-h-48 space-y-1 overflow-y-auto">{report.failed.slice(0, 100).map((s, i) => <li key={`${s.citeKey}-${i}`} className="break-words"><span className="font-mono">{s.citeKey}</span> — {s.reason}</li>)}</ul></details>}
+          {report.failed.length > 0 && <details className="mt-1" open><summary className="flex min-h-11 cursor-pointer items-center text-danger-text md:min-h-8">Entries to fix</summary><ul className="max-h-48 space-y-1 overflow-y-auto">{report.failed.slice(0, 100).map((s, i) => <li key={`${s.citeKey}-${i}`} className="break-words"><span className="font-mono">{s.citeKey}</span> — {s.reason}</li>)}</ul></details>}
           {!result && report.counts.wouldCreate === 0 && <p className="mt-2 text-fg-muted">Nothing new to import.</p>}
         </div>
       )}

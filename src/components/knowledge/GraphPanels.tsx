@@ -22,7 +22,7 @@ import { EDGE_KIND_LABEL, REL_LABEL, REL_TYPES, edgeStyle, isAI, isRealEdge } fr
 import { AIBadge, PagePicker, Segmented, fmtDay, pageGlyph, useTree } from "./shared";
 
 export const KIND_LABEL: Record<string, string> = { page: "Page", database: "Database", research: "Research page", row: "Database row", canvas: "Canvas", reference: "Reference", concept: "Concept", attachment: "Attachment" };
-const TONE_CLASS: Record<string, string> = { accent: "text-accent", success: "text-success", danger: "text-danger", warning: "text-fg", ai: "text-ai", muted: "text-fg-muted" };
+const TONE_CLASS: Record<string, string> = { accent: "text-accent", success: "text-success-text", danger: "text-danger-text", warning: "text-fg", ai: "text-ai", muted: "text-fg-muted" };
 const invalidate = (qc: ReturnType<typeof useQueryClient>) => { for (const k of ["kgraph", "kg-insights", "kg-concepts", "brief", "graph-suggestions", "page-relations"]) qc.invalidateQueries({ queryKey: [k] }); };
 const entity = (nodeId: string) => nodeId.replace(/^(ref|concept|att):/, "");
 export const nodeHref = (n: Pick<NodeV, "id" | "kind" | "entityId">) => (n.kind === "reference" ? "/research" : n.kind === "concept" || n.kind === "attachment" ? null : `/p/${n.entityId}`);
@@ -110,7 +110,7 @@ export function EdgeInspector({ edge, nodes, onClose, onFocus, onEdit }: { edge:
         {!editable && edge.status !== "suggested" && <p className="mt-2 text-micro leading-4 text-fg-muted">{edge.kind === "link" || edge.kind === "cites" ? "This edge comes from the text of the page: edit the page to change it." : edge.kind === "ai_suggested" ? "An accepted link suggestion. Reject it to remove the link." : "This edge is derived from your data and is edited where it comes from."}</p>}
         <div className="mt-3 flex flex-wrap gap-1.5">
           {editable && <Button size="sm" variant="outline" className="max-md:h-11" onClick={() => onEdit(edge)}><Pencil /> Edit</Button>}
-          {editable && <Button size="sm" variant="ghost" className="text-danger max-md:h-11" disabled={del.isPending} onClick={() => { if (window.confirm("Delete this relation? This cannot be undone.")) del.mutate(); }}><Trash2 /> Delete</Button>}
+          {editable && <Button size="sm" variant="ghost" className="text-danger-text max-md:h-11" disabled={del.isPending} onClick={() => { if (window.confirm("Delete this relation? This cannot be undone.")) del.mutate(); }}><Trash2 /> Delete</Button>}
           {edge.kind === "ai_suggested" && edge.status === "accepted" && <RejectAccepted edge={edge} />}
         </div>
       </div>
@@ -151,8 +151,8 @@ export function RelationDialog({ draft, onClose }: { draft: RelationDraft | null
             <Field label="To"><button type="button" disabled={editing} data-testid="rel-to" onClick={() => setPick("to")} className={cn(input, "truncate text-left disabled:opacity-60")}>{title(to)}</button></Field>
             <Field label="Note (optional)"><textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} rows={2} aria-label="Note" className={cn(input, "h-auto min-h-[4.5rem] py-2 sm:h-auto")} /></Field>
             <div className="grid grid-cols-2 gap-2"><Field label="Valid from"><input type="date" value={vf} onChange={(e) => setVf(e.target.value)} aria-label="Valid from" className={input} /></Field><Field label="Valid to"><input type="date" value={vt} onChange={(e) => setVt(e.target.value)} aria-label="Valid to" className={input} /></Field></div>
-            {vf && vt && vf > vt && <p role="alert" className="text-ui text-danger">“Valid to” must not be before “Valid from”.</p>}
-            {err && <p role="alert" className="text-ui text-danger">{err}</p>}
+            {vf && vt && vf > vt && <p role="alert" className="text-ui text-danger-text">“Valid to” must not be before “Valid from”.</p>}
+            {err && <p role="alert" className="text-ui text-danger-text">{err}</p>}
             <div className="flex justify-end gap-2 pt-1"><Button type="button" variant="ghost" className="max-md:h-11" onClick={onClose}>Cancel</Button><Button type="submit" className="max-md:h-11" disabled={!ok || save.isPending}>{save.isPending && <Spinner className="size-3.5" />}{editing ? "Save" : "Create relation"}</Button></div>
           </form>
         </SheetContent>
@@ -192,7 +192,7 @@ export function ConceptsManager({ open, onOpenChange, onShow }: { open: boolean;
                   {c.status !== "accepted" && <Button size="xs" variant="outline" className="max-md:h-11" onClick={() => patch.mutate({ status: "accepted" })}><Check /> Accept</Button>}
                   {c.status === "suggested" && <Button size="xs" variant="ghost" className="max-md:h-11" onClick={() => patch.mutate({ status: "rejected" })}><X /> Reject</Button>}
                   {onShow && c.status !== "rejected" && <Button size="xs" variant="ghost" className="max-md:h-11" onClick={() => { onShow(c.id); onOpenChange(false); }}><Locate /> Show in graph</Button>}
-                  <Button size="xs" variant="ghost" className="ml-auto text-danger max-md:h-11" onClick={() => { if (window.confirm(`Delete the concept “${c.name}”? Its page links go with it.`)) del.mutate(); }}><Trash2 /> Delete</Button></div>
+                  <Button size="xs" variant="ghost" className="ml-auto text-danger-text max-md:h-11" onClick={() => { if (window.confirm(`Delete the concept “${c.name}”? Its page links go with it.`)) del.mutate(); }}><Trash2 /> Delete</Button></div>
                 <form className="grid gap-2" onSubmit={(e) => { e.preventDefault(); patch.mutate({ name: draft.name.trim(), description: draft.description.trim() || null }); }}>
                   <input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} maxLength={120} aria-label="Concept name" className={cn(input, "font-medium")} />
                   <textarea value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} maxLength={2000} rows={2} aria-label="Description" placeholder="Description (optional)" className={cn(input, "h-auto min-h-[4rem] py-2 sm:h-auto")} />

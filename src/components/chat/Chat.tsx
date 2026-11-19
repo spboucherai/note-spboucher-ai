@@ -160,7 +160,7 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
       </div>
 
       <div ref={list} onScroll={(e) => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }} className="min-h-0 min-w-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-4 sm:px-4" aria-live="polite">
-        {loadErr && <div role="alert" className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-[13px]"><p className="text-danger">{loadErr}</p><Button variant="outline" className="mt-2 h-11 md:h-8" onClick={() => conv && loadConv(conv)}><RotateCcw />Retry</Button></div>}
+        {loadErr && <div role="alert" className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-[13px]"><p className="text-danger-text">{loadErr}</p><Button variant="outline" className="mt-2 h-11 md:h-8" onClick={() => conv && loadConv(conv)}><RotateCcw />Retry</Button></div>}
         {!msgs.length && !loadErr && (
           <div className="mx-auto max-w-md">
             {!compact && <><div className="flex items-center gap-2"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-ai-soft text-ai"><Sparkles className="size-4" /></span><div><p className="text-[15px] font-semibold tracking-[-0.01em]">What do you want to do?</p><p className="text-[12.5px] leading-5 text-fg-muted">{pageId ? "A page is open: page modes are available." : "No page is open: page modes are unavailable."}</p></div></div></>}
@@ -222,7 +222,7 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
       <Dialog open={histOpen} onOpenChange={setHistOpen}>
         <SheetContent title="Conversations" description={pageId ? "Conversations started on this page." : "All conversations."}>
           {convsLoading ? <div className="grid gap-2 py-2"><Skeleton className="h-11" /><Skeleton className="h-11" /><Skeleton className="h-11" /></div>
-            : convsError ? <div className="py-4 text-[13px]"><p className="text-danger">Could not load the conversations.</p><Button variant="outline" className="mt-2 h-11" onClick={() => refetchConvs()}><RotateCcw />Retry</Button></div>
+            : convsError ? <div className="py-4 text-[13px]"><p className="text-danger-text">Could not load the conversations.</p><Button variant="outline" className="mt-2 h-11" onClick={() => refetchConvs()}><RotateCcw />Retry</Button></div>
             : !convs.length ? <p className="py-6 text-center text-[13px] text-fg-muted">No conversation yet. Ask something to start one.</p>
             : <ul className="grid gap-0.5 pb-1">{convs.map((c) => <li key={c.id}><button type="button" aria-current={c.id === conv} onClick={() => { abort.current?.abort(); liveConv.current = null; setConv(c.id); setHistOpen(false); }} className={cn("flex min-h-12 w-full items-center gap-2 rounded-lg px-2 text-left text-[14px] hover:bg-bg-sunk", c.id === conv && "bg-accent-soft")}><span className="min-w-0 flex-1 truncate">{c.title}</span><span className="shrink-0 text-[11.5px] text-fg-faint">{new Date(c.updatedAt).toLocaleDateString()}</span></button></li>)}</ul>}
         </SheetContent>
@@ -243,7 +243,7 @@ function Answer({ m, busy, pageOpen, onInsert, onCite, onCopy, onSave, onTasks, 
         : <div className="chat-md min-w-0"><Markdown text={text} onCite={m.sources?.length ? (n) => { const s = m.sources?.find((x) => x.n === n); if (s) onCite(s); } : undefined} />{m.streaming && <span className="pulse-soft text-fg-faint">▍</span>}</div>}
       {(m.failure || m.stopped) && (
         <div role="alert" className="mt-2 rounded-xl border border-danger/30 bg-danger/5 p-3 text-[13px] leading-5">
-          <p className="font-medium text-danger">{m.stopped ? "Stopped before the answer was complete." : m.failure!.code === "not_configured" ? "AI is not configured." : "The answer failed."}</p>
+          <p className="font-medium text-danger-text">{m.stopped ? "Stopped before the answer was complete." : m.failure!.code === "not_configured" ? "AI is not configured." : "The answer failed."}</p>
           {m.failure && <p className="mt-0.5 [overflow-wrap:anywhere]">{m.failure.message}</p>}
           {text && <p className="mt-0.5 text-fg-muted">The text above is incomplete and was not saved.</p>}
           {(m.stopped || m.failure?.retryable) && <>
@@ -263,7 +263,7 @@ function Answer({ m, busy, pageOpen, onInsert, onCite, onCopy, onSave, onTasks, 
           {m.mode === "notes" && <Button variant="outline" className="h-11 md:h-9" disabled={busy} onClick={onGeneral}><MessageCircle />Ask without my notes</Button>}
         </div>
       )}
-      {tasks.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{m.tasksCreated ? <span role="status" className="flex h-11 items-center gap-1.5 rounded-lg bg-success/10 px-3 text-[13px] font-medium text-success md:h-9"><ListTodo className="size-4" />{m.tasksCreated} task{m.tasksCreated === 1 ? "" : "s"} created</span> : <Button className="h-11 md:h-9" onClick={() => onTasks(m)}><ListTodo />Create {tasks.length} task{tasks.length === 1 ? "" : "s"}</Button>}{onInsert && pageOpen && <Button variant="outline" className="h-11 md:h-9" onClick={() => onInsert(tasks.map((t) => `- [ ] ${t}`).join("\n"))}><ArrowDownToLine />Insert as checklist</Button>}</div>}
+      {tasks.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{m.tasksCreated ? <span role="status" className="flex h-11 items-center gap-1.5 rounded-lg bg-success/10 px-3 text-[13px] font-medium text-success-text md:h-9"><ListTodo className="size-4" />{m.tasksCreated} task{m.tasksCreated === 1 ? "" : "s"} created</span> : <Button className="h-11 md:h-9" onClick={() => onTasks(m)}><ListTodo />Create {tasks.length} task{tasks.length === 1 ? "" : "s"}</Button>}{onInsert && pageOpen && <Button variant="outline" className="h-11 md:h-9" onClick={() => onInsert(tasks.map((t) => `- [ ] ${t}`).join("\n"))}><ArrowDownToLine />Insert as checklist</Button>}</div>}
       {complete && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-fg-faint">
           <span className="min-w-0 [overflow-wrap:anywhere]">{m.scope && m.scope !== "all" ? `scope: ${SCOPES.find((x) => x.id === m.scope)?.label.toLowerCase()}${m.scopePages != null ? ` (${m.scopePages} page${m.scopePages === 1 ? "" : "s"})` : ""} · ` : ""}{who || "no provider called"}{m.latencyMs ? ` · ${(m.latencyMs / 1000).toFixed(1)} s` : ""}{usd(m.costUsd) ? ` · ${usd(m.costUsd)}` : who ? " · cost unknown" : ""}{sent && who ? ` · sent: ${sent}` : ""}</span>

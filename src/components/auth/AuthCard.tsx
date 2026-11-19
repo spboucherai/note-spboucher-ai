@@ -16,6 +16,6 @@ export function AuthCard({ icon, title, children, footer }: { icon: React.ReactN
   );
 }
 export function AuthNotice({ tone = "neutral", children }: { tone?: "neutral" | "danger" | "success" | "warning"; children: React.ReactNode }) {
-  return <div role={tone === "danger" ? "alert" : "status"} aria-live="polite" className={cn("rounded-xl border px-3 py-2.5 text-[13px] leading-5", tone === "danger" ? "border-danger/30 bg-danger/10 text-danger" : tone === "success" ? "border-success/30 bg-success/10 text-success" : tone === "warning" ? "border-warning/40 bg-warning/15 text-fg" : "border-line bg-bg-sunk text-fg-muted")}>{children}</div>;
+  return <div role={tone === "danger" ? "alert" : "status"} aria-live="polite" className={cn("rounded-xl border px-3 py-2.5 text-[13px] leading-5", tone === "danger" ? "border-danger/30 bg-danger/10 text-danger-text" : tone === "success" ? "border-success/30 bg-success/10 text-success-text" : tone === "warning" ? "border-warning/40 bg-warning/15 text-fg" : "border-line bg-bg-sunk text-fg-muted")}>{children}</div>;
 }
 export const BIOMETRIC_NOTE = "Your device checks that it is you (Face ID, Touch ID, fingerprint — or the device passcode as its own fallback). This site only receives a cryptographic signature: never an image of your face, a fingerprint or your passcode.";

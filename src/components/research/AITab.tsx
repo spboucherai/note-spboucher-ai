@@ -109,7 +109,7 @@ export function AITab({ pageId, pageTitle }: { pageId: string; pageTitle: string
                 <TButton className="mt-2" onClick={acceptTasks} disabled={acceptBusy}>{acceptBusy ? <Spinner className="size-3.5" /> : <ListChecks />} Add {res.data.tasks.filter((_: any, i: number) => accepted[i] !== false).length} tasks</TButton>
               </div>
             )}
-            {res.feature === "refcheck" && res.data && !res.streaming && <div className="border-t border-line px-3 py-2 text-[11px] text-fg-faint">{res.data.found} citations found · {res.data.matched} matched · <span className={res.data.unverified ? "text-warning" : ""}>{res.data.unverified} unverified</span>. Add missing references by DOI or BibTeX in the References tab.</div>}
+            {res.feature === "refcheck" && res.data && !res.streaming && <div className="border-t border-line px-3 py-2 text-[11px] text-fg-faint">{res.data.found} citations found · {res.data.matched} matched · <span className={res.data.unverified ? "text-warning-text" : ""}>{res.data.unverified} unverified</span>. Add missing references by DOI or BibTeX in the References tab.</div>}
           </div>
         )}
       </div>

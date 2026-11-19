@@ -27,7 +27,7 @@ export function ModelsDashboard() {
   async function saveRoutes(routes: Record<string, RouteDef>) { setSaving(true); try { await api("/api/ai/models", { method: "POST", json: { action: "routes", routes } }); toast("Routes saved", { tone: "success" }); refresh(); } catch (e: any) { toast("Could not save routes", { description: e.message, tone: "danger" }); } finally { setSaving(false); } }
   async function saveBudget(usd: number) { try { await api("/api/ai/models", { method: "POST", json: { action: "budget", usd } }); toast(`Daily budget set to $${usd}`, { tone: "success" }); } catch (e: any) { toast("Could not save budget", { description: e.message, tone: "danger" }); } }
   if (isLoading) return <div className="grid h-64 place-items-center"><Spinner /></div>;
-  if (error || !data) return <div className="p-6 text-sm text-danger">Could not load the model catalogue{error ? `: ${(error as Error).message}` : ""}.</div>;
+  if (error || !data) return <div className="p-6 text-sm text-danger-text">Could not load the model catalogue{error ? `: ${(error as Error).message}` : ""}.</div>;
   const benchmarked = data.models.filter(hasBench); const text = data.models.filter((m) => m.category !== "embedding");
   const highlights = [...new Set(Object.values(data.routes).map((r) => r.primary))];
   const pricing = { openai: data.models.find((m) => m.provider === "openai" && m.pricingSource)?.pricingSource, anthropic: data.models.find((m) => m.provider === "anthropic" && m.pricingSource)?.pricingSource };

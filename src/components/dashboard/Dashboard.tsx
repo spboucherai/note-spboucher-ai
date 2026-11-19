@@ -29,7 +29,7 @@ function WidgetCard({ w, editing, data, refresh, onRemove, onResize }: { w: Widg
         {editing ? (
           <div className="flex items-center gap-0.5">
             {SIZES.map((s) => <Tip key={s.id} label={s.label}><button onClick={() => onResize(s.id)} className={cn("grid size-8 place-items-center rounded-md text-fg-faint hover:bg-bg-sunk [&_svg]:size-4", w.size === s.id && "bg-bg-sunk text-accent")} aria-label={s.label}>{s.icon}</button></Tip>)}
-            <Tip label="Remove widget"><button onClick={onRemove} className="grid size-8 place-items-center rounded-md text-fg-faint hover:bg-danger/10 hover:text-danger" aria-label="Remove"><X className="size-4" /></button></Tip>
+            <Tip label="Remove widget"><button onClick={onRemove} className="grid size-8 place-items-center rounded-md text-fg-faint hover:bg-danger/10 hover:text-danger-text" aria-label="Remove"><X className="size-4" /></button></Tip>
           </div>
         ) : null}
       </header>
@@ -87,7 +87,7 @@ export function Dashboard({ displayName, embedded }: { displayName: string; /** 
           </div>
         ) : <Button size="sm" variant="ghost" onClick={start} disabled={!data}><Settings2 /> Customize</Button>}
       </div>
-      {isError && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-[13px] text-danger">Could not load the dashboard: {(error as Error).message}</div>}
+      {isError && <div className="mb-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-[13px] text-danger-text">Could not load the dashboard: {(error as Error).message}</div>}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[repeat(6,minmax(0,1fr))]">

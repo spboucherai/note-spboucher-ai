@@ -97,7 +97,7 @@ export function CardForm({ store, nodeId, pageId, onClose, onOpenPage, onConnect
           {kind === "link" && <>
             <label>Address<input type="url" inputMode="url" autoFocus={!str(node.url)} value={str(node.url)} onChange={(e) => set({ url: e.target.value.trim().slice(0, 2000) || undefined })} placeholder="https://…" autoCapitalize="none" autoCorrect="off" aria-label="Link address" /></label>
             <label>Title<input type="text" value={str(node.text)} onChange={(e) => set({ text: e.target.value || undefined })} placeholder="Optional" aria-label="Link title" /></label>
-            {str(node.url) && !safeHref(str(node.url)) && <div className="text-ui text-danger">This address cannot be opened from the canvas (only http, https, mailto and pages of this site).</div>}
+            {str(node.url) && !safeHref(str(node.url)) && <div className="text-ui text-danger-text">This address cannot be opened from the canvas (only http, https, mailto and pages of this site).</div>}
           </>}
           {kind === "page" && <>
             <PagePicker value={typeof node.pageId === "string" ? node.pageId : null} self={pageId} onPick={(id) => set({ pageId: id }, "commit")} />

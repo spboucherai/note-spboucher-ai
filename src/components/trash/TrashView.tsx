@@ -46,7 +46,7 @@ export function TrashView() {
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1"><h1 className="text-2xl font-semibold tracking-tight">Trash</h1><p className="mt-0.5 text-[13px] leading-5 text-fg-muted">Trashed pages stay here until you delete them. Nothing is removed automatically. <button type="button" onClick={purgeOld} className="font-medium text-accent underline-offset-2 hover:underline">Delete items older than {AUTO_PURGE_DAYS} days…</button></p></div>
-        <Button size="sm" variant="outline" className="text-danger hover:bg-danger/10" disabled={!items.length} onClick={() => setConfirm({ kind: "all" })}><Trash2 /> Empty trash</Button>
+        <Button size="sm" variant="outline" className="text-danger-text hover:bg-danger/10" disabled={!items.length} onClick={() => setConfirm({ kind: "all" })}><Trash2 /> Empty trash</Button>
       </div>
       {isLoading || purged === null ? <div className="flex justify-center py-16"><Spinner /></div> : loadFailed ? <ErrorState testId="trash-error" title="Could not load the trash" error={error} onRetry={() => refetch()} retrying={isFetching} /> : !items.length ? <Empty icon={<Trash2 />} title="Trash is empty" hint="Pages you move to the trash can be restored from here for 30 days." action={<Button size="sm" variant="outline" onClick={() => r.push("/")}>Back home</Button>} /> : (
         <><div data-testid="trash-list" className="overflow-hidden rounded-xl border border-line bg-bg-elev shadow-card">
@@ -59,7 +59,7 @@ export function TrashView() {
                 <span className="flex items-center gap-1 text-[12px] text-fg-muted" title={fmtDate(p.deletedAt, { dateStyle: "medium", timeStyle: "short" })}><Clock className="size-3 md:hidden" />{timeAgo(p.deletedAt)}<span className="text-fg-faint"> · {daysLeft(p.deletedAt) > 0 ? `${daysLeft(p.deletedAt)} d before it counts as old` : "old"}</span></span>
                 <span className="text-[12px] tabular-nums text-fg-muted md:text-right">{p.wordCount} w</span>
               </div>
-              <div className="flex items-center gap-1 md:justify-end"><Button size="sm" variant="ghost" onClick={() => restore(p)}><RotateCcw /> Restore</Button><Button size="sm" variant="ghost" className="text-danger hover:text-danger" onClick={() => setConfirm({ kind: "one", page: p })}><Trash2 /> Delete</Button></div>
+              <div className="flex items-center gap-1 md:justify-end"><Button size="sm" variant="ghost" onClick={() => restore(p)}><RotateCcw /> Restore</Button><Button size="sm" variant="ghost" className="text-danger-text hover:text-danger-text" onClick={() => setConfirm({ kind: "one", page: p })}><Trash2 /> Delete</Button></div>
             </div>
           ))}
         </div>
@@ -67,7 +67,7 @@ export function TrashView() {
       )}
       <Dialog open={!!confirm} onOpenChange={(o) => !o && !busy && setConfirm(null)}>
         <DialogContent title={confirm?.kind === "all" ? "Empty the trash?" : "Delete forever?"} description={confirm?.kind === "all" ? `${hasNextPage ? "Every page" : `All ${items.length} page${items.length === 1 ? "" : "s"}`} in the trash, including ${hasNextPage ? "those not listed yet and " : ""}their versions and attachments, will be permanently deleted.` : confirm ? `"${confirm.page.title || "Untitled"}" and its sub-pages will be permanently deleted. This cannot be undone.` : ""}>
-          <div className="flex items-center gap-2 rounded-md bg-danger/5 px-3 py-2 text-[12px] text-danger"><AlertTriangle className="size-4 shrink-0" /> This action is irreversible.</div>
+          <div className="flex items-center gap-2 rounded-md bg-danger/5 px-3 py-2 text-[12px] text-danger-text"><AlertTriangle className="size-4 shrink-0" /> This action is irreversible.</div>
           <div className="mt-4 flex justify-end gap-2"><Button variant="ghost" onClick={() => setConfirm(null)} disabled={busy}>Cancel</Button><Button variant="danger" onClick={doConfirm} disabled={busy} autoFocus>{busy ? <Spinner className="size-3.5 border-white/40 border-t-white" /> : <Trash2 />} {confirm?.kind === "all" ? "Empty trash" : "Delete forever"}</Button></div>
         </DialogContent>
       </Dialog>

@@ -90,7 +90,7 @@ function RowActions({ row, onClose, touch }: { row: RowOut; onClose: () => void;
       <MoveTo row={row} className={btn} />
       <button type="button" onClick={async () => { const copy = await ctx.duplicateRow(row.id); if (copy) ctx.open(copy.id); }} className={btn}><Copy className="size-3.5" /> Duplicate</button>
       <button type="button" onClick={() => { void saveAsTemplate(row); }} className={btn}><LayoutTemplate className="size-3.5" /> Save as template</button>
-      <button type="button" onClick={remove} className={cn(btn, "ml-auto hover:text-danger", touch && "text-danger")}><Trash2 className="size-3.5" /> Delete</button>
+      <button type="button" onClick={remove} className={cn(btn, "ml-auto hover:text-danger-text", touch && "text-danger-text")}><Trash2 className="size-3.5" /> Delete</button>
     </>
   );
 }

@@ -13,7 +13,7 @@
 .live-badge[data-state="stale"], .live-badge[data-state="offline"] { color: color-mix(in oklab, var(--warning) 58%, var(--fg)); }
 .live-badge[data-state="stale"] .live-dot, .live-badge[data-state="offline"] .live-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--warning); }
 .live-stale { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .375rem .75rem; border-bottom: 1px solid color-mix(in oklab, var(--warning) 30%, transparent); background: color-mix(in oklab, var(--warning) 9%, transparent); font-size: 0.75rem; line-height: 1.125rem; color: var(--fg); }
-.live-stale > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--warning); } .live-stale > span { min-width: 0; flex: 1 1 12rem; overflow-wrap: anywhere; }
+.live-stale > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--warning-text); } .live-stale > span { min-width: 0; flex: 1 1 12rem; overflow-wrap: anywhere; }
 .qv-num { text-align: right; font-variant-numeric: tabular-nums; }
 .ch-note .live-badge { margin-left: .25rem; }
 @keyframes live-pulse { 0% { opacity: .55; transform: scale(.6); } 70%, 100% { opacity: 0; transform: scale(1.9); } }
@@ -24,4 +24,4 @@
 .pdfv-ref > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--accent); }
 .note-editor .pdfv-ref-name, .pdfv-ref-name { color: var(--accent); font-weight: 600; text-decoration: none; } .pdfv-ref-name:hover { text-decoration: underline; }
 .pdfv-extract { display: inline-flex; margin-left: auto; flex-shrink: 0; color: var(--accent); } .pdfv-extract svg { width: 14px; height: 14px; }
-.note-editor .cite-inline[data-ref-state="deleted"] { color: var(--danger); border-bottom-color: color-mix(in oklab, var(--danger) 50%, transparent); }
+.note-editor .cite-inline[data-ref-state="deleted"] { color: var(--danger-text); border-bottom-color: color-mix(in oklab, var(--danger) 50%, transparent); }
