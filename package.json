@@ -1,6 +1,6 @@
 {
   "name": "note-spboucher-ai",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "devDependencies": {
@@ -130,6 +130,7 @@
     "bench:report": "tsx benchmarks/scripts/report.ts",
     "lint": "tsc --noEmit",
     "test": "tsx --test --test-force-exit --test-concurrency=1 tests/unit/*.test.ts",
+    "test:http": "tsx --test --test-force-exit --test-concurrency=1 tests/http/*.test.ts",
     "test:e2e": "playwright test"
   }
 }

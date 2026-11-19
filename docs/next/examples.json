@@ -1,0 +1,2810 @@
+{
+  "meta": {
+    "request": {
+      "method": "GET",
+      "path": "/api/meta"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "api": 3,
+      "version": "3.0.0-dev",
+      "features": [
+        "entities",
+        "tasks-v2",
+        "events",
+        "timemachine",
+        "graph-v2",
+        "insights",
+        "canvas",
+        "health",
+        "brief",
+        "query",
+        "zoom",
+        "nodes-v3",
+        "files-range"
+      ],
+      "serverTime": "2026-11-19T18:30:22.138Z"
+    }
+  },
+  "reference_create": {
+    "request": {
+      "method": "POST",
+      "path": "/api/research/references",
+      "body": {
+        "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+        "title": "Generalized autoregressive conditional heteroskedasticity",
+        "authors": [
+          "Bollerslev, Tim"
+        ],
+        "year": 1986,
+        "journal": "Journal of Econometrics"
+      }
+    },
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "pageId": null,
+      "citeKey": "tim1986generalized",
+      "entryType": "article",
+      "title": "Generalized autoregressive conditional heteroskedasticity",
+      "authors": [
+        "Bollerslev, Tim"
+      ],
+      "year": 1986,
+      "journal": "Journal of Econometrics",
+      "doi": null,
+      "url": null,
+      "bibtex": "@article{tim1986generalized,\n  author  = {Bollerslev, Tim},\n  title   = {Generalized autoregressive conditional heteroskedasticity},\n  journal = {Journal of Econometrics},\n  year    = {1986}\n}",
+      "fields": {
+        "year": "1986",
+        "title": "Generalized autoregressive conditional heteroskedasticity",
+        "author": "Bollerslev, Tim",
+        "journal": "Journal of Econometrics"
+      },
+      "verified": "user",
+      "attachmentId": null,
+      "createdAt": "2026-11-19T18:30:22.168Z",
+      "updatedAt": "2026-11-19T18:30:22.168Z",
+      "deletedAt": null,
+      "rev": 2618
+    }
+  },
+  "page_create": {
+    "request": {
+      "method": "POST",
+      "path": "/api/pages",
+      "body": "(see the document above)"
+    },
+    "status": 201,
+    "body": {
+      "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+      "databaseId": null,
+      "type": "page",
+      "section": "projects",
+      "title": "Exemple · Revue de littérature",
+      "icon": null,
+      "cover": null,
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "id": "JnjiYbI3ze",
+              "level": 1
+            },
+            "content": [
+              {
+                "text": "Volatilité conditionnelle",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "id": "UYapKgbhMk"
+            },
+            "content": [
+              {
+                "text": "Le modèle fondateur est ",
+                "type": "text"
+              },
+              {
+                "type": "citation",
+                "attrs": {
+                  "label": "Bollerslev 1986",
+                  "refId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+                  "locator": "p. 309"
+                }
+              },
+              {
+                "text": ". Voir aussi ",
+                "type": "text"
+              },
+              {
+                "type": "mention",
+                "attrs": {
+                  "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+                  "label": "Données"
+                }
+              },
+              {
+                "text": ".",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "taskList",
+            "attrs": {
+              "id": "FpCtkm7Mhd"
+            },
+            "content": [
+              {
+                "type": "taskItem",
+                "attrs": {
+                  "id": "oGqPGUa4yB",
+                  "due": "2026-11-25",
+                  "taskId": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+                  "checked": false,
+                  "priority": "high"
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "lrWg-fVW-c"
+                    },
+                    "content": [
+                      {
+                        "text": "Relire la section 2",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "callout",
+            "attrs": {
+              "id": "fcwCcxSt_x",
+              "icon": "✅",
+              "kind": "decision"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "vK6yUZ9Xtf"
+                },
+                "content": [
+                  {
+                    "text": "On retient EGARCH comme référence.",
+                    "type": "text"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "mermaid",
+            "attrs": {
+              "id": "rjBGEMbrnb",
+              "code": "graph LR\n  ARCH --> GARCH --> EGARCH",
+              "preview": null,
+              "previewHash": null
+            }
+          }
+        ]
+      },
+      "plainText": "Volatilité conditionnelle\nLe modèle fondateur est Bollerslev 1986. Voir aussi @Données.\nRelire la section 2\nOn retient EGARCH comme référence.\ngraph LR\n  ARCH --> GARCH --> EGARCH",
+      "tsv": "'1986':12B '2':19B 'arch':27B 'aussi':14B 'bollerslev':11B 'comme':23B 'conditionnelle':6B 'de':3A 'données':15B 'egarch':22B,29B 'est':10B 'exemple':1A 'fondateur':9B 'garch':28B 'graph':25B 'la':17B 'le':7B 'littérature':4A 'lr':26B 'modèle':8B 'on':20B 'relire':16B 'retient':21B 'revue':2A 'référence':24B 'section':18B 'voir':13B 'volatilité':5B",
+      "properties": {},
+      "position": 2,
+      "pinned": false,
+      "archived": false,
+      "version": 1,
+      "wordCount": 25,
+      "createdAt": "2026-11-19T18:30:22.180Z",
+      "updatedAt": "2026-11-19T18:30:22.180Z",
+      "lastOpenedAt": null,
+      "deletedAt": null,
+      "rev": 2620,
+      "inboxAt": null,
+      "captureKind": null
+    }
+  },
+  "task_create": {
+    "request": {
+      "method": "POST",
+      "path": "/api/tasks",
+      "body": {
+        "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+        "title": "Envoyer le plan au directeur",
+        "due": "2026-11-21",
+        "priority": "medium",
+        "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+      }
+    },
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "title": "Envoyer le plan au directeur",
+      "status": "todo",
+      "priority": "medium",
+      "dueAt": "2026-11-21T12:00:00.000Z",
+      "completedAt": null,
+      "project": null,
+      "createdAt": "2026-11-19T18:30:22.188Z",
+      "updatedAt": "2026-11-19T18:30:22.188Z",
+      "deletedAt": null,
+      "rev": 2624,
+      "blockId": null
+    }
+  },
+  "task_create_again": {
+    "request": {
+      "method": "POST",
+      "path": "/api/tasks",
+      "body": {
+        "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+        "title": "Envoyer le plan au directeur"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "x-existing": "1"
+    },
+    "body": {
+      "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "title": "Envoyer le plan au directeur",
+      "status": "todo",
+      "priority": "medium",
+      "dueAt": "2026-11-21T12:00:00.000Z",
+      "completedAt": null,
+      "project": null,
+      "createdAt": "2026-11-19T18:30:22.188Z",
+      "updatedAt": "2026-11-19T18:30:22.188Z",
+      "deletedAt": null,
+      "rev": 2624,
+      "blockId": null
+    }
+  },
+  "task_patch": {
+    "request": {
+      "method": "PATCH",
+      "path": "/api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+      "body": {
+        "status": "done"
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "title": "Envoyer le plan au directeur",
+      "status": "done",
+      "priority": "medium",
+      "dueAt": "2026-11-21T12:00:00.000Z",
+      "completedAt": "2026-11-19T18:30:22.194Z",
+      "project": null,
+      "createdAt": "2026-11-19T18:30:22.188Z",
+      "updatedAt": "2026-11-19T18:30:22.194Z",
+      "deletedAt": null,
+      "rev": 2625,
+      "blockId": null
+    }
+  },
+  "task_get_linked": {
+    "request": {
+      "method": "GET",
+      "path": "/api/tasks/366a7cbd-5b77-478a-8562-29cc08bfdb89"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+      "workspaceId": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "title": "Relire la section 2",
+      "status": "todo",
+      "priority": "high",
+      "dueAt": "2026-11-25T12:00:00.000Z",
+      "completedAt": null,
+      "project": null,
+      "createdAt": "2026-11-19T18:30:22.181Z",
+      "updatedAt": "2026-11-19T18:30:22.181Z",
+      "deletedAt": null,
+      "rev": 2623,
+      "blockId": "oGqPGUa4yB"
+    }
+  },
+  "tasks_list": {
+    "request": {
+      "method": "GET",
+      "path": "/api/tasks?pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&done=1"
+    },
+    "status": 200,
+    "headers": {},
+    "body": [
+      {
+        "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+        "title": "Relire la section 2",
+        "status": "todo",
+        "priority": "high",
+        "dueAt": "2026-11-25T12:00:00.000Z",
+        "completedAt": null,
+        "project": null,
+        "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+        "createdAt": "2026-11-19T18:30:22.181Z",
+        "updatedAt": "2026-11-19T18:30:22.181Z",
+        "pageTitle": "Exemple · Revue de littérature",
+        "pageIcon": null,
+        "blockId": "oGqPGUa4yB",
+        "deletedAt": null,
+        "rev": 2623
+      },
+      {
+        "id": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+        "title": "Envoyer le plan au directeur",
+        "status": "done",
+        "priority": "medium",
+        "dueAt": "2026-11-21T12:00:00.000Z",
+        "completedAt": "2026-11-19T18:30:22.194Z",
+        "project": null,
+        "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+        "createdAt": "2026-11-19T18:30:22.188Z",
+        "updatedAt": "2026-11-19T18:30:22.194Z",
+        "pageTitle": "Exemple · Revue de littérature",
+        "pageIcon": null,
+        "blockId": null,
+        "deletedAt": null,
+        "rev": 2625
+      }
+    ]
+  },
+  "task_delete": {
+    "request": {
+      "method": "DELETE",
+      "path": "/api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "ok": true,
+      "deleted": true
+    }
+  },
+  "task_delete_again": {
+    "request": {
+      "method": "DELETE",
+      "path": "/api/tasks/31b7dfbe-05ff-4187-ba58-6d791882f4e7"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "ok": true,
+      "deleted": false
+    }
+  },
+  "task_bad_page": {
+    "request": {
+      "method": "POST",
+      "path": "/api/tasks",
+      "body": {
+        "title": "x",
+        "pageId": "5007ba54-17f3-47b9-81c4-5e6985ea6958"
+      }
+    },
+    "status": 400,
+    "headers": {},
+    "body": {
+      "error": "Unknown page",
+      "code": "bad_page"
+    }
+  },
+  "relation_create": {
+    "request": {
+      "method": "POST",
+      "path": "/api/graph/relations",
+      "body": {
+        "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+        "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+        "relType": "supports",
+        "note": "Les données appuient la revue",
+        "validFrom": "2026-01-01T00:00:00Z"
+      }
+    },
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+      "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+      "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "sourceKind": "page",
+      "targetKind": "page",
+      "kind": "relation",
+      "relType": "supports",
+      "origin": "user",
+      "status": "accepted",
+      "confidence": null,
+      "rationale": null,
+      "note": "Les données appuient la revue",
+      "model": null,
+      "validFrom": "2026-01-01T00:00:00.000Z",
+      "validTo": null,
+      "sourceBlockId": null,
+      "targetBlockId": null,
+      "createdAt": "2026-11-19T18:30:22.220Z",
+      "updatedAt": "2026-11-19T18:30:22.220Z",
+      "decidedAt": "2026-11-19T18:30:22.221Z",
+      "rev": 2630,
+      "fromTitle": "Exemple · Données",
+      "toTitle": "Exemple · Revue de littérature"
+    }
+  },
+  "relation_exists": {
+    "request": {
+      "method": "POST",
+      "path": "/api/graph/relations",
+      "body": {
+        "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+        "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+        "relType": "supports"
+      }
+    },
+    "status": 409,
+    "headers": {},
+    "body": {
+      "error": "This relation already exists",
+      "code": "relation_exists",
+      "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+      "status": "accepted"
+    }
+  },
+  "relation_patch": {
+    "request": {
+      "method": "PATCH",
+      "path": "/api/graph/relations/e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+      "body": {
+        "relType": "extends",
+        "note": null
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+      "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+      "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "sourceKind": "page",
+      "targetKind": "page",
+      "kind": "relation",
+      "relType": "extends",
+      "origin": "user",
+      "status": "accepted",
+      "confidence": null,
+      "rationale": null,
+      "note": null,
+      "model": null,
+      "validFrom": "2026-01-01T00:00:00.000Z",
+      "validTo": null,
+      "sourceBlockId": null,
+      "targetBlockId": null,
+      "createdAt": "2026-11-19T18:30:22.220Z",
+      "updatedAt": "2026-11-19T18:30:22.228Z",
+      "decidedAt": "2026-11-19T18:30:22.221Z",
+      "rev": 2631,
+      "fromTitle": "Exemple · Données",
+      "toTitle": "Exemple · Revue de littérature"
+    }
+  },
+  "relations_list": {
+    "request": {
+      "method": "GET",
+      "path": "/api/graph/relations?nodeId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&include=cites"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "relations": [
+        {
+          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+          "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "sourceKind": "page",
+          "targetKind": "page",
+          "kind": "relation",
+          "relType": "extends",
+          "origin": "user",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": "2026-01-01T00:00:00.000Z",
+          "validTo": null,
+          "sourceBlockId": null,
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.220Z",
+          "updatedAt": "2026-11-19T18:30:22.228Z",
+          "decidedAt": "2026-11-19T18:30:22.221Z",
+          "rev": 2631,
+          "fromTitle": "Exemple · Données",
+          "toTitle": "Exemple · Revue de littérature"
+        },
+        {
+          "id": "0f9bf63b-6ddb-458d-8e3a-8071ebeb5eb8",
+          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "toId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "sourceKind": "page",
+          "targetKind": "reference",
+          "kind": "cites",
+          "relType": "cites",
+          "origin": "system",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": "UYapKgbhMk",
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.181Z",
+          "updatedAt": "2026-11-19T18:30:22.181Z",
+          "decidedAt": null,
+          "rev": 2622,
+          "fromTitle": "Exemple · Revue de littérature",
+          "toTitle": "Generalized autoregressive conditional heteroskedasticity"
+        }
+      ]
+    }
+  },
+  "concept_create": {
+    "request": {
+      "method": "POST",
+      "path": "/api/concepts",
+      "body": {
+        "name": "Exemple · hétéroscédasticité",
+        "description": "Variance non constante",
+        "pageIds": [
+          "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "c511cd3f-a51e-4023-a806-752acb83ad7b"
+        ]
+      }
+    },
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+      "name": "Exemple · hétéroscédasticité",
+      "description": "Variance non constante",
+      "origin": "user",
+      "status": "accepted",
+      "model": null,
+      "createdAt": "2026-11-19T18:30:22.234Z",
+      "updatedAt": "2026-11-19T18:30:22.234Z",
+      "decidedAt": "2026-11-19T18:30:22.234Z",
+      "rev": 2632,
+      "pages": 2,
+      "suggestedPages": 0,
+      "pageLinks": [
+        {
+          "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "title": "Exemple · Données",
+          "icon": null,
+          "origin": "user",
+          "status": "accepted",
+          "confidence": null,
+          "blockId": null,
+          "model": null,
+          "createdAt": "2026-11-19T18:30:22.234Z"
+        },
+        {
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "title": "Exemple · Revue de littérature",
+          "icon": null,
+          "origin": "user",
+          "status": "accepted",
+          "confidence": null,
+          "blockId": null,
+          "model": null,
+          "createdAt": "2026-11-19T18:30:22.234Z"
+        }
+      ]
+    }
+  },
+  "concept_patch": {
+    "request": {
+      "method": "PATCH",
+      "path": "/api/concepts/95be9154-7a3a-4f50-9d65-ce42e149b429",
+      "body": {
+        "removePages": [
+          "c511cd3f-a51e-4023-a806-752acb83ad7b"
+        ]
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+      "name": "Exemple · hétéroscédasticité",
+      "description": "Variance non constante",
+      "origin": "user",
+      "status": "accepted",
+      "model": null,
+      "createdAt": "2026-11-19T18:30:22.234Z",
+      "updatedAt": "2026-11-19T18:30:22.239Z",
+      "decidedAt": "2026-11-19T18:30:22.234Z",
+      "rev": 2633,
+      "pages": 1,
+      "suggestedPages": 0,
+      "pageLinks": [
+        {
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "title": "Exemple · Revue de littérature",
+          "icon": null,
+          "origin": "user",
+          "status": "accepted",
+          "confidence": null,
+          "blockId": null,
+          "model": null,
+          "createdAt": "2026-11-19T18:30:22.234Z"
+        }
+      ]
+    }
+  },
+  "concepts_list": {
+    "request": {
+      "method": "GET",
+      "path": "/api/concepts?pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "concepts": [
+        {
+          "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "name": "Exemple · hétéroscédasticité",
+          "description": "Variance non constante",
+          "origin": "user",
+          "status": "accepted",
+          "model": null,
+          "createdAt": "2026-11-19T18:30:22.234Z",
+          "updatedAt": "2026-11-19T18:30:22.239Z",
+          "decidedAt": "2026-11-19T18:30:22.234Z",
+          "rev": 2633,
+          "pages": 1,
+          "suggestedPages": 0
+        }
+      ]
+    }
+  },
+  "canvas_get": {
+    "request": {
+      "method": "GET",
+      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "pageId": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "title": "Exemple · Carte du projet",
+      "data": {
+        "edges": [],
+        "nodes": [],
+        "format": "spn-canvas-1",
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      },
+      "version": 1,
+      "rev": 2635,
+      "updatedAt": "2026-11-19T18:30:22.247Z"
+    }
+  },
+  "canvas_put": {
+    "request": {
+      "method": "PUT",
+      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "body": {
+        "data": {
+          "format": "spn-canvas-1",
+          "nodes": [
+            {
+              "id": "n1",
+              "kind": "page",
+              "x": 0,
+              "y": 0,
+              "w": 240,
+              "h": 120,
+              "z": 0,
+              "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+            },
+            {
+              "id": "n2",
+              "kind": "text",
+              "x": 320,
+              "y": 20,
+              "w": 200,
+              "h": 80,
+              "z": 1,
+              "text": "Hypothèse H1",
+              "color": "#3157d5"
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "n1",
+              "to": "n2",
+              "label": "motive",
+              "kind": "arrow"
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          }
+        },
+        "baseVersion": 1
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "version": 2,
+      "rev": 2636,
+      "updatedAt": "2026-11-19T18:30:22.256Z",
+      "unchanged": false
+    }
+  },
+  "canvas_conflict": {
+    "request": {
+      "method": "PUT",
+      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "body": {
+        "data": {
+          "format": "spn-canvas-1",
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          }
+        },
+        "baseVersion": 1
+      }
+    },
+    "status": 409,
+    "headers": {},
+    "body": {
+      "error": "This canvas was changed in another session",
+      "code": "conflict",
+      "server": {
+        "version": 2,
+        "data": {
+          "edges": [
+            {
+              "id": "e1",
+              "to": "n2",
+              "from": "n1",
+              "kind": "arrow",
+              "label": "motive"
+            }
+          ],
+          "nodes": [
+            {
+              "h": 120,
+              "w": 240,
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "id": "n1",
+              "kind": "page",
+              "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+            },
+            {
+              "h": 80,
+              "w": 200,
+              "x": 320,
+              "y": 20,
+              "z": 1,
+              "id": "n2",
+              "kind": "text",
+              "text": "Hypothèse H1",
+              "color": "#3157d5"
+            }
+          ],
+          "format": "spn-canvas-1",
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          }
+        },
+        "updatedAt": "2026-11-19T18:30:22.256Z"
+      }
+    }
+  },
+  "canvas_bad": {
+    "request": {
+      "method": "PUT",
+      "path": "/api/canvases/3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+      "body": {
+        "data": {
+          "format": "v0"
+        },
+        "baseVersion": 2
+      }
+    },
+    "status": 400,
+    "headers": {},
+    "body": {
+      "error": "Invalid canvas: data.format must be \"spn-canvas-1\"",
+      "code": "bad_canvas"
+    }
+  },
+  "canvas_not_canvas": {
+    "request": {
+      "method": "GET",
+      "path": "/api/canvases/461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+    },
+    "status": 404,
+    "headers": {},
+    "body": {
+      "error": "This page is not a canvas",
+      "code": "not_canvas"
+    }
+  },
+  "row_create": {
+    "request": {
+      "method": "POST",
+      "path": "/api/databases/6c821f6a-3d37-4dbc-aaeb-632b9691bcf0/rows",
+      "body": {
+        "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
+        "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+        "title": "Engle (1982)",
+        "values": {
+          "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+        }
+      }
+    },
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
+      "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+      "title": "Engle (1982)",
+      "icon": null,
+      "values": {
+        "32c6dda6-0db0-4084-a38d-207305dcb0a7": "Engle (1982)",
+        "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+      },
+      "position": 1,
+      "createdAt": "2026-11-19T18:30:22.288Z",
+      "updatedAt": "2026-11-19T18:30:22.288Z"
+    }
+  },
+  "attachment_upload": {
+    "request": {
+      "method": "POST",
+      "path": "/api/attachments"
+    },
+    "status": 201,
+    "headers": {},
+    "body": {
+      "id": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "url": "/api/files/62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "name": "memo.mp3",
+      "size": 200,
+      "mime": "audio/mpeg",
+      "hasText": false,
+      "pages": null
+    }
+  },
+  "file_range": {
+    "request": {
+      "method": "GET",
+      "path": "/api/files/62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "headers": {
+        "range": "bytes=0-9"
+      }
+    },
+    "status": 206,
+    "headers": {
+      "content-range": "bytes 0-9/200",
+      "accept-ranges": "bytes",
+      "content-length": "10",
+      "content-type": "audio/mpeg",
+      "etag": "\"295cbb667c2d2380418d4c7576c666c4f1690de2a2433f0e301bd5923377f8ed\""
+    },
+    "body": "<10 bytes>"
+  },
+  "file_range_416": {
+    "request": {
+      "method": "GET",
+      "path": "/api/files/62e21717-4ba3-4fc1-9809-02ce27c940f5",
+      "headers": {
+        "range": "bytes=500-"
+      }
+    },
+    "status": 416,
+    "headers": {
+      "content-range": "bytes */200",
+      "accept-ranges": "bytes",
+      "content-type": "audio/mpeg",
+      "etag": "\"295cbb667c2d2380418d4c7576c666c4f1690de2a2433f0e301bd5923377f8ed\""
+    },
+    "body": "<0 bytes>"
+  },
+  "sync_entities": {
+    "request": {
+      "method": "GET",
+      "path": "/api/sync?kinds=all&since=0&limit=500"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "cursor": 2645,
+      "head": 2645,
+      "more": false,
+      "reset": false,
+      "serverTime": "2026-11-19T18:30:22.306Z",
+      "workspace": {
+        "id": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+        "name": "Note SPBoucher AI"
+      },
+      "user": {
+        "displayName": "Simon-Pierre Boucher"
+      },
+      "pages": "[… 6 pages, same shape as 2.x …]",
+      "attachments": [
+        {
+          "id": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "filename": "memo.mp3",
+          "mime": "audio/mpeg",
+          "size": 200,
+          "sha256": "295cbb667c2d2380418d4c7576c666c4f1690de2a2433f0e301bd5923377f8ed",
+          "pageCount": null,
+          "createdAt": "2026-11-19T18:30:22.293Z",
+          "deletedAt": null,
+          "rev": 2645
+        }
+      ],
+      "tombstones": [],
+      "tags": [
+        {
+          "name": "garch",
+          "color": "gray"
+        },
+        {
+          "name": "thèse",
+          "color": "gray"
+        }
+      ],
+      "entities": {
+        "task": [
+          {
+            "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+            "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "blockId": "oGqPGUa4yB",
+            "title": "Relire la section 2",
+            "status": "todo",
+            "priority": "high",
+            "dueAt": "2026-11-25T12:00:00.000Z",
+            "completedAt": null,
+            "project": null,
+            "createdAt": "2026-11-19T18:30:22.181Z",
+            "updatedAt": "2026-11-19T18:30:22.181Z",
+            "deletedAt": null,
+            "rev": 2623
+          },
+          "… 1 more"
+        ],
+        "database": [
+          {
+            "id": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+            "pageId": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+            "name": "Exemple · Lectures",
+            "description": null,
+            "icon": null,
+            "isTemplate": false,
+            "templateOf": null,
+            "createdAt": "2026-11-19T18:30:22.276Z",
+            "updatedAt": "2026-11-19T18:30:22.276Z",
+            "deletedAt": null,
+            "rev": 2639
+          }
+        ],
+        "database_property": [
+          {
+            "id": "32c6dda6-0db0-4084-a38d-207305dcb0a7",
+            "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+            "name": "Name",
+            "type": "title",
+            "config": {},
+            "position": 0,
+            "width": 260,
+            "createdAt": "2026-11-19T18:30:22.277Z",
+            "rev": 2640
+          },
+          "… 1 more"
+        ],
+        "database_view": [
+          {
+            "id": "c7d9e78b-3565-45f9-aefe-4820c1a9336f",
+            "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+            "name": "Table",
+            "type": "table",
+            "config": {},
+            "position": 0,
+            "isDefault": true,
+            "createdAt": "2026-11-19T18:30:22.278Z",
+            "rev": 2641
+          }
+        ],
+        "database_row": [
+          {
+            "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
+            "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+            "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+            "values": {
+              "32c6dda6-0db0-4084-a38d-207305dcb0a7": "Engle (1982)",
+              "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+            },
+            "position": 1,
+            "createdAt": "2026-11-19T18:30:22.288Z",
+            "updatedAt": "2026-11-19T18:30:22.288Z",
+            "deletedAt": null,
+            "rev": 2644
+          }
+        ],
+        "edge": [
+          {
+            "id": "2a243406-6449-4835-895f-a16304cc5167",
+            "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "toId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+            "sourceKind": "page",
+            "targetKind": "page",
+            "kind": "link",
+            "relType": "related",
+            "origin": "system",
+            "status": "accepted",
+            "confidence": null,
+            "rationale": null,
+            "note": null,
+            "model": null,
+            "validFrom": null,
+            "validTo": null,
+            "sourceBlockId": "UYapKgbhMk",
+            "targetBlockId": null,
+            "createdAt": "2026-11-19T18:30:22.181Z",
+            "updatedAt": "2026-11-19T18:30:22.181Z",
+            "decidedAt": null,
+            "rev": 2621
+          },
+          "… 2 more"
+        ],
+        "reference": [
+          {
+            "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+            "pageId": null,
+            "citeKey": "tim1986generalized",
+            "entryType": "article",
+            "title": "Generalized autoregressive conditional heteroskedasticity",
+            "authors": [
+              "Bollerslev, Tim"
+            ],
+            "year": 1986,
+            "journal": "Journal of Econometrics",
+            "doi": null,
+            "url": null,
+            "bibtex": "@article{tim1986generalized,\n  author  = {Bollerslev, Tim},\n  title   = {Generalized autoregressive conditional heteroskedasticity},\n  journal = {Journal of Econometrics},\n  year    = {1986}\n}",
+            "fields": {
+              "year": "1986",
+              "title": "Generalized autoregressive conditional heteroskedasticity",
+              "author": "Bollerslev, Tim",
+              "journal": "Journal of Econometrics"
+            },
+            "verified": "user",
+            "attachmentId": null,
+            "createdAt": "2026-11-19T18:30:22.168Z",
+            "updatedAt": "2026-11-19T18:30:22.168Z",
+            "deletedAt": null,
+            "rev": 2618
+          }
+        ],
+        "canvas": [
+          {
+            "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "pageId": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "data": {
+              "edges": [
+                {
+                  "id": "e1",
+                  "to": "n2",
+                  "from": "n1",
+                  "kind": "arrow",
+                  "label": "motive"
+                }
+              ],
+              "nodes": [
+                {
+                  "h": 120,
+                  "w": 240,
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "id": "n1",
+                  "kind": "page",
+                  "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+                },
+                {
+                  "h": 80,
+                  "w": 200,
+                  "x": 320,
+                  "y": 20,
+                  "z": 1,
+                  "id": "n2",
+                  "kind": "text",
+                  "text": "Hypothèse H1",
+                  "color": "#3157d5"
+                }
+              ],
+              "format": "spn-canvas-1",
+              "viewport": {
+                "x": 0,
+                "y": 0,
+                "zoom": 1
+              }
+            },
+            "version": 2,
+            "createdAt": "2026-11-19T18:30:22.247Z",
+            "updatedAt": "2026-11-19T18:30:22.256Z",
+            "rev": 2636
+          }
+        ],
+        "concept": [
+          {
+            "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+            "name": "Exemple · hétéroscédasticité",
+            "description": "Variance non constante",
+            "origin": "user",
+            "status": "accepted",
+            "model": null,
+            "createdAt": "2026-11-19T18:30:22.234Z",
+            "updatedAt": "2026-11-19T18:30:22.239Z",
+            "decidedAt": "2026-11-19T18:30:22.234Z",
+            "rev": 2633
+          }
+        ]
+      }
+    }
+  },
+  "sync_2x": {
+    "request": {
+      "method": "GET",
+      "path": "/api/sync?since=2645&limit=5"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "cursor": 2645,
+      "head": 2645,
+      "more": false,
+      "reset": false,
+      "serverTime": "2026-11-19T18:30:22.310Z",
+      "workspace": {
+        "id": "40c09a2e-73c5-4981-813e-66c793ab31f8",
+        "name": "Note SPBoucher AI"
+      },
+      "user": {
+        "displayName": "Simon-Pierre Boucher"
+      },
+      "pages": [],
+      "attachments": [],
+      "tombstones": [],
+      "tags": [
+        {
+          "name": "garch",
+          "color": "gray"
+        },
+        {
+          "name": "thèse",
+          "color": "gray"
+        }
+      ]
+    }
+  },
+  "sync_bad_kinds": {
+    "request": {
+      "method": "GET",
+      "path": "/api/sync?kinds=task,unicorn"
+    },
+    "status": 400,
+    "headers": {},
+    "body": {
+      "error": "Unknown kind: unicorn",
+      "code": "bad_kinds",
+      "kinds": [
+        "task",
+        "database",
+        "database_property",
+        "database_view",
+        "database_row",
+        "edge",
+        "reference",
+        "canvas",
+        "concept"
+      ]
+    }
+  },
+  "events": {
+    "request": {
+      "method": "GET",
+      "path": "/api/events?pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&limit=4"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "events": [
+        {
+          "id": "ea467abe-3ad8-461d-9efa-4533caf5bb41",
+          "at": "2026-11-19T18:30:22.294Z",
+          "kind": "attachment.added",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageTitle": "Exemple · Revue de littérature",
+          "pageIcon": null,
+          "entityKind": "attachment",
+          "entityId": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "memo.mp3",
+          "data": {
+            "mime": "audio/mpeg",
+            "size": 200
+          }
+        },
+        {
+          "id": "775660b1-2c30-4ef4-a386-a334a610180c",
+          "at": "2026-11-19T18:30:22.211Z",
+          "kind": "tag.added",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageTitle": "Exemple · Revue de littérature",
+          "pageIcon": null,
+          "entityKind": "tag",
+          "entityId": "garch",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "garch",
+          "data": {
+            "tag": "garch"
+          }
+        },
+        {
+          "id": "1cbe5f93-86eb-4999-8de4-6fe575a6c50c",
+          "at": "2026-11-19T18:30:22.211Z",
+          "kind": "tag.added",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageTitle": "Exemple · Revue de littérature",
+          "pageIcon": null,
+          "entityKind": "tag",
+          "entityId": "thèse",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "thèse",
+          "data": {
+            "tag": "thèse"
+          }
+        },
+        {
+          "id": "24c3051f-f5e4-4f05-8832-26da48b9ea9b",
+          "at": "2026-11-19T18:30:22.194Z",
+          "kind": "task.completed",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageTitle": "Exemple · Revue de littérature",
+          "pageIcon": null,
+          "entityKind": "task",
+          "entityId": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "Envoyer le plan au directeur",
+          "data": {}
+        }
+      ],
+      "nextCursor": "MjAyNi0xMS0xOVQxODozMDoyMi4xOTRafDI0YzMwNTFmLWY1ZTQtNGYwNS04ODMyLTI2ZGE0OGI5ZWE5Yg"
+    }
+  },
+  "events_project": {
+    "request": {
+      "method": "GET",
+      "path": "/api/events?projectId=ba54fc28-a1e0-4f7f-a544-4329ac1df694&kinds=relation.*,task.*&limit=3"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "events": [
+        {
+          "id": "d52b805e-b573-49ff-887d-bc6dee9e006c",
+          "at": "2026-11-19T18:30:22.220Z",
+          "kind": "relation.created",
+          "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "pageTitle": "Exemple · Données",
+          "pageIcon": null,
+          "entityKind": "edge",
+          "entityId": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "Exemple · Données — supports → Exemple · Revue de littérature",
+          "data": {
+            "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+            "origin": "user",
+            "relType": "supports",
+            "toTitle": "Exemple · Revue de littérature",
+            "fromTitle": "Exemple · Données",
+            "relationId": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+            "sourceKind": "page",
+            "targetKind": "page"
+          }
+        },
+        {
+          "id": "24c3051f-f5e4-4f05-8832-26da48b9ea9b",
+          "at": "2026-11-19T18:30:22.194Z",
+          "kind": "task.completed",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageTitle": "Exemple · Revue de littérature",
+          "pageIcon": null,
+          "entityKind": "task",
+          "entityId": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "Envoyer le plan au directeur",
+          "data": {}
+        },
+        {
+          "id": "2d92c699-93a6-4b3d-88f8-9f5ce4521fa7",
+          "at": "2026-11-19T18:30:22.188Z",
+          "kind": "task.created",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageTitle": "Exemple · Revue de littérature",
+          "pageIcon": null,
+          "entityKind": "task",
+          "entityId": "31b7dfbe-05ff-4187-ba58-6d791882f4e7",
+          "actor": "user",
+          "device": "SP Notes · Mac",
+          "summary": "Envoyer le plan au directeur",
+          "data": {
+            "dueAt": "2026-11-21T12:00:00.000Z",
+            "priority": "medium"
+          }
+        }
+      ],
+      "nextCursor": "MjAyNi0xMS0xOVQxODozMDoyMi4xODhafDJkOTJjNjk5LTkzYTYtNGIzZC04OGY4LTlmNWNlNDUyMWZhNw"
+    }
+  },
+  "timemachine_page": {
+    "request": {
+      "method": "GET",
+      "path": "/api/timemachine?at=2026-11-19T18%3A30%3A22.318Z&pageId=c511cd3f-a51e-4023-a806-752acb83ad7b"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "at": "2026-11-19T18:30:22.318Z",
+      "scope": {
+        "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b"
+      },
+      "pages": [
+        {
+          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "icon": null,
+          "section": "projects",
+          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "trashedAt": null,
+          "currentTitle": "Exemple · Données",
+          "currentVersion": 1,
+          "title": "Exemple · Données",
+          "existed": true,
+          "source": "current",
+          "exact": true,
+          "version": 1,
+          "versionId": null,
+          "versionAt": "2026-11-19T18:30:22.173Z",
+          "wordCount": 6,
+          "changedSince": false,
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "cDO12-4dJX"
+                },
+                "content": [
+                  {
+                    "text": "Les séries couvrent 2010 à 2025.",
+                    "type": "text"
+                  }
+                ]
+              }
+            ]
+          },
+          "properties": {}
+        }
+      ],
+      "relations": [
+        {
+          "id": "2a243406-6449-4835-895f-a16304cc5167",
+          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "toId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "sourceKind": "page",
+          "targetKind": "page",
+          "kind": "link",
+          "relType": "related",
+          "origin": "system",
+          "note": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": "UYapKgbhMk",
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.181Z",
+          "fromTitle": "Exemple · Revue de littérature",
+          "toTitle": "Exemple · Données"
+        },
+        {
+          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+          "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "sourceKind": "page",
+          "targetKind": "page",
+          "kind": "relation",
+          "relType": "extends",
+          "origin": "user",
+          "note": null,
+          "validFrom": "2026-01-01T00:00:00.000Z",
+          "validTo": null,
+          "sourceBlockId": null,
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.220Z",
+          "fromTitle": "Exemple · Données",
+          "toTitle": "Exemple · Revue de littérature"
+        }
+      ],
+      "references": [],
+      "removedSince": [],
+      "journalSince": "2026-11-19T18:30:22.159Z"
+    }
+  },
+  "timemachine_project": {
+    "request": {
+      "method": "GET",
+      "path": "/api/timemachine?at=2026-11-19T18%3A30%3A22.322Z&projectId=ba54fc28-a1e0-4f7f-a544-4329ac1df694"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "at": "2026-11-19T18:30:22.322Z",
+      "scope": {
+        "projectId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694"
+      },
+      "pages": [
+        {
+          "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "icon": null,
+          "section": "projects",
+          "parentId": null,
+          "trashedAt": null,
+          "currentTitle": "Exemple · Thèse",
+          "currentVersion": 1,
+          "title": "Exemple · Thèse",
+          "existed": true,
+          "source": "current",
+          "exact": true,
+          "version": 1,
+          "versionId": null,
+          "versionAt": "2026-11-19T18:30:22.159Z",
+          "wordCount": 0,
+          "changedSince": false
+        },
+        {
+          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "icon": null,
+          "section": "projects",
+          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "trashedAt": null,
+          "currentTitle": "Exemple · Données",
+          "currentVersion": 1,
+          "title": "Exemple · Données",
+          "existed": true,
+          "source": "current",
+          "exact": true,
+          "version": 1,
+          "versionId": null,
+          "versionAt": "2026-11-19T18:30:22.173Z",
+          "wordCount": 6,
+          "changedSince": false
+        },
+        {
+          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "icon": null,
+          "section": "projects",
+          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "trashedAt": null,
+          "currentTitle": "Exemple · Revue de littérature",
+          "currentVersion": 1,
+          "title": "Exemple · Revue de littérature",
+          "existed": true,
+          "source": "current",
+          "exact": true,
+          "version": 1,
+          "versionId": null,
+          "versionAt": "2026-11-19T18:30:22.180Z",
+          "wordCount": 25,
+          "changedSince": false
+        },
+        {
+          "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "icon": null,
+          "section": "projects",
+          "parentId": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "trashedAt": null,
+          "currentTitle": "Exemple · Carte du projet",
+          "currentVersion": 1,
+          "title": "Exemple · Carte du projet",
+          "existed": true,
+          "source": "current",
+          "exact": true,
+          "version": 1,
+          "versionId": null,
+          "versionAt": "2026-11-19T18:30:22.257Z",
+          "wordCount": 0,
+          "changedSince": false
+        }
+      ],
+      "relations": [
+        {
+          "id": "0f9bf63b-6ddb-458d-8e3a-8071ebeb5eb8",
+          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "toId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "sourceKind": "page",
+          "targetKind": "reference",
+          "kind": "cites",
+          "relType": "cites",
+          "origin": "system",
+          "note": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": "UYapKgbhMk",
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.181Z",
+          "fromTitle": "Exemple · Revue de littérature",
+          "toTitle": "Generalized autoregressive conditional heteroskedasticity"
+        },
+        {
+          "id": "2a243406-6449-4835-895f-a16304cc5167",
+          "fromId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "toId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "sourceKind": "page",
+          "targetKind": "page",
+          "kind": "link",
+          "relType": "related",
+          "origin": "system",
+          "note": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": "UYapKgbhMk",
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.181Z",
+          "fromTitle": "Exemple · Revue de littérature",
+          "toTitle": "Exemple · Données"
+        },
+        {
+          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+          "fromId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "toId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "sourceKind": "page",
+          "targetKind": "page",
+          "kind": "relation",
+          "relType": "extends",
+          "origin": "user",
+          "note": null,
+          "validFrom": "2026-01-01T00:00:00.000Z",
+          "validTo": null,
+          "sourceBlockId": null,
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.220Z",
+          "fromTitle": "Exemple · Données",
+          "toTitle": "Exemple · Revue de littérature"
+        }
+      ],
+      "references": [
+        {
+          "id": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "citeKey": "tim1986generalized",
+          "title": "Generalized autoregressive conditional heteroskedasticity",
+          "authors": [
+            "Bollerslev, Tim"
+          ],
+          "year": 1986,
+          "pageId": null,
+          "createdAt": "2026-11-19T18:30:22.168Z"
+        }
+      ],
+      "removedSince": [],
+      "journalSince": "2026-11-19T18:30:22.159Z"
+    }
+  },
+  "graph_local": {
+    "request": {
+      "method": "GET",
+      "path": "/api/graph?view=local&pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044&depth=1"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "view": "local",
+      "nodes": [
+        {
+          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "entityId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "kind": "page",
+          "title": "Exemple · Revue de littérature",
+          "icon": null,
+          "section": "projects",
+          "createdAt": "2026-11-19T18:30:22.180Z",
+          "updatedAt": "2026-11-19T18:30:22.180Z",
+          "databaseId": null,
+          "degree": 5,
+          "in": 1,
+          "out": 4
+        },
+        {
+          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "entityId": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "kind": "page",
+          "title": "Exemple · Données",
+          "icon": null,
+          "section": "projects",
+          "createdAt": "2026-11-19T18:30:22.173Z",
+          "updatedAt": "2026-11-19T18:30:22.173Z",
+          "databaseId": null,
+          "degree": 2,
+          "in": 1,
+          "out": 1
+        },
+        {
+          "id": "concept:95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "entityId": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "kind": "concept",
+          "title": "Exemple · hétéroscédasticité",
+          "icon": null,
+          "section": null,
+          "createdAt": "2026-11-19T18:30:22.234Z",
+          "updatedAt": "2026-11-19T18:30:22.239Z",
+          "databaseId": null,
+          "degree": 1,
+          "in": 1,
+          "out": 0,
+          "status": "accepted",
+          "origin": "user"
+        },
+        {
+          "id": "ref:a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "entityId": "a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "kind": "reference",
+          "title": "Generalized autoregressive conditional heteroskedasticity",
+          "icon": null,
+          "section": null,
+          "createdAt": "2026-11-19T18:30:22.168Z",
+          "updatedAt": "2026-11-19T18:30:22.168Z",
+          "databaseId": null,
+          "degree": 1,
+          "in": 1,
+          "out": 0
+        },
+        {
+          "id": "att:62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "entityId": "62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "kind": "attachment",
+          "title": "memo.mp3",
+          "icon": null,
+          "section": null,
+          "createdAt": "2026-11-19T18:30:22.293Z",
+          "updatedAt": "2026-11-19T18:30:22.293Z",
+          "databaseId": null,
+          "degree": 1,
+          "in": 1,
+          "out": 0
+        },
+        {
+          "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "entityId": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "kind": "canvas",
+          "title": "Exemple · Carte du projet",
+          "icon": null,
+          "section": "projects",
+          "createdAt": "2026-11-19T18:30:22.247Z",
+          "updatedAt": "2026-11-19T18:30:22.257Z",
+          "databaseId": null,
+          "degree": 0,
+          "in": 0,
+          "out": 0
+        }
+      ],
+      "edges": [
+        {
+          "relType": "about",
+          "origin": "user",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": null,
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.234Z",
+          "sub": null,
+          "id": "e-about-461702e8-7111-46a8-a8a0-6eb8d5bfd044-95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "target": "concept:95be9154-7a3a-4f50-9d65-ce42e149b429",
+          "kind": "about"
+        },
+        {
+          "id": "2a243406-6449-4835-895f-a16304cc5167",
+          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "target": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "kind": "link",
+          "relType": "related",
+          "origin": "system",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": "UYapKgbhMk",
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.181Z",
+          "sub": null
+        },
+        {
+          "id": "0f9bf63b-6ddb-458d-8e3a-8071ebeb5eb8",
+          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "target": "ref:a54dfb9f-b2a9-4ea1-80cf-7fb293d9589b",
+          "kind": "cites",
+          "relType": "cites",
+          "origin": "system",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": "UYapKgbhMk",
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.181Z",
+          "sub": null
+        },
+        {
+          "id": "e2ed24d0-1c30-4e08-9add-27c6bb07624b",
+          "source": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "target": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "kind": "typed",
+          "relType": "extends",
+          "origin": "user",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": "2026-01-01T00:00:00.000Z",
+          "validTo": null,
+          "sourceBlockId": null,
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.220Z",
+          "sub": null
+        },
+        {
+          "relType": "related",
+          "origin": "system",
+          "status": "accepted",
+          "confidence": null,
+          "rationale": null,
+          "note": null,
+          "model": null,
+          "validFrom": null,
+          "validTo": null,
+          "sourceBlockId": null,
+          "targetBlockId": null,
+          "createdAt": "2026-11-19T18:30:22.293Z",
+          "sub": null,
+          "id": "e-att-62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "source": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "target": "att:62e21717-4ba3-4fc1-9809-02ce27c940f5",
+          "kind": "attachment"
+        }
+      ],
+      "center": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "stats": {
+        "pages": 3,
+        "references": 1,
+        "concepts": 1,
+        "edges": 5,
+        "suggested": 0
+      }
+    }
+  },
+  "graph_timeline": {
+    "request": {
+      "method": "GET",
+      "path": "/api/graph?view=timeline&from=2026-11-19T17%3A30%3A22.332Z"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "view": "timeline",
+      "nodes": "[… 8 nodes …]",
+      "edges": "[… 4 edges …]",
+      "center": null,
+      "range": {
+        "from": "2026-11-19T17:30:22.332Z",
+        "to": "2026-11-19T18:30:22.334Z"
+      },
+      "buckets": [
+        {
+          "date": "2026-11-19",
+          "created": 6,
+          "updated": 0,
+          "edges": 4
+        }
+      ],
+      "stats": {
+        "pages": 6,
+        "references": 1,
+        "concepts": 1,
+        "edges": 4,
+        "suggested": 0
+      }
+    }
+  },
+  "insights_run": {
+    "request": {
+      "method": "POST",
+      "path": "/api/graph/insights/run",
+      "body": {
+        "mode": "deterministic"
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "mode": "deterministic",
+      "deterministic": {
+        "created": 1,
+        "considered": 1
+      },
+      "queued": false,
+      "jobId": null
+    }
+  },
+  "insights": {
+    "request": {
+      "method": "GET",
+      "path": "/api/graph/insights?limit=5"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "intelligence": {
+        "computedAt": "2026-11-19T18:30:22.342Z",
+        "stats": {
+          "pages": 5,
+          "edges": 2,
+          "orphans": 3,
+          "clusters": 1,
+          "concepts": 1,
+          "tags": 2
+        },
+        "centralPages": [
+          {
+            "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "title": "Exemple · Revue de littérature",
+            "icon": null,
+            "degree": 1,
+            "in": 1,
+            "out": 1,
+            "pagerank": 0.408163
+          },
+          {
+            "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+            "title": "Exemple · Données",
+            "icon": null,
+            "degree": 1,
+            "in": 1,
+            "out": 1,
+            "pagerank": 0.408163
+          }
+        ],
+        "centralConcepts": [
+          {
+            "id": "95be9154-7a3a-4f50-9d65-ce42e149b429",
+            "name": "Exemple · hétéroscédasticité",
+            "status": "accepted",
+            "origin": "user",
+            "pages": 1
+          }
+        ],
+        "orphans": [
+          {
+            "id": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+            "title": "Exemple · Lectures",
+            "icon": null,
+            "section": "databases",
+            "updatedAt": "2026-11-19T18:30:22.269Z"
+          },
+          {
+            "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "title": "Exemple · Carte du projet",
+            "icon": null,
+            "section": "projects",
+            "updatedAt": "2026-11-19T18:30:22.257Z"
+          },
+          {
+            "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+            "title": "Exemple · Thèse",
+            "icon": null,
+            "section": "projects",
+            "updatedAt": "2026-11-19T18:30:22.159Z"
+          }
+        ],
+        "clusters": [
+          {
+            "id": "1f7f8b405512ce8032b7027e75cdcfa386ec110c",
+            "size": 2,
+            "label": "Exemple · Revue de littérature",
+            "pageIds": [
+              "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+              "c511cd3f-a51e-4023-a806-752acb83ad7b"
+            ],
+            "top": [
+              {
+                "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+                "title": "Exemple · Revue de littérature",
+                "icon": null
+              },
+              {
+                "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+                "title": "Exemple · Données",
+                "icon": null
+              }
+            ]
+          }
+        ],
+        "recurringTopics": [
+          {
+            "kind": "tag",
+            "id": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+            "name": "thèse",
+            "pages": 2,
+            "pageIds": [
+              "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+              "c511cd3f-a51e-4023-a806-752acb83ad7b"
+            ],
+            "lastActivityAt": "2026-11-19T18:30:22.180Z"
+          }
+        ],
+        "duplicates": []
+      },
+      "insights": [
+        {
+          "id": "a6a2d1b4-5a8f-42e1-9985-dcf7f34afabc",
+          "kind": "recurring_topic",
+          "status": "suggested",
+          "title": "#thèse",
+          "detail": "2 pages",
+          "data": {
+            "name": "thèse",
+            "pages": 2,
+            "pageIds": [
+              "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+              "c511cd3f-a51e-4023-a806-752acb83ad7b"
+            ],
+            "topicId": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+            "topicKind": "tag"
+          },
+          "origin": "system",
+          "model": null,
+          "createdAt": "2026-11-19T18:30:22.339Z",
+          "decidedAt": null
+        }
+      ],
+      "counts": {
+        "suggested": 1,
+        "accepted": 0,
+        "dismissed": 0
+      }
+    }
+  },
+  "insight_patch": {
+    "request": {
+      "method": "PATCH",
+      "path": "/api/graph/insights/a6a2d1b4-5a8f-42e1-9985-dcf7f34afabc",
+      "body": {
+        "status": "dismissed"
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "id": "a6a2d1b4-5a8f-42e1-9985-dcf7f34afabc",
+      "kind": "recurring_topic",
+      "status": "dismissed",
+      "title": "#thèse",
+      "detail": "2 pages",
+      "data": {
+        "name": "thèse",
+        "pages": 2,
+        "pageIds": [
+          "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "c511cd3f-a51e-4023-a806-752acb83ad7b"
+        ],
+        "topicId": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+        "topicKind": "tag"
+      },
+      "origin": "system",
+      "model": null,
+      "createdAt": "2026-11-19T18:30:22.339Z",
+      "decidedAt": "2026-11-19T18:30:22.345Z",
+      "relationId": null
+    }
+  },
+  "health": {
+    "request": {
+      "method": "GET",
+      "path": "/api/health/knowledge"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "computedAt": "2026-11-19T18:30:22.347Z",
+      "inactiveDays": 30,
+      "score": {
+        "pages": 6,
+        "issues": 3
+      },
+      "orphans": {
+        "count": 3,
+        "ids": [
+          "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+          "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "ba54fc28-a1e0-4f7f-a544-4329ac1df694"
+        ],
+        "items": [
+          {
+            "id": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+            "title": "Exemple · Lectures",
+            "icon": null,
+            "section": "databases",
+            "updatedAt": "2026-11-19T18:30:22.269Z"
+          },
+          {
+            "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+            "title": "Exemple · Carte du projet",
+            "icon": null,
+            "section": "projects",
+            "updatedAt": "2026-11-19T18:30:22.257Z"
+          },
+          {
+            "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+            "title": "Exemple · Thèse",
+            "icon": null,
+            "section": "projects",
+            "updatedAt": "2026-11-19T18:30:22.159Z"
+          }
+        ]
+      },
+      "brokenLinks": {
+        "count": 0,
+        "ids": [],
+        "items": []
+      },
+      "missingReferences": {
+        "count": 0,
+        "ids": [],
+        "items": []
+      },
+      "potentialDuplicates": {
+        "count": 0,
+        "ids": [],
+        "items": []
+      },
+      "untitled": {
+        "count": 0,
+        "ids": [],
+        "items": []
+      },
+      "inactiveProjects": {
+        "count": 0,
+        "ids": [],
+        "items": []
+      },
+      "openTasks": {
+        "count": 1,
+        "overdue": 0,
+        "withoutDate": 0,
+        "ids": [
+          "366a7cbd-5b77-478a-8562-29cc08bfdb89"
+        ],
+        "items": [
+          {
+            "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+            "title": "Relire la section 2",
+            "dueAt": "2026-11-25T12:00:00.000Z",
+            "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "priority": "high",
+            "overdue": false
+          }
+        ]
+      }
+    }
+  },
+  "brief": {
+    "request": {
+      "method": "GET",
+      "path": "/api/brief?tz=America/Toronto"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "generatedAt": "2026-11-19T18:30:22.350Z",
+      "date": "2026-11-19",
+      "timeZone": "America/Toronto",
+      "recentNotes": [
+        {
+          "id": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+          "title": "Exemple · Lectures",
+          "icon": null,
+          "section": "databases",
+          "type": "database",
+          "updatedAt": "2026-11-19T18:30:22.269Z",
+          "wordCount": 0
+        },
+        {
+          "id": "3d9d278b-333f-4fdc-92f7-2a9eb46d8e19",
+          "title": "Exemple · Carte du projet",
+          "icon": null,
+          "section": "projects",
+          "type": "canvas",
+          "updatedAt": "2026-11-19T18:30:22.257Z",
+          "wordCount": 0
+        },
+        {
+          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "title": "Exemple · Revue de littérature",
+          "icon": null,
+          "section": "projects",
+          "type": "page",
+          "updatedAt": "2026-11-19T18:30:22.180Z",
+          "wordCount": 25
+        },
+        {
+          "id": "c511cd3f-a51e-4023-a806-752acb83ad7b",
+          "title": "Exemple · Données",
+          "icon": null,
+          "section": "projects",
+          "type": "page",
+          "updatedAt": "2026-11-19T18:30:22.173Z",
+          "wordCount": 6
+        },
+        {
+          "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "title": "Exemple · Thèse",
+          "icon": null,
+          "section": "projects",
+          "type": "page",
+          "updatedAt": "2026-11-19T18:30:22.159Z",
+          "wordCount": 0
+        }
+      ],
+      "activeProjects": [
+        {
+          "id": "ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+          "title": "Exemple · Thèse",
+          "icon": null,
+          "lastActivityAt": "2026-11-19T18:30:22.257Z",
+          "pages": 4,
+          "openTasks": 1
+        }
+      ],
+      "tasks": {
+        "overdue": [],
+        "dueToday": [],
+        "dueSoon": [
+          {
+            "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+            "title": "Relire la section 2",
+            "status": "todo",
+            "priority": "high",
+            "dueAt": "2026-11-25T12:00:00.000Z",
+            "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+            "pageTitle": "Exemple · Revue de littérature",
+            "blockId": "oGqPGUa4yB",
+            "project": null
+          }
+        ]
+      },
+      "unfiledCaptures": {
+        "count": 0,
+        "items": []
+      },
+      "linkSuggestions": {
+        "count": 0,
+        "items": []
+      },
+      "toRevisit": [],
+      "aiSummary": {
+        "ai": true,
+        "text": "Résumé factice.",
+        "model": "fake-brief-1",
+        "at": "2026-11-19T18:30:13.591Z"
+      }
+    }
+  },
+  "query_tasks": {
+    "request": {
+      "method": "POST",
+      "path": "/api/query",
+      "body": {
+        "source": "tasks",
+        "filter": {
+          "parentId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "status": "all"
+        },
+        "limit": 10
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "source": "tasks",
+      "columns": [
+        {
+          "key": "title",
+          "label": "Tâche",
+          "type": "text"
+        },
+        {
+          "key": "status",
+          "label": "État",
+          "type": "select"
+        },
+        {
+          "key": "priority",
+          "label": "Priorité",
+          "type": "select"
+        },
+        {
+          "key": "dueAt",
+          "label": "Échéance",
+          "type": "date"
+        },
+        {
+          "key": "pageTitle",
+          "label": "Page",
+          "type": "page"
+        },
+        {
+          "key": "project",
+          "label": "Projet",
+          "type": "text"
+        }
+      ],
+      "rows": [
+        {
+          "id": "366a7cbd-5b77-478a-8562-29cc08bfdb89",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "blockId": "oGqPGUa4yB",
+          "title": "Relire la section 2",
+          "status": "todo",
+          "priority": "high",
+          "dueAt": "2026-11-25T12:00:00.000Z",
+          "completedAt": null,
+          "pageTitle": "Exemple · Revue de littérature",
+          "project": null
+        }
+      ],
+      "total": 1,
+      "limit": 10,
+      "table": {
+        "columns": [
+          "Tâche",
+          "État",
+          "Priorité",
+          "Échéance",
+          "Page",
+          "Projet"
+        ],
+        "rows": [
+          [
+            "Relire la section 2",
+            "todo",
+            "high",
+            "2026-11-25T12:00:00.000Z",
+            "Exemple · Revue de littérature",
+            null
+          ]
+        ]
+      },
+      "resolvedAt": "2026-11-19T18:30:22.355Z"
+    }
+  },
+  "query_database": {
+    "request": {
+      "method": "POST",
+      "path": "/api/query",
+      "body": {
+        "source": "database",
+        "databaseId": "6c821f6a-3d37-4dbc-aaeb-632b9691bcf0",
+        "limit": 10
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "source": "database",
+      "columns": [
+        {
+          "key": "32c6dda6-0db0-4084-a38d-207305dcb0a7",
+          "label": "Name",
+          "type": "page"
+        },
+        {
+          "key": "6bd4009e-c6cb-4a62-9247-da4caacd8705",
+          "label": "Année",
+          "type": "number"
+        }
+      ],
+      "rows": [
+        {
+          "id": "ebb9c7a8-368b-4c6a-bd4c-ae15098ff147",
+          "pageId": "0c111cd6-de3e-4127-a52b-904425c6b81a",
+          "title": "Engle (1982)",
+          "icon": null,
+          "32c6dda6-0db0-4084-a38d-207305dcb0a7": "Engle (1982)",
+          "6bd4009e-c6cb-4a62-9247-da4caacd8705": 1982
+        }
+      ],
+      "total": 1,
+      "limit": 10,
+      "table": {
+        "columns": [
+          "Name",
+          "Année"
+        ],
+        "rows": [
+          [
+            "Engle (1982)",
+            1982
+          ]
+        ]
+      },
+      "resolvedAt": "2026-11-19T18:30:22.358Z",
+      "databaseId": "c36f369e-8c55-4bcd-932e-9f801446cf7c",
+      "viewId": "c7d9e78b-3565-45f9-aefe-4820c1a9336f",
+      "name": "Exemple · Lectures"
+    }
+  },
+  "query_backlinks": {
+    "request": {
+      "method": "POST",
+      "path": "/api/query",
+      "body": {
+        "source": "backlinks",
+        "pageId": "c511cd3f-a51e-4023-a806-752acb83ad7b"
+      }
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "source": "backlinks",
+      "columns": [
+        {
+          "key": "title",
+          "label": "Page",
+          "type": "page"
+        },
+        {
+          "key": "section",
+          "label": "Espace",
+          "type": "select"
+        },
+        {
+          "key": "updatedAt",
+          "label": "Modifiée",
+          "type": "date"
+        }
+      ],
+      "rows": [
+        {
+          "id": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+          "title": "Exemple · Revue de littérature",
+          "icon": null,
+          "section": "projects",
+          "updatedAt": "2026-11-19T18:30:22.180Z",
+          "via": [
+            "link"
+          ]
+        }
+      ],
+      "total": 1,
+      "limit": 25,
+      "table": {
+        "columns": [
+          "Page",
+          "Espace",
+          "Modifiée"
+        ],
+        "rows": [
+          [
+            "Exemple · Revue de littérature",
+            "projects",
+            "2026-11-19T18:30:22.180Z"
+          ]
+        ]
+      },
+      "resolvedAt": "2026-11-19T18:30:22.360Z"
+    }
+  },
+  "zoom2": {
+    "request": {
+      "method": "GET",
+      "path": "/api/pages/461702e8-7111-46a8-a8a0-6eb8d5bfd044/zoom?level=2"
+    },
+    "status": 200,
+    "headers": {},
+    "body": {
+      "level": 2,
+      "pageId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044",
+      "title": "Exemple · Revue de littérature",
+      "version": 1,
+      "updatedAt": "2026-11-19T18:30:22.180Z",
+      "ai": false,
+      "sections": [
+        {
+          "blockId": "JnjiYbI3ze",
+          "level": 1,
+          "heading": "Volatilité conditionnelle",
+          "firstSentence": "Le modèle fondateur est Bollerslev 1986.",
+          "words": 23,
+          "blocks": 4
+        }
+      ]
+    }
+  },
+  "zoom1": {
+    "request": {
+      "method": "GET",
+      "path": "/api/pages/461702e8-7111-46a8-a8a0-6eb8d5bfd044/zoom?level=1"
+    },
+    "status": 501,
+    "headers": {},
+    "body": {
+      "error": "Semantic zoom level 1 (AI synopsis) is not available on this server",
+      "code": "not_implemented"
+    }
+  },
+  "error_bad_id": {
+    "request": {
+      "method": "GET",
+      "path": "/api/pages/not-a-uuid"
+    },
+    "status": 400,
+    "headers": {},
+    "body": {
+      "error": "Validation: Invalid UUID",
+      "code": "bad_request"
+    }
+  },
+  "error_cycle": {
+    "request": {
+      "method": "PATCH",
+      "path": "/api/pages/ba54fc28-a1e0-4f7f-a544-4329ac1df694",
+      "body": {
+        "parentId": "461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+      }
+    },
+    "status": 409,
+    "headers": {},
+    "body": {
+      "error": "A page cannot be moved under one of its own sub-pages",
+      "code": "cycle"
+    }
+  },
+  "tags": {
+    "request": {
+      "method": "GET",
+      "path": "/api/tags"
+    },
+    "status": 200,
+    "headers": {},
+    "body": [
+      {
+        "id": "1145c4b2-3fe7-4f3f-bfc3-fedf2eab46ea",
+        "name": "garch",
+        "color": "gray",
+        "pages": 1
+      },
+      {
+        "id": "6dc94d9e-40a3-4441-9c0a-c49dd6e511d7",
+        "name": "thèse",
+        "color": "gray",
+        "pages": 2
+      }
+    ]
+  },
+  "export_md": {
+    "request": {
+      "method": "GET",
+      "path": "/api/export?format=md&pageId=461702e8-7111-46a8-a8a0-6eb8d5bfd044"
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/markdown; charset=utf-8"
+    },
+    "body": "<551 bytes>"
+  },
+  "_catalogue": {
+    "entityKinds": [
+      "task",
+      "database",
+      "database_property",
+      "database_view",
+      "database_row",
+      "edge",
+      "reference",
+      "canvas",
+      "concept"
+    ],
+    "entityColumns": {
+      "task": [
+        "id",
+        "pageId",
+        "blockId",
+        "title",
+        "status",
+        "priority",
+        "dueAt",
+        "completedAt",
+        "project",
+        "createdAt",
+        "updatedAt",
+        "deletedAt",
+        "rev"
+      ],
+      "database": [
+        "id",
+        "pageId",
+        "name",
+        "description",
+        "icon",
+        "isTemplate",
+        "templateOf",
+        "createdAt",
+        "updatedAt",
+        "deletedAt",
+        "rev"
+      ],
+      "database_property": [
+        "id",
+        "databaseId",
+        "name",
+        "type",
+        "config",
+        "position",
+        "width",
+        "createdAt",
+        "rev"
+      ],
+      "database_view": [
+        "id",
+        "databaseId",
+        "name",
+        "type",
+        "config",
+        "position",
+        "isDefault",
+        "createdAt",
+        "rev"
+      ],
+      "database_row": [
+        "id",
+        "databaseId",
+        "pageId",
+        "values",
+        "position",
+        "createdAt",
+        "updatedAt",
+        "deletedAt",
+        "rev"
+      ],
+      "edge": [
+        "id",
+        "fromId",
+        "toId",
+        "sourceKind",
+        "targetKind",
+        "kind",
+        "relType",
+        "origin",
+        "status",
+        "confidence",
+        "rationale",
+        "note",
+        "model",
+        "validFrom",
+        "validTo",
+        "sourceBlockId",
+        "targetBlockId",
+        "createdAt",
+        "updatedAt",
+        "decidedAt",
+        "rev"
+      ],
+      "reference": [
+        "id",
+        "pageId",
+        "citeKey",
+        "entryType",
+        "title",
+        "authors",
+        "year",
+        "journal",
+        "doi",
+        "url",
+        "bibtex",
+        "fields",
+        "verified",
+        "attachmentId",
+        "createdAt",
+        "updatedAt",
+        "deletedAt",
+        "rev"
+      ],
+      "canvas": [
+        "id",
+        "pageId",
+        "data",
+        "version",
+        "createdAt",
+        "updatedAt",
+        "rev"
+      ],
+      "concept": [
+        "id",
+        "name",
+        "description",
+        "origin",
+        "status",
+        "model",
+        "createdAt",
+        "updatedAt",
+        "decidedAt",
+        "rev"
+      ]
+    },
+    "eventKinds": [
+      "page.created",
+      "page.renamed",
+      "page.edited",
+      "page.moved",
+      "page.archived",
+      "page.unarchived",
+      "page.trashed",
+      "page.restored",
+      "page.purged",
+      "page.version",
+      "tag.added",
+      "tag.removed",
+      "link.added",
+      "link.removed",
+      "relation.created",
+      "relation.accepted",
+      "relation.rejected",
+      "relation.removed",
+      "reference.added",
+      "reference.linked",
+      "attachment.added",
+      "task.created",
+      "task.completed",
+      "task.reopened",
+      "capture.created",
+      "capture.filed",
+      "ai.applied",
+      "agent.applied",
+      "decision.recorded",
+      "canvas.edited"
+    ],
+    "relTypes": [
+      "related",
+      "supports",
+      "contradicts",
+      "extends",
+      "example_of",
+      "part_of",
+      "cites",
+      "precedes",
+      "follows",
+      "about",
+      "answers",
+      "duplicates"
+    ],
+    "features": [
+      "entities",
+      "tasks-v2",
+      "events",
+      "timemachine",
+      "graph-v2",
+      "insights",
+      "canvas",
+      "health",
+      "brief",
+      "query",
+      "zoom",
+      "nodes-v3",
+      "files-range"
+    ],
+    "nodeLimits": {
+      "codeChars": 200000,
+      "outputChars": 200000,
+      "chartColumns": 100,
+      "chartRows": 5000,
+      "chartCellChars": 2000,
+      "annotations": 2000,
+      "annotationTextChars": 10000,
+      "annotationRects": 500,
+      "annotationInkPoints": 20000,
+      "transcriptSegments": 20000,
+      "transcriptTextChars": 5000,
+      "summaryChars": 20000,
+      "titleChars": 500,
+      "queryLimit": 500
+    },
+    "canvasLimits": {
+      "nodes": 5000,
+      "edges": 10000,
+      "bytes": 4194304,
+      "textChars": 100000,
+      "idChars": 64
+    },
+    "generatedAt": "2026-11-19T18:30:22.390Z",
+    "base": "http://localhost:8483"
+  }
+}
