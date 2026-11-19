@@ -51,7 +51,7 @@ export function InboxSuggestions({ pageId, title, onClose, onApplied }: { pageId
   return (
     <section aria-label={`AI suggestions for ${title}`} data-testid="inbox-suggestions" className="ai-surface mx-3 mb-3 rounded-xl p-3">
       <header className="flex items-center gap-2">
-        <span className="ai-mark"><Sparkles aria-hidden className="size-3" />AI suggestions</span>
+        <span className="ai-mark shrink-0 whitespace-nowrap"><Sparkles aria-hidden className="size-3" />AI suggestions</span>
         {state.phase === "ready" && state.result.model && <span className="min-w-0 truncate text-[12px] text-fg-muted">{state.result.model}{state.result.cached ? " · cached" : ""}</span>}
         <span className="ml-auto flex shrink-0 items-center">
           {state.phase === "ready" && state.result.ai && <button type="button" aria-label="Regenerate suggestions" title="Regenerate suggestions" onClick={() => void load(true)} className="grid size-9 place-items-center rounded-lg text-fg-muted hover:bg-ai-soft hover:text-ai"><RefreshCw className="size-4" /></button>}
