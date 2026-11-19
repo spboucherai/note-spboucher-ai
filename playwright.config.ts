@@ -17,5 +17,10 @@ export default defineConfig({
     { name: "iphone-se", testMatch: /mobile.*\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "iphone-max", testMatch: /mobile.*\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
     { name: "desktop", testMatch: /desktop.*\.spec\.ts/, use: { viewport: { width: 1280, height: 800 } }, dependencies: ["auth"] },
+    // SP Note Next Generation — web editor / design system (fake microphone for the voice-note recorder; clipboard for Markdown paste)
+    { name: "next-desktop", testMatch: /next-web\.spec\.ts/, use: { viewport: { width: 1280, height: 800 }, permissions: ["clipboard-read", "clipboard-write", "microphone"], launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] } }, dependencies: ["auth"] },
+    { name: "next-phone-360", testMatch: /next-web-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
+    { name: "next-phone-375", testMatch: /next-web-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
+    { name: "next-phone-430", testMatch: /next-web-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
   ],
 });
