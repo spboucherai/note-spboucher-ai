@@ -149,3 +149,9 @@ export const normText = (s: string) => s.toLowerCase().replace(/\[image:[^\]]*\]
 /** Duplicate key of a page: title + content hash. */
 export const contentKey = (title: string, text: string) => createHash("sha256").update(`${title.trim().toLowerCase()}\n${normText(text)}`).digest("hex");
 export const sha256Hex = (buf: Uint8Array) => createHash("sha256").update(buf).digest("hex");
+/** `parentId` field of the upload form: absent / empty → null, a UUID → that id (lower-case); anything else (malformed text, a file sent under that name) is a 400, never a 500. */
+export function parentIdOf(v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim())) throw new ImportError("Invalid parentId: expected the id of a page.", 400, "bad_parent");
+  return v.trim().toLowerCase();
+}

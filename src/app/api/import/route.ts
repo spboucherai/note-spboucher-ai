@@ -18,7 +18,7 @@ import { handler, HttpError, parseBody, uuid, requireFresh } from "@/lib/api";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import { audit } from "@/lib/audit";
 import { log } from "@/lib/log";
-import { detectKind, validateUpload, previewImport, ImportError, INLINE_MAX, INLINE_KINDS, KINDS, LIMITS, setImportProgress, getImportProgress, deleteImportRecord, listImportJobs, type ImportKind, type DuplicateMode, type ImportProgress } from "@/lib/import";
+import { detectKind, validateUpload, parentIdOf, previewImport, ImportError, INLINE_MAX, INLINE_KINDS, KINDS, LIMITS, setImportProgress, getImportProgress, deleteImportRecord, listImportJobs, type ImportKind, type DuplicateMode, type ImportProgress } from "@/lib/import";
 import { executeJob, auditCounts, isStalled, publicJob, purgeStaleImports, readStaged, removeStaged, stageFile, stagedPath, MAX_ATTEMPTS } from "@/lib/import/job";
 import { getPage } from "@/lib/pages/service";
 export const maxDuration = 300;
@@ -95,7 +95,7 @@ export const POST = handler(async ({ req, ws, user }) => {
   const file = form.get("file");
   if (!(file instanceof File)) throw new HttpError(400, "file missing");
   if (file.size > LIMITS.upload) throw new HttpError(413, "File too large (max 500 MB).", "file_too_large");
-  const parentId = (form.get("parentId") as string) || null; if (parentId) { uuid.parse(parentId); await getPage(ws.id, parentId); }
+  let parentId: string | null; try { parentId = parentIdOf(form.get("parentId")); } catch (e) { throw asHttp(e); } if (parentId) await getPage(ws.id, parentId);
   const filename = file.name.replace(/^.*[\\/]/, "").slice(0, 255) || "upload";
   let kind: ImportKind; const buffer = Buffer.from(await file.arrayBuffer());
   try { const k = (form.get("kind") as string) || ""; kind = KINDS.includes(k as ImportKind) ? (k as ImportKind) : detectKind(filename, file.type); validateUpload({ kind, buffer, filename }); } catch (e) { throw asHttp(e); }
