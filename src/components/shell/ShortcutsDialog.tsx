@@ -1,7 +1,7 @@
 "use client";
 import { Dialog, DialogContent, Kbd } from "@/components/ui/primitives";
 const GROUPS: { title: string; rows: [string, string][] }[] = [
-  { title: "Navigation", rows: [["⌘ K", "Search & commands"], ["Tab", "Titles ↔ content search (in palette)"], ["⌘ \\", "Toggle sidebar"], ["⌘ .", "Focus mode"], ["⌘ ?", "This help"]] },
+  { title: "Navigation", rows: [["⌘ K", "Search & commands"], ["Tab", "Titles ↔ content search (in palette)"], ["⌘ \\", "Toggle sidebar"], ["⌘ .", "Focus mode"], ["⌘ ?", "This help"], /* NEXT-K */ ["⌥ 1 – 4", "Zoom: synopsis / outline / full / + connections (on a page)"]] },
   { title: "Create", rows: [["⌘ ⇧ N", "New page"], ["/", "Block menu (in editor)"], ["@", "Link a page (in editor)"]] },
   { title: "AI", rows: [["⌘ /", "Toggle AI assistant"], ["⌘ J", "AI on selection (in editor)"], ["⏎ / ⇧ ⏎", "Send / new line (chat)"]] },
   { title: "Editing", rows: [["⌘ B / I / U", "Bold / italic / underline"], ["⌘ E", "Inline code"], ["⌘ ⇧ 8 / 7", "Bulleted / numbered list"], ["Tab / ⇧ Tab", "Indent / outdent"], ["⌘ Z / ⌘ ⇧ Z", "Undo / redo"]] },

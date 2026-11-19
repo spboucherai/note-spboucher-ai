@@ -8,7 +8,7 @@ import type { TreeNode } from "./types";
 import { api } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
 
-const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", archive: "Archive", graph: "Knowledge graph", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents" };
+const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", archive: "Archive", graph: "Knowledge graph", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents", /* NEXT-K */ timeline: "Timeline", timemachine: "Time machine", health: "Knowledge health", constellation: "Thought constellation" };
 export function TopBar({ tree }: { tree: TreeNode[] }) {
   const ui = useUI(); const pathname = usePathname(); const r = useRouter();
   const current = pathname.startsWith("/p/") ? tree.find((n) => n.id === pathname.slice(3)) : null;
