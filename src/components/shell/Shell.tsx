@@ -9,6 +9,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav, MobileHeader } from "./MobileNav";
 import { CaptureSheet } from "./CaptureSheet";
+import { CaptureDrop } from "./CaptureDrop";
 import { flushOutbox } from "@/lib/client/outbox";
 import { purgeExpired } from "@/lib/client/offline";
 import { CommandPalette } from "./CommandPalette";
@@ -74,6 +75,7 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
       {!ui.aiOpen && !ui.focusMode && <RightPanel pathname={pathname} />}
       <CommandPalette tree={tree} />
       <CaptureSheet />
+      <CaptureDrop />
       {update && <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] mx-auto flex max-w-md items-center gap-3 rounded-xl border border-line bg-bg-elev p-3 text-[13.5px] shadow-pop"><span className="min-w-0 flex-1">A new version is ready.</span><button className="h-9 rounded-lg bg-accent px-3 font-medium text-accent-fg" onClick={() => { (window as any).__noteUpdateAccepted = true; update.postMessage({ type: "SKIP_WAITING" }); }}>Reload</button><button aria-label="Later" className="h-9 px-2 text-fg-muted" onClick={() => setUpdate(null)}>Later</button></div>}
       <ShortcutsDialog open={help} onOpenChange={setHelp} />
       {ui.focusMode && <button onClick={() => ui.set({ focusMode: false })} title="Exit focus mode (⌘.)" className="fixed right-3 top-3 z-30 grid size-8 place-items-center rounded-md border border-line bg-bg-elev/80 text-fg-muted shadow-card backdrop-blur hover:text-fg safe-top"><Minimize2 className="size-4" /></button>}

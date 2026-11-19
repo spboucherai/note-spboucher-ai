@@ -8,6 +8,7 @@ import type { TreeNode, ShellUser } from "./types";
 import { cn } from "@/lib/utils";
 import { useUI } from "@/lib/client/store";
 import { api } from "@/lib/client/api";
+import { enqueueCapture } from "@/lib/client/outbox";
 import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, Kbd } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { wipeLocalData } from "@/lib/client/offline";
@@ -30,7 +31,11 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
   }
   async function quickCapture() {
     const t = capture.trim(); if (!t || capturing) return; setCapturing(true);
-    try { await api("/api/capture", { method: "POST", json: { kind: /^(https?:\/\/|www\.)\S+$/i.test(t) ? "link" : "note", text: t } }); qc.invalidateQueries({ queryKey: ["inbox"] }); qc.invalidateQueries({ queryKey: ["inbox-count"] }); setCapture(""); toast("Captured to inbox", { tone: "success" }); }
+    // through the outbox, like the capture sheet (3.0): offline or on a timeout the capture is kept on the device and sent later, exactly once
+    try { const res = await enqueueCapture({ kind: /^(https?:\/\/|www\.)\S+$/i.test(t) ? "link" : "note", text: t });
+      if (res.sent) { qc.invalidateQueries({ queryKey: ["inbox"] }); qc.invalidateQueries({ queryKey: ["inbox-count"] }); setCapture(""); toast("Captured to inbox", { tone: "success" }); }
+      else if (res.error && navigator.onLine && !/network|timed out/i.test(res.error)) toast("Capture failed", { description: res.error, tone: "danger" }); // refused by the server: the text stays in the field
+      else { setCapture(""); toast("Saved on this device", { description: "It will be sent to your inbox as soon as the network is back." }); } }
     catch (e: any) { toast("Capture failed", { description: e.message, tone: "danger" }); } finally { setCapturing(false); }
   }
   async function trash(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "DELETE" }); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash", { description: n.title }); if (pathname === `/p/${n.id}`) r.push("/"); }

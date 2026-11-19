@@ -31,7 +31,7 @@ import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import type { Node as PMNodeT } from "@tiptap/pm/model";
 import { createLowlight, common } from "lowlight";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Highlighter, Link2, Sparkles, Heading2, List, Quote, GripVertical, Subscript as SubIcon, Superscript as SupIcon, X, RotateCcw, FileUp, Plus, Trash2, CopyPlus, ArrowUp, ArrowDown, Link as LinkIcon, ShieldAlert, ListTree, AlignLeft, AlignCenter, AlignRight, Pilcrow, Heading1, Heading3, ListOrdered, ListChecks, Lightbulb, SquareCode } from "lucide-react";
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Highlighter, Link2, Sparkles, Heading2, List, Quote, GripVertical, Subscript as SubIcon, Superscript as SupIcon, X, RotateCcw, FileUp, Plus, Trash2, CopyPlus, ArrowUp, ArrowDown, Link as LinkIcon, ShieldAlert, ListTree, AlignLeft, AlignCenter, AlignRight, Pilcrow, Heading1, Heading3, ListOrdered, ListChecks, Lightbulb, SquareCode, Inbox } from "lucide-react";
 import { Callout, AIBlock, FileBlock, FootnoteRef, Footnote, BlockId } from "./extensions/nodes";
 import { SlashCommand, slashItems } from "./extensions/slash";
 import { PageMention } from "./extensions/mention";
@@ -48,6 +48,7 @@ import { Button } from "@/components/ui/button";
 import { useIsTouch, useKeyboardInset } from "@/lib/client/hooks";
 import { uploadFile, type Uploaded } from "@/lib/client/upload";
 import { registerCommands, type Command } from "@/lib/client/commands";
+import { openCapture } from "@/lib/client/capture";
 import { revealBlocks, semanticZoom } from "@/lib/client/motion";
 import { wrapUnknown, unwrapUnknown, type UnknownReport } from "@/lib/editor/unknown";
 import { docToMarkdown } from "@/lib/editor/markdown-client";
@@ -159,6 +160,13 @@ export function Editor({ content, onChange, onReady, onLock, pageId, editable = 
     setAi({ mode, selection: sel || e.getText(), replaceRange: sel ? { from, to } : null, insertAt: to, pageId });
   }, [pageId]);
 
+  /** Capture the selected text to the inbox as a `selection` capture that remembers the page and block it comes from (SPEC §4.12). */
+  const captureSelection = useCallback(() => {
+    const e = editorRef.current; if (!e) return; const { from, to, $from } = e.state.selection; const sel = e.state.doc.textBetween(from, to, "\n").trim();
+    if (!sel) { toast("Select some text first"); return; }
+    const blockId = $from.depth > 0 ? ($from.node(1).attrs.id as string | null | undefined) : null;
+    openCapture({ origin: "selection", text: sel.slice(0, 50_000), sourceUrl: pageId ? `/p/${pageId}${blockId ? `#block-${blockId}` : ""}` : undefined, sourceTitle: typeof document !== "undefined" ? document.querySelector<HTMLTextAreaElement>("[data-page-title]")?.value?.trim().slice(0, 80) || undefined : undefined });
+  }, [pageId]);
   const setLink = useCallback(() => {
     const e = editorRef.current; if (!e) return; const { from, to } = e.state.selection; linkRange.current = { from, to };
     setLinkUrl((e.getAttributes("link").href as string | undefined) ?? ""); setLinkOpen(true);
@@ -194,9 +202,10 @@ export function Editor({ content, onChange, onReady, onLock, pageId, editable = 
       { id: "editor.zoom.full", group: "View", title: "Zoom in to the full text", keywords: "semantic zoom full text", icon: "list-tree", when: () => outlineRef.current, run: () => setZoomLevel(false) },
       { id: "editor.copy.markdown", group: "Page", title: "Copy the page as Markdown", keywords: "export markdown copy md", icon: "copy", run: async () => { try { await navigator.clipboard.writeText(docToMarkdown(getEditorDoc(editor))); toast("Markdown copied"); } catch { toast("Copy is not allowed here", { tone: "danger" }); } } },
       { id: "editor.ai.selection", group: "AI", title: "AI on the selection", shortcut: "⌘J", icon: "sparkles", when: live, run: () => openAIForSelection("custom") },
+      { id: "editor.capture.selection", group: "Editor", title: "Capture the selection to the inbox", keywords: "capture selection quote extract inbox", icon: "inbox", priority: 2, when: () => !editor.state.selection.empty, run: () => captureSelection() },
     ];
     return registerCommands(cmds);
-  }, [editor, embedded, editable, pageId, slashCtx, setZoomLevel, openAIForSelection]);
+  }, [editor, embedded, editable, pageId, slashCtx, setZoomLevel, openAIForSelection, captureSelection]);
   // Block menu on the drag handle
   const blockAct = useCallback((act: "delete" | "duplicate" | "up" | "down" | "link" | "below" | { turn: string }) => {
     const e = editorRef.current; const h = hovered.current; if (!e || !h) return; const node = e.state.doc.nodeAt(h.pos); if (!node) return; const end = h.pos + node.nodeSize;
@@ -269,6 +278,7 @@ export function Editor({ content, onChange, onReady, onLock, pageId, editable = 
             <B title="List" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}><List /></B>
             <B title="Quote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote /></B>
             <span className="mx-0.5 h-5 w-px bg-line" />
+            {!embedded && <B title="Capture selection" onClick={captureSelection}><Inbox /></B>}
             <B title="Align left" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()}><AlignLeft /></B>
             <B title="Align centre" active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()}><AlignCenter /></B>
             <B title="Align right" active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()}><AlignRight /></B>
