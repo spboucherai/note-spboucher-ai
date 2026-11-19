@@ -53,7 +53,7 @@ test("D9: a rollup over a formula, a rollup or a relation of the target rows is 
   const overFormula = await R("sum of formula", dbl.id, "sum"); const overRollup = await R("sum of rollup", leafSum.id, "sum"); const overRelation = await R("leaves shown", toLeaf.id, "show"); const overError = await R("error passes", bad.id, "sum"); const maxFormula = await R("max formula", dbl.id, "max");
   const row = await createRow(ws, top.id, { title: `${PFX} top`, values: { [toMid.id]: [m1.id, m2.id] } });
   assert.equal(row.values[overFormula], 14); assert.equal(row.values[maxFormula], 8); assert.equal(row.values[overRollup], 12);
-  assert.deepEqual(row.values[overRelation], [`${PFX} leaf1, ${PFX} leaf2`, `${PFX} leaf2`]);
+  assert.deepEqual((row.values[overRelation] as string[]).map((v) => v.split(", ").sort().join(", ")), [`${PFX} leaf1, ${PFX} leaf2`, `${PFX} leaf2`]); // relation rows inserted in one statement share created_at: their order is not defined
   assert.match((row.values[overError] as { error: string }).error, /Bad: Division by zero/);
   // the same values through the engine (window hydration)
   const d = await getDatabase(ws, top.id); const q = await queryRows(d.id, d.properties, { limit: 10 }); assert.equal(q.rows[0].values[overFormula], 14);
