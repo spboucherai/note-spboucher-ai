@@ -14,7 +14,7 @@ import { wipeLocalData } from "@/lib/client/offline";
 import type { TreeNode } from "./types";
 
 const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", graph: "Connections", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents", browse: "Browse", archive: "Archive", databases: "Databases" };
-const icon = (n: { icon: string | null; type: string }) => n.icon ?? (n.type === "database" ? "🗂" : n.type === "research" ? "🔬" : "📄");
+const icon = (n: { icon: string | null; type: string }) => n.icon ?? (n.type === "canvas" ? "◇" : n.type === "database" ? "🗂" : n.type === "research" ? "🔬" : "📄");
 
 /** Things waiting on this device (captures not sent yet) + connectivity, as a small pill. */
 export function SyncPill({ className }: { className?: string }) {

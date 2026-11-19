@@ -22,5 +22,10 @@ export default defineConfig({
     { name: "next-phone-360", testMatch: /next-web-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
     { name: "next-phone-375", testMatch: /next-web-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "next-phone-430", testMatch: /next-web-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
+    // SP Note Next Generation — Infinite Canvas (clipboard for copy / paste of cards)
+    { name: "next-canvas", testMatch: /next-canvas\.spec\.ts/, use: { viewport: { width: 1280, height: 800 }, permissions: ["clipboard-read", "clipboard-write"] }, dependencies: ["auth"] },
+    { name: "next-canvas-phone-360", testMatch: /next-canvas-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
+    { name: "next-canvas-phone-375", testMatch: /next-canvas-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
+    { name: "next-canvas-phone-430", testMatch: /next-canvas-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
   ],
 });

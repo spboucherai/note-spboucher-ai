@@ -28,6 +28,7 @@ export function useShellCommands(_tree: TreeNode[], openShortcuts: () => void) {
       nav("archive", "Archive", "/archive", "archive"), nav("trash", "Trash", "/trash", "trash", "deleted corbeille"), nav("settings", "Settings", "/settings", "settings", "preferences réglages"),
       { id: "create.page", group: "Create", title: "New page", shortcut: "⌘⇧N", icon: "plus", keywords: "note nouvelle page", priority: 5, run: create({ title: "" }) },
       { id: "create.database", group: "Create", title: "New database", icon: "database", keywords: "table board kanban", run: create({ title: "New database", type: "database", section: "databases" }) },
+      { id: "create.canvas", group: "Create", title: "New canvas", icon: "shapes", keywords: "canvas whiteboard board map infinite tableau", run: create({ title: "New canvas", type: "canvas" }) },
       { id: "create.research", group: "Create", title: "New research page", icon: "flask", run: create({ title: "", type: "research", section: "research" }) },
       { id: "create.capture", group: "Create", title: "Quick capture", shortcut: "⌘⇧C", icon: "inbox", keywords: "capture note inbox", priority: 4, run: () => ui().set({ captureOpen: true }) },
       { id: "ai.open", group: "AI", title: "Open the AI assistant", shortcut: "⌘/", icon: "sparkles", keywords: "ask chat", run: () => ui().openAI() },

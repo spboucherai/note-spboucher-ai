@@ -11,16 +11,16 @@ import { Command } from "cmdk";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Plus, Sparkles, Home, Share2, Settings, Search, BarChart3, Trash2, Database, FlaskConical, Moon, Sun, Columns3, Bot, Inbox, Archive, CheckSquare, Link2, PanelLeft, PanelRight, Maximize2, ListTree, Laptop, Keyboard, History, Tag, FileDown, Download, Undo2, Redo2, Copy, Clock, CornerDownLeft, TerminalSquare } from "lucide-react";
+import { FileText, Plus, Sparkles, Home, Share2, Settings, Search, BarChart3, Trash2, Database, FlaskConical, Moon, Sun, Columns3, Bot, Inbox, Archive, CheckSquare, Link2, PanelLeft, PanelRight, Maximize2, ListTree, Laptop, Keyboard, History, Tag, FileDown, Download, Undo2, Redo2, Copy, Clock, CornerDownLeft, TerminalSquare, Shapes } from "lucide-react";
 import { useUI } from "@/lib/client/store";
 import { api } from "@/lib/client/api";
 import { availableCommands, subscribeCommands, getCommands, fuzzyRank, readRecents, rememberRecent, recencyBoost, type Command as Cmd, type RecentEntry } from "@/lib/client/commands";
 import type { TreeNode } from "./types";
 import { cn } from "@/lib/utils";
 
-const ICONS: Record<string, React.ReactNode> = { home: <Home />, inbox: <Inbox />, "check-square": <CheckSquare />, search: <Search />, share: <Share2 />, flask: <FlaskConical />, link: <Link2 />, bot: <Bot />, "bar-chart": <BarChart3 />, columns: <Columns3 />, archive: <Archive />, trash: <Trash2 />, settings: <Settings />, plus: <Plus />, database: <Database />, sparkles: <Sparkles />, "panel-left": <PanelLeft />, "panel-right": <PanelRight />, maximize: <Maximize2 />, "list-tree": <ListTree />, sun: <Sun />, moon: <Moon />, laptop: <Laptop />, keyboard: <Keyboard />, history: <History />, tag: <Tag />, "file-down": <FileDown />, download: <Download />, undo: <Undo2 />, redo: <Redo2 />, copy: <Copy /> };
+const ICONS: Record<string, React.ReactNode> = { shapes: <Shapes />, home: <Home />, inbox: <Inbox />, "check-square": <CheckSquare />, search: <Search />, share: <Share2 />, flask: <FlaskConical />, link: <Link2 />, bot: <Bot />, "bar-chart": <BarChart3 />, columns: <Columns3 />, archive: <Archive />, trash: <Trash2 />, settings: <Settings />, plus: <Plus />, database: <Database />, sparkles: <Sparkles />, "panel-left": <PanelLeft />, "panel-right": <PanelRight />, maximize: <Maximize2 />, "list-tree": <ListTree />, sun: <Sun />, moon: <Moon />, laptop: <Laptop />, keyboard: <Keyboard />, history: <History />, tag: <Tag />, "file-down": <FileDown />, download: <Download />, undo: <Undo2 />, redo: <Redo2 />, copy: <Copy /> };
 const GROUP_ORDER = ["Recent", "Pages", "Create", "Insert", "Page", "Editor", "AI", "View", "Go to", "Settings"];
-const pageIcon = (p: { icon?: string | null; type?: string }) => p.icon ?? (p.type === "database" ? <Database /> : p.type === "research" ? <FlaskConical /> : <FileText />);
+const pageIcon = (p: { icon?: string | null; type?: string }) => p.icon ?? (p.type === "canvas" ? <Shapes /> : p.type === "database" ? <Database /> : p.type === "research" ? <FlaskConical /> : <FileText />);
 /** Title with the matched characters emphasised (never colour alone: weight too). */
 function Hl({ text, positions }: { text: string; positions: number[] }) {
   if (!positions.length) return <>{text}</>; const set = new Set(positions); const out: React.ReactNode[] = []; let buf = "", on = false;

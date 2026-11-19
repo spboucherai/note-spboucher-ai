@@ -14,6 +14,7 @@ export async function handleIndex(d: { sourceType: "page" | "attachment" | "row"
   if (d.sourceType === "page") {
     const [p] = await db.select().from(schema.pages).where(eq(schema.pages.id, d.sourceId));
     if (!p || p.deletedAt) { await removeSource("page", d.sourceId); return { removed: true }; }
+    if (p.type === "canvas") return indexSource(p.workspaceId, "page", p.id, p.title, { text: `${p.title}\n\n${p.plainText}` }, p.id); // a canvas has no document: its cards' text (kept in plain_text by putCanvas) is indexed
     return indexSource(p.workspaceId, "page", p.id, p.title, { doc: await withIds(p) }, p.id);
   }
   if (d.sourceType === "attachment") {

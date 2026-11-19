@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard, CheckSquare, Archive } from "lucide-react";
+import { Home, Search, Sparkles, FileText, Files, Database, FolderKanban, FlaskConical, Share2, Link2, ChevronRight, Plus, Settings, Trash2, Star, MoreHorizontal, Moon, Sun, Laptop, Lock, BarChart3, Bot, Inbox, Columns3, CornerDownLeft, Keyboard, CheckSquare, Archive, Shapes } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TreeNode, ShellUser } from "./types";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ import { navigateWithTitle } from "@/lib/client/motion";
 const SECTIONS: { id: string; label: string; icon: React.ReactNode; type?: string }[] = [
   { id: "notes", label: "Notes", icon: <FileText /> }, { id: "documents", label: "Documents", icon: <Files /> }, { id: "projects", label: "Projects", icon: <FolderKanban /> }, { id: "research", label: "Research", icon: <FlaskConical />, type: "research" },
 ];
-const defaultIcon = (t: string) => (t === "database" ? "🗂" : t === "research" ? "🔬" : "📄");
+const defaultIcon = (t: string): React.ReactNode => (t === "canvas" ? <Shapes className="inline !size-3.5 text-accent" aria-label="Canvas" data-testid="canvas-icon" /> : t === "database" ? "🗂" : t === "research" ? "🔬" : "📄");
 
 export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[]; user: ShellUser; workspace: { name: string }; onNavigate?: () => void }) {
   const pathname = usePathname(); const r = useRouter(); const qc = useQueryClient(); const ui = useUI();
@@ -97,7 +97,7 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
         <Sec id="databases" label="Databases" action={<button aria-label="New database" onClick={() => create("databases", null, "database", "New database")} className="grid size-5 place-items-center rounded-chip text-fg-faint hover:bg-bg-hover hover:text-fg"><Plus className="size-3.5" /></button>}>
         {databases.length ? databases.slice(0, 12).map((n) => <Link key={n.id} href={`/p/${n.id}`} onClick={onNavigate} data-active={pathname === `/p/${n.id}`} className="side-item"><span className="w-4 text-center text-ui leading-none">{n.icon ?? "🗂"}</span><span className="truncate">{n.title || "Untitled"}</span></Link>) : <button onClick={() => create("databases", null, "database", "New database")} className="side-item w-full text-fg-faint"><Database /> Create a database</button>}
         </Sec>
-        <Sec id="workspace" label="Workspace">
+        <Sec id="workspace" label="Workspace" action={<button aria-label="New canvas" title="New canvas" onClick={() => create("notes", null, "canvas", "New canvas")} className="grid size-5 place-items-center rounded-chip text-fg-faint hover:bg-bg-hover hover:text-fg"><Shapes className="size-3.5" /></button>}>
         {SECTIONS.map((s) => { const roots = (byParent.get(null) ?? []).filter((n) => n.section === s.id); const isOpen = open[`sec:${s.id}`] ?? true; return (
           <div key={s.id}>
             <div className="side-item group pr-1">

@@ -23,7 +23,12 @@ import dynamic from "next/dynamic";
 const PageGraphCard = dynamic(() => import("@/components/graph/PageGraphCard").then((m) => m.PageGraphCard), { ssr: false });
 
 const EMOJI = ["📄", "📝", "📚", "🔬", "🧠", "💡", "📊", "📈", "🗂", "🧪", "🏠", "🏦", "📐", "🧮", "🗓", "✅", "🚀", "⭐", "🔥", "🎯", "🧭", "🗺", "💬", "🤖", "🧩", "📎", "🔐", "🌍", "🏛", "🎓"];
-export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrumb: { id: string; title: string; icon: string | null }[]; backlinks: any[] }) {
+// ── SP Note Next · Infinite Canvas: a page of type "canvas" opens the canvas instead of the text editor (src/components/canvas) ──
+const CanvasPage = dynamic(() => import("@/components/canvas/CanvasPage").then((m) => m.CanvasPage), { ssr: false, loading: () => <div className="grid h-full place-items-center text-ui text-fg-muted" role="status">Loading the canvas…</div> });
+type PageViewProps = { page: any; breadcrumb: { id: string; title: string; icon: string | null }[]; backlinks: any[] };
+export function PageView(props: PageViewProps) { return props.page.type === "canvas" ? <CanvasPage {...props} /> : <DocumentPageView {...props} />; }
+// ── end canvas switch ──
+function DocumentPageView({ page, breadcrumb, backlinks }: PageViewProps) {
   const r = useRouter(); const qc = useQueryClient(); const ui = useUI();
   const [title, setTitle] = useState(page.title === "Untitled" ? "" : page.title); const [icon, setIcon] = useState<string | null>(page.icon); const [cover, setCover] = useState<string | null>(page.cover);
   const [versions, setVersions] = useState<any[] | null>(null); const [preview, setPreview] = useState<any | null>(null); const [compare, setCompare] = useState(false); const [resolving, setResolving] = useState<string | null>(null);
