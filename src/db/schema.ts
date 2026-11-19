@@ -115,7 +115,7 @@ export const databaseRows = pgTable("database_rows", {
   pageId: uuid("page_id").notNull().references(() => pages.id, { onDelete: "cascade" }),
   values: jsonb().$type<Record<string, unknown>>().notNull().default({}), position: doublePrecision().notNull().default(0),
   createdAt: created(), updatedAt: created(), deletedAt: ts("deleted_at"), rev: bigint({ mode: "number" }).notNull().default(0), workspaceId: uuid("workspace_id"),
-}, (t) => [index("db_rows_db_idx").on(t.databaseId), index("db_rows_values_idx").using("gin", t.values)]);
+}, (t) => [index("db_rows_db_idx").on(t.databaseId), index("db_rows_values_idx").using("gin", t.values), index("db_rows_db_pos_idx").on(t.databaseId, t.position, t.createdAt)]);
 export const databaseViews = pgTable("database_views", {
   id: uuid().primaryKey().defaultRandom(), databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }),
   name: text().notNull(), type: text().notNull().default("table"), // table board calendar gallery timeline list
@@ -266,6 +266,22 @@ export const aiPropertyRuns = pgTable("ai_property_runs", {
   createdAt: created(), startedAt: ts("started_at"), finishedAt: ts("finished_at"),
 }, (t) => [index("ai_property_runs_db_idx").on(t.databaseId, t.createdAt), index("ai_property_runs_cell_idx").on(t.rowId, t.propertyId, t.createdAt)]);
 // ---------- end NEXT-AI
+
+// ---------- NEXT-P-DB (migration 0005_next_productivity): Databases Next Generation
+/** Reusable presets for new rows of a database: property values (keyed by property id) + the body of the row page. */
+export const databaseRowTemplates = pgTable("database_row_templates", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }),
+  name: text().notNull(), icon: text(), values: jsonb().$type<Record<string, unknown>>().notNull().default({}), content: jsonb().$type<unknown>(),
+  position: integer().notNull().default(0), isDefault: boolean("is_default").notNull().default(false), createdAt: created(), updatedAt: created(),
+}, (t) => [index("db_row_templates_db_idx").on(t.databaseId, t.position)]);
+/** Undo / redo journal of bulk row actions. kind = update | delete | duplicate; data holds what is needed to revert and to re-apply. */
+export const databaseRowOps = pgTable("database_row_ops", {
+  id: uuid().primaryKey().defaultRandom(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  databaseId: uuid("database_id").notNull().references(() => databases.id, { onDelete: "cascade" }),
+  kind: text().notNull(), data: jsonb().$type<Record<string, unknown>>().notNull().default({}), rowCount: integer("row_count").notNull().default(0), createdAt: created(), undoneAt: ts("undone_at"),
+}, (t) => [index("db_row_ops_db_idx").on(t.databaseId, t.createdAt)]);
+// ---------- end NEXT-P-DB
 
 // ---------- research
 export const researchReferences = pgTable("references", {
