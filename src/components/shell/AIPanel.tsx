@@ -3,7 +3,9 @@ import { useEffect, useRef } from "react";
 import { X, PanelRightClose, Sparkles } from "lucide-react";
 import { useUI } from "@/lib/client/store";
 import { useIsPhone, useKeyboardInset } from "@/lib/client/hooks";
-import { Chat } from "@/components/chat/Chat";
+import dynamic from "next/dynamic";
+// loaded when the panel opens: the chat renders Markdown with KaTeX (≈ 420 kB), which was in the first-load JavaScript of every screen
+const Chat = dynamic(() => import("@/components/chat/Chat").then((m) => m.Chat), { ssr: false, loading: () => <div className="p-4"><div className="skeleton h-7 w-2/3" /></div> });
 /**
  * Assistant panel. Desktop: resizable right column. Phone: a full-height screen pinned between the top of the viewport and the top of
  * the on-screen keyboard (`bottom: var(--kb)`), laid out as a flex column so the composer is always the last visible row — it can never

@@ -663,7 +663,8 @@ malformed.
 ### `GET /api/health/knowledge`
 
 `?inactiveDays=<1..3650, default 30>` — an integer outside the range is clamped and the applied value is echoed in `inactiveDays`
-(§0.6). Authenticated (the public liveness probe `GET /api/health` is unchanged). Computed from real
+(§0.6). `score` is `{pages, truncated, issues}`: `pages` = live pages read, most recently changed first, at most 50 000;
+`truncated: true` (new key, integration pass) says older pages were left out — the cut used to be an unordered 20 000. Authenticated (the public liveness probe `GET /api/health` is unchanged). Computed from real
 data at each call, no model. Every section is `{ count, ids, items }` (`ids` ≤ 200 page / task ids, `items` ≤ 200 with details).
 
 | Section | Definition | Item |

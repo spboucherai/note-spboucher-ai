@@ -35,7 +35,9 @@ test("rollups: every aggregate over a relation, with real target values", async 
   const idsOf: string[] = []; for (const [agg, tp] of want) idsOf.push(await R(agg, tp));
   assert.deepEqual([...new Set(want.map((w) => w[0]))].sort(), [...AGGREGATES].sort(), "every aggregate of the enum is exercised");
   const row = await createRow(ws, s.id, { title: `${PFX} src`, values: { [rel.id]: [a.id, b.id, c.id, e.id] } });
-  want.forEach(([agg, tp, v], i) => assert.deepEqual(row.values[idsOf[i]], v, `${agg} of ${tp.name}`));
+  // the order of the related rows is not defined when they were created in the same instant: lists are compared as multisets
+  const norm = (x: unknown) => (Array.isArray(x) ? [...x].map(String).sort() : x);
+  want.forEach(([agg, tp, v], i) => assert.deepEqual(norm(row.values[idsOf[i]]), norm(v), `${agg} of ${tp.name}`));
   const d = await getDatabase(ws, s.id); const pct = d.properties.find((p) => p.name === "percent_checked:Ok")!; assert.equal(displayValue(pct, 50), "50 %");
   const empty = await createRow(ws, s.id, { title: `${PFX} none` }); assert.equal(empty.values[idsOf[0]], 0); assert.equal(empty.values[idsOf[6]], null); assert.equal(empty.values[idsOf[4]], null);
   assert.equal(await code(createProperty(ws, s.id, { name: "bad", type: "rollup", config: { relationPropertyId: rel.id, targetPropertyId: pts.id, aggregate: "mode" as any } })), "bad_request");

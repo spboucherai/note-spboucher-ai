@@ -39,7 +39,7 @@ const editCard = async (page: Page, id: string, value: string) => { await card(p
 const center = async (page: Page, id: string) => { const b = (await card(page, id).boundingBox())!; return { x: b.x + b.width / 2, y: b.y + b.height / 2, b }; };
 const shot = async (page: Page, name: string) => { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, `${name}.png`) }); };
 const setTheme = (page: Page, theme: "light" | "dark") => page.evaluate((t) => (window as any).__noteUI().setTheme(t), theme);
-test.afterAll(async () => { if (made.length) await sql`delete from pages where id = any(${made}::uuid[])`; await sql`delete from pages where title like 'E2E-canvas %' or title = 'New canvas'`; });
+test.afterAll(async () => { if (made.length) await sql`delete from pages where id = any(${made}::uuid[])`; await sql`delete from pages where title like 'E2E-canvas %' or title = 'New canvas'`; await sql`delete from knowledge_edges where to_id in (select id from "references" where title like 'Canvas reference %')`; await sql`delete from "references" where title like 'Canvas reference %'`; });
 
 test("create a canvas from the sidebar, add every kind of card, connect two, reload: identical", async ({ page }) => {
   test.setTimeout(150_000);

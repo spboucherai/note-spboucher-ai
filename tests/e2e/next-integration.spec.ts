@@ -127,6 +127,7 @@ test("one note with every new block lives in the timeline, the graph, health, th
   for (const form of ["```mermaid", `[[${target.body.id}#${targetBlock}]]`, `[Canvas](/p/${canvas.body.id})`, "```javascript", "```output", "[PDF: article.pdf]", "[Audio: Réunion de laboratoire]", "| Trimestre | Ventes | Marge |", "[Vue: Tâches ouvertes]", "[@", `Integration zeta ${stamp}`, "Edited offline."]) expect(md, `Markdown form ${form}`).toContain(form);
   const imp = await page.request.fetch("/api/import", { method: "POST", headers: { origin: ORIGIN }, multipart: { file: { name: `${PFX} reimport ${stamp}.md`, mimeType: "text/markdown", buffer: Buffer.from(md, "utf8") }, sync: "1" } });
   expect(imp.status(), await imp.text()).toBeLessThan(300); const impBody = await imp.json(); expect(impBody.pageId).toBeTruthy(); made.push(impBody.pageId);
+  if (impBody.jobId) await apiCall(page, "DELETE", `/api/import?jobId=${impBody.jobId}`); await sql`delete from settings where key like 'import.%' and value->>'filename' like ${PFX + "%"}`; // the job record of this import
   const back = await server(page, impBody.pageId); const bt = types(back.content); const backText = text(back.content);
   // what the documented Markdown forms carry back: structural blocks as blocks, the rest as readable text (never lost)
   for (const k of ["mermaid", "runCode", "blockRef", "canvasLink", "table"]) expect(bt[k] ?? 0, `re-imported as a ${k} block (${JSON.stringify(bt)})`).toBeGreaterThanOrEqual(1);
