@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Plus, Sparkles, Home, Share2, Settings, Search, BarChart3, Trash2, Database, FlaskConical, Moon, Sun, Columns3, Bot, Inbox, Archive, CheckSquare, Link2, PanelLeft, PanelRight, Maximize2, ListTree, Laptop, Keyboard, History, Tag, FileDown, Download, Undo2, Redo2, Copy, Clock, CornerDownLeft, TerminalSquare } from "lucide-react";
 import { useUI } from "@/lib/client/store";
 import { api } from "@/lib/client/api";
+import { createPage } from "@/lib/client/journal";
 import { availableCommands, subscribeCommands, getCommands, fuzzyRank, readRecents, rememberRecent, recencyBoost, type Command as Cmd, type RecentEntry } from "@/lib/client/commands";
 import type { TreeNode } from "./types";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,7 @@ export function CommandPalette({ tree }: { tree: TreeNode[] }) {
       return [...rec, ...firstPages, ...cmdRows];
     }
     const extra: Row[] = [
-      { key: "x:new", group: "Create", title: `New page “${query}”`, positions: [], icon: <Plus />, score: -1, run: async () => { close(); const p = await api("/api/pages", { method: "POST", json: { title: query } }); r.push(`/p/${p.id}`); } },
+      { key: "x:new", group: "Create", title: `New page “${query}”`, positions: [], icon: <Plus />, score: -1, run: async () => { close(); const p = await createPage({ title: query }); r.push(`/p/${p.id}`); } },
       { key: "x:ask", group: "AI", title: `Ask AI “${query}”`, positions: [], icon: <Sparkles />, score: -2, run: () => { close(); ui.openAI({ prefill: query }); } },
       { key: "x:search", group: "Go to", title: `Search content for “${query}”`, positions: [], icon: <Search />, score: -3, shortcut: "⇥", run: () => { close(); r.push(`/search?q=${encodeURIComponent(query)}`); } },
     ];

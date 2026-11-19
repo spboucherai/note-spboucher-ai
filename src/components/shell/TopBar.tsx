@@ -5,7 +5,8 @@ import { PanelLeft, Search, Sparkles, Plus, Maximize2, ChevronRight, Keyboard, L
 import { useUI } from "@/lib/client/store";
 import { Kbd, Tip } from "@/components/ui/primitives";
 import type { TreeNode } from "./types";
-import { api } from "@/lib/client/api";
+import { createPage } from "@/lib/client/journal";
+import { SyncStatus } from "@/components/offline/SyncStatus";
 import { cn } from "@/lib/utils";
 
 const ROUTE_LABEL: Record<string, string> = { "": "Home", search: "Search", inbox: "Inbox", tasks: "Tasks", archive: "Archive", graph: "Knowledge graph", backlinks: "Backlinks", research: "Research", trash: "Trash", settings: "Settings", ai: "AI", models: "Models", compare: "Compare", agents: "Agents" };
@@ -27,7 +28,8 @@ export function TopBar({ tree }: { tree: TreeNode[] }) {
       </nav>
       <button onClick={() => ui.set({ paletteOpen: true })} className="hidden h-8 w-60 items-center gap-2 rounded-control border border-line bg-bg-elev px-2.5 text-ui text-fg-faint shadow-card transition-colors hover:border-line-strong lg:flex"><Search className="size-4" /><span className="flex-1 text-left">Search or run a command…</span><Kbd>⌘K</Kbd></button>
       <Tip label={<span>Search <Kbd>⌘K</Kbd></span>}><button aria-label="Search" onClick={() => ui.set({ paletteOpen: true })} className={cn(btn, "lg:hidden")}><Search className="size-4" /></button></Tip>
-      <Tip label={<span>New page <Kbd>⌘⇧N</Kbd></span>}><button aria-label="New page" onClick={async () => { const p = await api("/api/pages", { method: "POST", json: { title: "" } }); r.push(`/p/${p.id}`); }} className={btn}><Plus className="size-4" /></button></Tip>
+      <SyncStatus />
+      <Tip label={<span>New page <Kbd>⌘⇧N</Kbd></span>}><button aria-label="New page" onClick={async () => { const p = await createPage({ title: "" }); r.push(`/p/${p.id}`); }} className={btn}><Plus className="size-4" /></button></Tip>
       {current && current.type !== "database" && <Tip label="Outline panel"><button aria-label="Outline panel" aria-pressed={ui.panel?.id === "outline"} onClick={() => (ui.panel?.id === "outline" ? ui.closePanel() : ui.openPanel("outline"))} className={cn(btn, "max-lg:hidden", ui.panel?.id === "outline" && "text-accent")}><ListTree className="size-4" /></button></Tip>}
       <Tip label={<span>Focus mode <Kbd>⌘.</Kbd></span>}><button aria-label="Focus mode" onClick={() => ui.set({ focusMode: true })} className={btn}><Maximize2 className="size-4" /></button></Tip>
       <Tip label={<span>Shortcuts <Kbd>⌘?</Kbd></span>}><button aria-label="Keyboard shortcuts" onClick={() => window.dispatchEvent(new CustomEvent("note:shortcuts"))} className={btn}><Keyboard className="size-4" /></button></Tip>

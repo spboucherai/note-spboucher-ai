@@ -11,6 +11,7 @@ import { api } from "@/lib/client/api";
 import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, Kbd } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
 import { wipeLocalData } from "@/lib/client/offline";
+import { createPage, trashPage, updatePageMeta } from "@/lib/client/journal";
 import { navigateWithTitle } from "@/lib/client/motion";
 
 const SECTIONS: { id: string; label: string; icon: React.ReactNode; type?: string }[] = [
@@ -25,7 +26,7 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
   const [capture, setCapture] = useState(""); const [capturing, setCapturing] = useState(false);
   const toggle = (id: string) => setOpen((o) => { const n = { ...o, [id]: !(o[id] ?? (id.startsWith("sec:") || id.startsWith("grp:"))) }; localStorage.setItem("note-tree-open", JSON.stringify(n)); return n; });
   async function create(section: string, parentId: string | null = null, type?: string, title = "") {
-    const p = await api("/api/pages", { method: "POST", json: { title, section, parentId, type: type ?? "page" } });
+    const p = await createPage({ title, section, parentId, type: type ?? "page" });
     qc.invalidateQueries({ queryKey: ["tree"] }); r.push(`/p/${p.id}`); onNavigate?.(); return p;
   }
   async function quickCapture() {
@@ -33,8 +34,8 @@ export function Sidebar({ tree, user, workspace, onNavigate }: { tree: TreeNode[
     try { await api("/api/capture", { method: "POST", json: { kind: /^(https?:\/\/|www\.)\S+$/i.test(t) ? "link" : "note", text: t } }); qc.invalidateQueries({ queryKey: ["inbox"] }); qc.invalidateQueries({ queryKey: ["inbox-count"] }); setCapture(""); toast("Captured to inbox", { tone: "success" }); }
     catch (e: any) { toast("Capture failed", { description: e.message, tone: "danger" }); } finally { setCapturing(false); }
   }
-  async function trash(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "DELETE" }); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash", { description: n.title }); if (pathname === `/p/${n.id}`) r.push("/"); }
-  async function pin(n: TreeNode) { await api(`/api/pages/${n.id}`, { method: "PATCH", json: { pinned: !n.pinned } }); qc.invalidateQueries({ queryKey: ["tree"] }); }
+  async function trash(n: TreeNode) { await trashPage(n.id); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash", { description: n.title }); if (pathname === `/p/${n.id}`) r.push("/"); }
+  async function pin(n: TreeNode) { await updatePageMeta(n.id, { pinned: !n.pinned }); qc.invalidateQueries({ queryKey: ["tree"] }); }
   async function lock() { if (!window.confirm("Lock this device? You come back with your passkey. Drafts not yet synced on this device are erased.")) return; await api("/api/auth/logout", { method: "POST", idempotencyKey: false }).catch(() => {}); await wipeLocalData(); window.location.href = "/login"; }
 
   // 4 Fluid Navigation: the row title becomes the page title (View Transitions; plain navigation elsewhere or with a modifier key)

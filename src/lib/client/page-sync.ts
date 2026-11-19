@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import { deleteDraft, getDraft, putDraft } from "./offline";
+import { activeEditors, clearConflict, ensurePageReady } from "./journal";
+import { patchReplicaPage } from "./replica";
 
 /**
  * Autosave engine for one page.
@@ -10,7 +12,9 @@ import { deleteDraft, getDraft, putDraft } from "./offline";
  *  - the pending patch is mirrored to IndexedDB at once, so a killed tab, a dead battery or a lost network cannot lose text —
  *    it is replayed on the next visit (or shown as a conflict if the page moved meanwhile);
  *  - when the tab is hidden a keepalive request is attempted too; it uses the same version check;
- *  - states: saved · saving · offline (will retry by itself) · error (retry button) · conflict (user decides, both copies are kept).
+ *  - states: saved · saving · offline (will retry by itself) · error (retry button) · conflict (user decides, both copies are kept);
+ *  - 3.0 offline-first: a page created on this device is sent (mutation journal) before its first save; the device replica is updated
+ *    with every confirmed save; drafts of pages that are not open are replayed by the sync engine (src/lib/client/journal.ts).
  */
 export type SyncStatus = "saved" | "saving" | "offline" | "error" | "conflict";
 export interface ServerCopy { version: number; title: string; content: any; properties?: Record<string, unknown>; updatedAt: string }
@@ -52,8 +56,10 @@ export function usePageSync(page: { id: string; version: number; title: string; 
     const patch = pending.current; pending.current = null; inflight.current = true; if (alive.current) setStatus("saving");
     const versioned = VERSIONED.some((k) => k in patch);
     try {
+      const known = await ensurePageReady(page.id); if (version.current === 0 && known) version.current = known; // created offline: now it exists on the server
       const r = await api<{ version: number; updatedAt: string }>(`/api/pages/${page.id}`, { method: "PATCH", json: versioned ? { ...patch, baseVersion: version.current } : patch, timeoutMs: 20_000 });
       version.current = r.version; backoff.current = 0; hooksRef.current.onSaved?.(patch);
+      patchReplicaPage(page.id, { ...(patch as object), ...(typeof patch.title === "string" ? { title: patch.title.trim() || "Untitled" } : {}), version: r.version, updatedAt: r.updatedAt }).catch(() => {});
       if (!pending.current) { await dropDraft(page.id); if (alive.current) { setStatus("saved"); setError(null); setSavedAt(r.updatedAt); } } else persist();
     } catch (e) {
       const err = e as ApiError; pending.current = { ...patch, ...(pending.current ?? {}) }; persist();
@@ -79,7 +85,8 @@ export function usePageSync(page: { id: string; version: number; title: string; 
     const cur = hooksRef.current.current(); const mine = { title: (pending.current?.title as string | undefined) ?? cur.title, content: pending.current?.content ?? cur.content };
     try {
       const r = await api<ServerCopy & { copyId: string | null }>(`/api/pages/${page.id}/resolve`, { method: "POST", json: { choice, serverVersion: conflict.server.version, mine } });
-      version.current = r.version; pending.current = null; await dropDraft(page.id); blocked.current = false;
+      version.current = r.version; pending.current = null; await dropDraft(page.id); blocked.current = false; clearConflict(page.id).catch(() => {});
+      patchReplicaPage(page.id, { title: r.title, content: r.content, version: r.version, updatedAt: r.updatedAt }).catch(() => {});
       if (choice !== "mine") hooksRef.current.applyRemote(r);
       setConflict(null); setStatus("saved"); setError(null); setSavedAt(r.updatedAt); return { copyId: r.copyId };
     } catch (e) {
@@ -90,7 +97,7 @@ export function usePageSync(page: { id: string; version: number; title: string; 
 
   // Draft left by a previous visit (crash, offline, closed tab): replay it, or show a conflict when the page moved on.
   useEffect(() => {
-    alive.current = true; let cancelled = false;
+    alive.current = true; let cancelled = false; activeEditors.add(page.id);
     (async () => {
       const idb = await getDraft(page.id); const ls = readSyncDraft(page.id); const d = idb && ls ? (ls.updatedAt > idb.updatedAt ? ls : idb) : idb ?? ls; if (!d || cancelled) return;
       const same = (d.patch.content === undefined || sameJson(d.patch.content, page.content)) && (d.patch.title === undefined || d.patch.title === page.title) && d.patch.properties === undefined && Object.keys(d.patch).every((k) => VERSIONED.includes(k));
@@ -100,7 +107,7 @@ export function usePageSync(page: { id: string; version: number; title: string; 
       if (d.baseVersion === page.version) { hooksRef.current.applyRemote({ version: page.version, title: (d.patch.title as string) ?? page.title, content: d.patch.content ?? page.content, updatedAt: page.updatedAt }); hooksRef.current.onDraftRestored?.(); setStatus("saving"); flush(); }
       else raiseConflict({ version: page.version, title: page.title, content: page.content, updatedAt: page.updatedAt }, d.patch);
     })();
-    return () => { cancelled = true; alive.current = false; };
+    return () => { cancelled = true; alive.current = false; activeEditors.delete(page.id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page.id]);
 

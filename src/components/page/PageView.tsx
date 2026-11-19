@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { Clock, Link2, MoreHorizontal, Trash2, RotateCcw, Image as ImageIcon, Smile, Star, Copy, Download, History, FileDown, Sparkles, Check, CloudOff, TriangleAlert, GitCompareArrows, RefreshCw, Archive, Inbox, Tag, X } from "lucide-react";
 import { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, Dialog, DialogContent, SheetContent, Popover, PopoverTrigger, PopoverContent, Spinner } from "@/components/ui/primitives";
 import { usePageSync, type ServerCopy } from "@/lib/client/page-sync";
+import { setPageTags, trashPage, updatePageMeta } from "@/lib/client/journal";
 import { withFreshAuth } from "@/lib/client/passkey";
 import { Button } from "@/components/ui/button";
 import { timeAgo, cn } from "@/lib/utils";
@@ -39,7 +40,7 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
   const { status, queue } = sync;
   useEffect(() => { const h = () => toast("Updated", { description: "This note was changed in another session; you now see the latest version." }); window.addEventListener("note:remote-update", h); return () => window.removeEventListener("note:remote-update", h); }, []);
   useEffect(() => { api<string[]>(`/api/pages/${page.id}/tags`).then(setTags).catch(() => setTags([])); }, [page.id]);
-  async function saveTags(next: string[]) { const prev = tags; setTags(next); try { setTags(await api<string[]>(`/api/pages/${page.id}/tags`, { method: "PUT", json: { tags: next } })); } catch (e: any) { setTags(prev); toast("Could not save tags", { description: e.message, tone: "danger" }); } }
+  async function saveTags(next: string[]) { const prev = tags; setTags(next); try { const r = await setPageTags(page.id, next); if (Array.isArray(r.result)) setTags(r.result); } catch (e: any) { setTags(prev); toast("Could not save tags", { description: e.message, tone: "danger" }); } }
   async function settle(choice: "mine" | "theirs" | "both") {
     setResolving(choice);
     try { const r = await sync.resolve(choice); setCompare(false); toast(choice === "mine" ? "Your version was kept" : choice === "theirs" ? "The other version was kept" : "Both kept", { description: choice === "both" ? "Your text is in a new page “… (conflict copy)”." : "The other copy is in the version history.", tone: "success" }); if (r.copyId) qc.invalidateQueries({ queryKey: ["tree"] }); }
@@ -82,16 +83,16 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
           <button onClick={() => ui.openAI({ pageId: page.id })} className="ml-1 hidden h-7 items-center gap-1 rounded-md px-2 font-medium text-ai hover:bg-ai-soft md:flex"><Sparkles className="size-3.5" />Ask about this page</button>
           <Menu><MenuTrigger asChild><button aria-label="Page menu" className="grid size-7 place-items-center rounded-md text-fg-muted hover:bg-bg-hover hover:text-fg"><MoreHorizontal className="size-4" /></button></MenuTrigger>
             <MenuContent>
-              <MenuItem onSelect={async () => { const next = !pinned; setPinned(next); try { await api(`/api/pages/${page.id}`, { method: "PATCH", json: { pinned: next } }); qc.invalidateQueries({ queryKey: ["tree"] }); toast(next ? "Added to favourites" : "Removed from favourites"); } catch (e: any) { setPinned(!next); toast("Could not update", { description: e.message, tone: "danger" }); } }}><Star /> {pinned ? "Remove from favourites" : "Add to favourites"}</MenuItem>
+              <MenuItem onSelect={async () => { const next = !pinned; setPinned(next); try { await updatePageMeta(page.id, { pinned: next }); qc.invalidateQueries({ queryKey: ["tree"] }); toast(next ? "Added to favourites" : "Removed from favourites"); } catch (e: any) { setPinned(!next); toast("Could not update", { description: e.message, tone: "danger" }); } }}><Star /> {pinned ? "Remove from favourites" : "Add to favourites"}</MenuItem>
               <MenuItem onSelect={() => setTagOpen(true)}><Tag /> Tags</MenuItem>
               <MenuItem onSelect={() => ui.openAI({ pageId: page.id })} className="md:hidden"><Sparkles /> Ask about this page</MenuItem>
               <MenuItem onSelect={loadVersions}><History /> Version history</MenuItem>
               <MenuItem onSelect={async () => { const p = await api(`/api/pages/${page.id}?action=duplicate`, { method: "POST" }); qc.invalidateQueries({ queryKey: ["tree"] }); r.push(`/p/${p.id}`); }}><Copy /> Duplicate</MenuItem>
               <MenuItem onSelect={() => window.open(`/api/export?format=md&pageId=${page.id}`, "_blank")}><FileDown /> Export Markdown</MenuItem>
               <MenuItem onSelect={() => window.open(`/api/export?format=pdf&pageId=${page.id}`, "_blank")}><Download /> Print / PDF</MenuItem>
-              {!isTrashed && <MenuItem onSelect={async () => { await sync.flush(); await api(`/api/pages/${page.id}`, { method: "PATCH", json: { archived: !page.archived } }); qc.invalidateQueries({ queryKey: ["tree"] }); toast(page.archived ? "Back in the workspace" : "Archived", { description: page.archived ? undefined : "Find it again with search or in Archive." }); r.refresh(); if (!page.archived) r.push("/"); }}><Archive /> {page.archived ? "Unarchive" : "Archive"}</MenuItem>}
+              {!isTrashed && <MenuItem onSelect={async () => { await sync.flush(); await updatePageMeta(page.id, { archived: !page.archived }); qc.invalidateQueries({ queryKey: ["tree"] }); toast(page.archived ? "Back in the workspace" : "Archived", { description: page.archived ? undefined : "Find it again with search or in Archive." }); r.refresh(); if (!page.archived) r.push("/"); }}><Archive /> {page.archived ? "Unarchive" : "Archive"}</MenuItem>}
               <MenuSeparator />
-              {isTrashed ? <MenuItem onSelect={async () => { await api(`/api/pages/${page.id}?action=restore`, { method: "POST" }); qc.invalidateQueries({ queryKey: ["tree"] }); r.refresh(); }}><RotateCcw /> Restore</MenuItem> : <MenuItem danger onSelect={async () => { await sync.flush(); await api(`/api/pages/${page.id}`, { method: "DELETE" }); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash"); r.push("/"); }}><Trash2 /> Move to trash</MenuItem>}
+              {isTrashed ? <MenuItem onSelect={async () => { await api(`/api/pages/${page.id}?action=restore`, { method: "POST" }); qc.invalidateQueries({ queryKey: ["tree"] }); r.refresh(); }}><RotateCcw /> Restore</MenuItem> : <MenuItem danger onSelect={async () => { await sync.flush(); await trashPage(page.id); qc.invalidateQueries({ queryKey: ["tree"] }); toast("Moved to trash"); r.push("/"); }}><Trash2 /> Move to trash</MenuItem>}
             </MenuContent></Menu>
         </span>
       </div>

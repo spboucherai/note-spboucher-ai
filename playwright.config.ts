@@ -22,5 +22,10 @@ export default defineConfig({
     { name: "next-phone-360", testMatch: /next-web-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
     { name: "next-phone-375", testMatch: /next-web-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "next-phone-430", testMatch: /next-web-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
+    // SP Note Next Generation — productivity workstream: web offline-first (service worker + device replica; real offline via context.setOffline)
+    { name: "next-p-offline", testMatch: /next-p-offline\.spec\.ts/, use: { viewport: { width: 1280, height: 800 }, serviceWorkers: "allow" }, dependencies: ["auth"] },
+    { name: "next-p-offline-phone-360", testMatch: /next-p-offline-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
+    { name: "next-p-offline-phone-375", testMatch: /next-p-offline-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
+    { name: "next-p-offline-phone-430", testMatch: /next-p-offline-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
   ],
 });
