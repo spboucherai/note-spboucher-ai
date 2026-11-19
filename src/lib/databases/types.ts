@@ -45,7 +45,7 @@ export interface RelationRef { rowId: string; pageId: string; title: string; ico
 export interface RowOut { id: string; pageId: string; title: string; icon: string | null; values: Record<string, unknown>; position: number; createdAt: string; updatedAt: string; cover?: string | null }
 export interface FileRef { id: string; url: string; name: string; mime?: string }
 /** 3.0 additive inputs: `extraFilter` (ANDed with the filter: date window of a calendar, one board column…), `groupBy` (property id: rows ordered by group first, `groups` returned), `aggregates`. */
-export interface QueryInput { viewId?: string; filter?: FilterGroup | null; extraFilter?: FilterGroup | null; sorts?: Sort[]; search?: string; limit?: number; offset?: number; groupBy?: string | null; aggregates?: boolean }
+export interface QueryInput { viewId?: string; filter?: FilterGroup | null; extraFilter?: FilterGroup | null; sorts?: Sort[]; search?: string; limit?: number; offset?: number; groupBy?: string | null; aggregates?: boolean; /** with groupBy: keep the group-first order but skip the per-group counts (windows after the first one) */ skipGroups?: boolean }
 export interface NumAgg { sum: number; avg: number; min: number; max: number; count: number }
 /** One group of the whole result: `offset` = index of its first row in the returned order. Keys: option id, "true" / "false", or "__none". */
 export interface GroupOut { key: string; count: number; offset: number; aggregates: Record<string, NumAgg> }

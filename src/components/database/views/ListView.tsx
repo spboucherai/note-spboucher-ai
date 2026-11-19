@@ -4,23 +4,25 @@ import { cn } from "@/lib/utils";
 import { isEmpty } from "@/lib/databases/values";
 import { useDb } from "../hooks";
 import { CellDisplay } from "../cells/Cell";
-import { groupRows } from "../group";
+import { ChevronRight } from "lucide-react";
+import { useGrowing, rowsOfGroup, LoadMore } from "../growing";
+import { groupSummary } from "./TableView";
 import { OPTION_CLASS } from "../colors";
 
 /** List: one line per row on desktop; on phones the title sits above its priority properties (rows ≥ 48 px). */
 export function ListView() {
   const ctx = useDb();
-  const gb = ctx.props.find((p) => p.id === ctx.view.config.groupBy);
-  const groups = groupRows(ctx.rows, gb);
+  const gb = ctx.groupProp; const groups = ctx.groups; const { shown, more } = useGrowing();
+  const numCols = ctx.visibleProps.filter((p) => ctx.win.aggregates?.[p.id]);
   const side = (ctx.isMobile ? ctx.priorityProps : ctx.visibleProps).filter((p) => p.type !== "title" && p.id !== gb?.id);
   const max = ctx.isMobile ? 3 : 5;
   return (
     <div className="space-y-3">
-      {groups.map((g) => (g.rows.length || !gb) ? (
+      {groups.map((g) => (g.count || !gb) ? (
         <section key={g.key} aria-label={gb ? g.label : "Rows"}>
-          {gb && <h3 className="mb-1 flex items-center gap-1.5"><span className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-medium max-md:text-[13px]", OPTION_CLASS[g.color])}>{g.label}</span><span className="text-[12px] tabular-nums text-fg-faint max-md:text-[13px] max-md:text-fg-muted">{g.rows.length}</span></h3>}
-          <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg-elev shadow-card">
-            {g.rows.map((r) => {
+          {gb && <h3 className="mb-1 flex min-w-0 items-center gap-1.5"><button type="button" aria-expanded={!ctx.collapsed.has(g.key)} aria-label={`${ctx.collapsed.has(g.key) ? "Expand" : "Collapse"} group ${g.label}`} onClick={() => ctx.toggleGroup(g.key)} className="grid size-7 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-bg-sunk max-md:size-11"><ChevronRight className={cn("size-4 transition-transform motion-reduce:transition-none", !ctx.collapsed.has(g.key) && "rotate-90")} /></button><span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-medium max-md:text-[13px]", OPTION_CLASS[g.color])}>{g.label}</span><span className="shrink-0 text-[12px] tabular-nums text-fg-muted max-md:text-[13px]" data-group-count={g.key}>{g.count.toLocaleString("en-CA")}</span><span className="truncate text-[11px] tabular-nums text-fg-muted" data-group-agg={g.key}>{groupSummary(numCols, g.aggregates)}</span></h3>}
+          {!(gb && ctx.collapsed.has(g.key)) && <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-bg-elev shadow-card">
+            {rowsOfGroup(ctx.win, g, shown).map((r) => {
               const shown = side.filter((p) => !isEmpty(r.values[p.id])).slice(0, max);
               return (
                 <div key={r.id} className="relative transition-colors hover:bg-bg-hover">
@@ -37,9 +39,10 @@ export function ListView() {
               );
             })}
             <button type="button" onClick={() => ctx.newRow(gb && g.value !== undefined ? { [gb.id]: g.value } : {})} className="flex h-9 w-full items-center gap-1.5 px-3.5 text-[12px] text-fg-faint hover:bg-bg-hover hover:text-fg max-md:h-11 max-md:text-[14px] max-md:text-fg-muted"><Plus className="size-3.5" /> New</button>
-          </div>
+          </div>}
         </section>
       ) : null)}
+      <LoadMore shown={shown} more={more} />
     </div>
   );
 }

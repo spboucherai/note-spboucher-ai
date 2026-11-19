@@ -252,11 +252,11 @@ const from = () => db.select(rawCols).from(R).innerJoin(P, eq(P.id, R.pageId));
  */
 export async function queryRows(dbId: string, props: Property[], input: EngineInput): Promise<QueryResult> {
   const offset = Math.max(0, Math.floor(input.offset ?? 0)); const limit = Math.min(MAX_LIMIT, Math.max(0, Math.floor(input.limit ?? 200)));
-  const pl = await plan(dbId, props, input); const wantAgg = !!input.aggregates || !!pl.group;
+  const pl = await plan(dbId, props, input); const wantAgg = !!input.aggregates || (!!pl.group && !input.skipGroups);
   if (pl.sqlOnly) {
     const where = and(...pl.where);
     let groups: GroupOut[] | undefined; let aggregates: Record<string, NumAgg> | undefined; let total: number;
-    if (pl.group) {
+    if (pl.group && !input.skipGroups) {
       // one pass: the key / order / numeric expressions are computed in a sub-select so that GROUP BY sees plain columns; totals are the sum of the groups
       const g = groupSql(pl.group); const nums = numProps(props);
       const inner = dsql.join([dsql`${g.key} as k`, dsql`${g.order} as o`, ...nums.map((p, i) => dsql`${numSql(p)} as ${dsql.raw(`v${i}`)}`)], dsql`, `);
@@ -281,7 +281,7 @@ export async function queryRows(dbId: string, props: Property[], input: EngineIn
   if (input.search?.trim() && pl.reasons.includes("search:computed")) { const q = input.search.trim().toLowerCase(); rows = rows.filter((r) => r.title.toLowerCase().includes(q) || props.some((p) => p.type !== "title" && displayValue(p, r.values[p.id]).toLowerCase().includes(q))); }
   rows = sortRows(rows, input.sorts ?? [], pm);
   const out: QueryResult = { rows: [], total: rows.length, limit, offset, engine: "js", fallback: pl.reasons };
-  if (pl.group) {
+  if (pl.group) { // (the JavaScript path has every row in hand: `skipGroups` saves nothing here)
     const gp = pl.group; const buckets = new Map<string, RowOut[]>(); for (const r of rows) { const k = groupKeyOf(gp, r.values[gp.id]); let b = buckets.get(k); if (!b) buckets.set(k, (b = [])); b.push(r); }
     const keys = [...buckets.keys()].sort((a, b) => groupOrder(gp, a) - groupOrder(gp, b)); let at = 0; rows = [];
     out.groups = keys.map((k) => { const b = buckets.get(k)!; const o: GroupOut = { key: k, count: b.length, offset: at, aggregates: aggJs(props, b) }; at += b.length; rows.push(...b); return o; });
