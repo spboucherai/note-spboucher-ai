@@ -1,0 +1,151 @@
+{
+  "description": "SP Note ink width law, shared by the web (src/lib/editor/ink.ts) and the Swift core. pen: width × (0.35 + 0.65·p); marker and highlighter: constant width; a point without pressure counts as p = 1; an opaque highlighter colour is drawn at alpha 0.40. `expected[i]` belongs to `ink.strokes[i]`: the pressure read for each point, the drawn width at each point (rounded to 3 decimals) and the stroke bounds [minX, minY, maxX, maxY] (points ± half the widest width).",
+  "law": {
+    "pen": "width * (0.35 + 0.65 * p)",
+    "marker": "width",
+    "highlighter": "width",
+    "missingPressure": 1,
+    "highlighterAlpha": 0.4
+  },
+  "highlighterAlpha": 0.4,
+  "ink": {
+    "format": "spn-ink-1",
+    "width": 400,
+    "height": 300,
+    "strokes": [
+      {
+        "tool": "pen",
+        "color": "#1a1f2bff",
+        "width": 4,
+        "points": [
+          [
+            10,
+            10,
+            0
+          ],
+          [
+            20,
+            10,
+            0.25
+          ],
+          [
+            30,
+            10,
+            0.5
+          ],
+          [
+            40,
+            10,
+            0.75
+          ],
+          [
+            50,
+            10,
+            1
+          ],
+          [
+            60,
+            10
+          ]
+        ]
+      },
+      {
+        "tool": "marker",
+        "color": "#2f5ddbff",
+        "width": 6,
+        "points": [
+          [
+            10,
+            50,
+            0.2
+          ],
+          [
+            60,
+            50,
+            0.9
+          ],
+          [
+            110,
+            50
+          ]
+        ]
+      },
+      {
+        "tool": "highlighter",
+        "color": "#ffd60aff",
+        "width": 20,
+        "points": [
+          [
+            10,
+            100,
+            0.1
+          ],
+          [
+            200,
+            100
+          ]
+        ]
+      }
+    ]
+  },
+  "expected": [
+    {
+      "pressures": [
+        0,
+        0.25,
+        0.5,
+        0.75,
+        1,
+        1
+      ],
+      "widths": [
+        1.4,
+        2.05,
+        2.7,
+        3.35,
+        4,
+        4
+      ],
+      "bounds": [
+        8,
+        8,
+        62,
+        12
+      ]
+    },
+    {
+      "pressures": [
+        0.2,
+        0.9,
+        1
+      ],
+      "widths": [
+        6,
+        6,
+        6
+      ],
+      "bounds": [
+        7,
+        47,
+        113,
+        53
+      ]
+    },
+    {
+      "pressures": [
+        0.1,
+        1
+      ],
+      "widths": [
+        20,
+        20
+      ],
+      "bounds": [
+        0,
+        90,
+        210,
+        110
+      ]
+    }
+  ]
+}

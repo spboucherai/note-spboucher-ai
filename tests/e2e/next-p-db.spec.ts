@@ -11,7 +11,7 @@ import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { apiCall, sql, expectNoHorizontalOverflow } from "./helpers";
+import { apiCall, sql, expectNoHorizontalOverflow, removeBench } from "./helpers";
 
 const DATA = process.env.DATA_DIR ? path.dirname(process.env.DATA_DIR) : "test-results"; const SHOTS = process.env.E2E_SHOTS ?? path.join(DATA, "shots"); const METRICS = path.join(SHOTS, "..", "db-metrics.json");
 const made: string[] = []; const stamp = Date.now().toString(36);
@@ -27,7 +27,9 @@ test.beforeAll(() => {
   const out = execFileSync("node", ["node_modules/tsx/dist/cli.mjs", "scripts/db-seed-bench.ts", "20000"], { encoding: "utf8", env: process.env, stdio: ["ignore", "pipe", "pipe"] });
   bench = JSON.parse(out.trim().split("\n").pop()!); expect(bench.rows).toBe(20000);
 });
-test.afterAll(async () => { if (made.length) { await sql`delete from pages where database_id in (select id from databases where page_id = any(${made}::uuid[]))`; await sql`delete from pages where id = any(${made}::uuid[])`; } });
+test.afterAll(async () => {
+  await removeBench(bench); // see helpers.ts
+  if (made.length) { await sql`delete from pages where database_id in (select id from databases where page_id = any(${made}::uuid[]))`; await sql`delete from pages where id = any(${made}::uuid[])`; } });
 
 type Mk = { pageId: string; id: string; props: Record<string, string>; rows: { id: string; title: string }[]; views: Record<string, string> };
 /** A small database through the API: properties, rows, extra views. */

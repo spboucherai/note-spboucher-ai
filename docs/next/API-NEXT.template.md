@@ -907,6 +907,30 @@ operator, a non-object). A filter is never ignored.
   `400 bad_id` for a malformed id, `400 too_many_ids`.
 - `POST /api/research/references` with a client `id`: see §0.3 (`200` + `x-existing: 1` on a replay, `409 reference_deleted`).
 
+### Offline-first captures — `POST /api/pages` with `inboxAt` | `inbox` and `captureKind`
+
+A capture made offline by a native client is a page created under its client `id`; so that it reaches the **server inbox**,
+`POST /api/pages` accepts three optional fields (integration pass):
+
+- `inboxAt` — ISO date: the moment of the capture (kept as given) — or `inbox: true` (= now). Unparsable → `400 bad_request`.
+- `captureKind` — open string, 1–32 characters (`note`, `tasks`, `link`, `photo`, `file`, `audio`, `screenshot`, `selection`,
+  `document`, or a kind of your own). Given alone it implies `inbox: true`; in the inbox without a kind it is stored as `note`.
+
+The page is then an inbox item like one made by `POST /api/capture`: listed by `GET /api/inbox`, `inboxAt` / `captureKind` in the
+page and in its feed row, one `capture.created` event (`data: {kind, attachments: 0, via: "pages"}`) next to `page.created`. The call
+stays idempotent on `id` (`200` + `x-existing: 1`, the stored page untouched — a replay never moves a filed note back to the inbox).
+Without these fields nothing changes (`inboxAt: null`, `captureKind: null`).
+
+### Universal links — `GET /.well-known/apple-app-site-association`
+
+Public. `webcredentials` is unchanged; `applinks` is new: `/p/*` (a page, with an optional `#<blockId>` fragment) opens in the
+iOS / iPadOS app when it is installed.
+
+```json
+{ "webcredentials": { "apps": ["3YM54G49SN.ai.spboucher.spnotes", "3YM54G49SN.ai.spboucher.spnotes.ios"] },
+  "applinks": { "details": [ { "appIDs": ["3YM54G49SN.ai.spboucher.spnotes.ios"], "components": [ { "/": "/p/*", "comment": "a page, optional #blockId" } ] } ] } }
+```
+
 ### Capture kinds
 
 `POST /api/capture` accepts `kind`: `note | idea | tasks | link | photo | file | audio | screenshot | selection | document`

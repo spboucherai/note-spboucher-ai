@@ -95,3 +95,27 @@ by the importer and are fixed: `[[<page uuid>#<block>]]` (was treated as a wiki 
 `![Dessin](/api/files/<id>)` (was imported as an image). A file with YAML front matter (SP Note's own export) no longer has a first
 paragraph of the form `Word: text` swallowed as a Notion-style property. Test: `tests/unit/next-int-import.test.ts`,
 `tests/e2e/next-integration.spec.ts`.
+
+
+## Ink: one width law for every platform (lead decision, integration pass)
+
+`src/lib/editor/ink.ts` (drawing block **and** canvas ink — same module) now uses the law of the Swift core, so a drawing has the same
+thickness on every device:
+
+| tool | drawn width at pressure `p` (0…1) |
+|---|---|
+| pen | `width × (0.35 + 0.65 · p)` — the nominal `width` at `p = 1`, 35 % of it at `p = 0` (it was `width × (0.35 + 1.3 · p)`, nominal at 0.5) |
+| marker | `width`, constant (it was `width × (0.85 + 0.3 · p)`) |
+| highlighter | `width`, constant; an opaque colour is drawn at alpha **0.40** (it was 0.35); new strokes are written `#rrggbb66` |
+
+A point without pressure (`[x, y]`) counts as `p = 1` (it was 0.5). Input without a force sensor — mouse, finger — is **written with
+`p = 1`** (it was 0.5); only a stylus (`pointerType: "pen"`) writes its real pressure. Drawings saved before this change keep their
+stored pressures: a mouse stroke stored at 0.5 is now drawn at 67.5 % of its nominal width.
+
+Shared numeric fixture, asserted by `tests/unit/next-web-ink.test.ts` and meant for the Swift tests — `tests/fixtures/ink/width-law.json`:
+
+| stroke | points (pressure) | drawn widths | bounds `[minX, minY, maxX, maxY]` |
+|---|---|---|---|
+| pen, width 4 | 0 · 0.25 · 0.5 · 0.75 · 1 · *(none)* | 1.4 · 2.05 · 2.7 · 3.35 · 4 · 4 | 8, 8, 62, 12 |
+| marker, width 6 | 0.2 · 0.9 · *(none)* | 6 · 6 · 6 | 7, 47, 113, 53 |
+| highlighter, width 20, `#ffd60aff` | 0.1 · *(none)* | 20 · 20 (alpha 0.40) | 0, 90, 210, 110 |

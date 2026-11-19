@@ -9,13 +9,13 @@ import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { apiCall, sql, expectNoHorizontalOverflow } from "./helpers";
+import { apiCall, sql, expectNoHorizontalOverflow, removeBench } from "./helpers";
 
 const DATA = process.env.DATA_DIR ? path.dirname(process.env.DATA_DIR) : "test-results"; const SHOTS = process.env.E2E_SHOTS ?? path.join(DATA, "shots");
 const made: string[] = []; let bench: { pageId: string; databaseId: string; views: Record<string, string>; properties: Record<string, string> };
 const shot = async (page: Page, name: string, w: number) => { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, `phone-${w}-${name}.png`) }); };
 test.beforeAll(() => { bench = JSON.parse(execFileSync("node", ["node_modules/tsx/dist/cli.mjs", "scripts/db-seed-bench.ts", "20000"], { encoding: "utf8", env: process.env, stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n").pop()!); });
-test.afterAll(async () => { if (made.length) { await sql`delete from pages where database_id in (select id from databases where page_id = any(${made}::uuid[]))`; await sql`delete from pages where id = any(${made}::uuid[])`; } });
+test.afterAll(async () => { await removeBench(bench); if (made.length) { await sql`delete from pages where database_id in (select id from databases where page_id = any(${made}::uuid[]))`; await sql`delete from pages where id = any(${made}::uuid[])`; } });
 const tab = async (page: Page, name: string) => { const t = page.getByRole("tab", { name, exact: true }); await t.scrollIntoViewIfNeeded(); if ((await t.getAttribute("aria-selected")) !== "true") await t.click(); await expect(t).toHaveAttribute("aria-selected", "true"); };
 
 test("20 000 rows on a phone: cards load by pages, every view fits, the grid is virtualised", async ({ page }, t) => {

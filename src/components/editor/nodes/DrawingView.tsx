@@ -133,7 +133,7 @@ function InkDialog({ attrs, pageId, onClose, onSaved }: { attrs: DrawingAttrs; p
   // ---- pointer input ----
   const at = (g: Gesture, e: { clientX: number; clientY: number; pressure: number; pointerType: string }): InkPoint => {
     const d = doc.current, x = Math.max(0, Math.min(d.width, (e.clientX - g.left) / geom.current.css)), y = Math.max(0, Math.min(d.height, (e.clientY - g.top) / geom.current.css));
-    let p = e.pressure; if (!(p > 0) || (e.pointerType === "touch" && p >= 1)) p = 0.5; // no force sensor → nominal width
+    let p = e.pressure; if (e.pointerType !== "pen" || !(p > 0)) p = 1; // no force sensor (mouse, finger) → p = 1, the nominal width (same law on every platform)
     return [x, y, Math.min(1, p)];
   };
   const erase = (g: Gesture, pts: InkPoint[]) => { const next = eraseAt(doc.current, pts, WIDTHS.eraser[style.current.size]); if (next !== doc.current) { doc.current = next; rebuild(); } };
@@ -142,7 +142,7 @@ function InkDialog({ attrs, pageId, onClose, onSaved }: { attrs: DrawingAttrs; p
     e.preventDefault(); const c = e.currentTarget; try { c.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
     const r = c.getBoundingClientRect(), s = style.current, g: Gesture = { id: e.pointerId, left: r.left, top: r.top, live: null, before: null, last: [0, 0] }, p = at(g, e); g.last = [p[0], p[1]];
     if (s.tool === "eraser") { g.before = doc.current; erase(g, [p]); }
-    else g.live = { tool: s.tool, color: `${s.color}${s.tool === "highlighter" ? "59" : "ff"}`, width: WIDTHS[s.tool][s.size], points: [p] };
+    else g.live = { tool: s.tool, color: `${s.color}${s.tool === "highlighter" ? "66" : "ff"}`, width: WIDTHS[s.tool][s.size], points: [p] };
     gesture.current = g; schedule();
   };
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {

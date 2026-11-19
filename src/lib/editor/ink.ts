@@ -42,7 +42,7 @@ export function serializeInk(doc: InkDoc): string {
 const COLOR = /^#[0-9a-f]{8}$/i;
 /**
  * Strict reader of an `spn-ink-1` document (JSON text or an already parsed value). Throws an Error that says what is wrong. Unknown
- * keys of the document and of each stroke are kept as they are. Tolerances: a point without pressure gets 0.5, `#rrggbb` gets `ff`.
+ * keys of the document and of each stroke are kept as they are. Tolerances: a point without pressure gets 1 (the nominal width), `#rrggbb` gets `ff`.
  */
 export function parseInk(input: unknown): InkDoc {
   let v = input;
@@ -60,7 +60,7 @@ export function parseInk(input: unknown): InkDoc {
     if (!Array.isArray(s.points)) throw new Error(`${at} must have an array of points`);
     const points = s.points.map((p: unknown, j: number): InkPoint => {
       if (!Array.isArray(p) || p.length < 2 || !p.every(fin)) throw new Error(`${at}, point ${j + 1} must be [x, y, pressure]`);
-      return [p[0], p[1], p.length > 2 ? clamp01(p[2]) : 0.5, ...p.slice(3)];
+      return [p[0], p[1], p.length > 2 ? clamp01(p[2]) : NO_PRESSURE, ...p.slice(3)];
     });
     return { ...extras(s, STROKE_KEYS), tool: s.tool as InkTool, color: (s.color.length === 7 ? `${s.color}ff` : s.color).toLowerCase(), width: s.width, points };
   });
@@ -81,11 +81,19 @@ export function inkBounds(doc: InkDoc): InkBounds | null {
   return b;
 }
 
-/** Drawn width for a pressure: the pen follows pressure (nominal width at 0.5), the marker only mildly, the highlighter not at all. */
+/**
+ * Drawn width for a pressure — ONE law for every platform (lead decision, 3.0 integration: the web adopts the law of the Swift core,
+ * so a drawing does not change thickness between devices):
+ *   pen          width × (0.35 + 0.65 · p)   → the nominal width at p = 1, 35 % of it at p = 0
+ *   marker       width                        (constant)
+ *   highlighter  width                        (constant)
+ * A point without pressure counts as p = 1; input without a force sensor (mouse, finger) is written with p = 1.
+ * Numeric fixture shared with the Swift tests: tests/fixtures/ink/width-law.json.
+ */
+export const NO_PRESSURE = 1;
 export function strokeWidthAt(stroke: Pick<InkStroke, "tool" | "width">, pressure: number): number {
-  const p = clamp01(Number.isFinite(pressure) ? pressure : 0.5);
-  if (stroke.tool === "pen") return stroke.width * (0.35 + 1.3 * p);
-  if (stroke.tool === "marker") return stroke.width * (0.85 + 0.3 * p);
+  const p = clamp01(Number.isFinite(pressure) ? pressure : NO_PRESSURE);
+  if (stroke.tool === "pen") return stroke.width * (0.35 + 0.65 * p);
   return stroke.width;
 }
 
@@ -141,7 +149,7 @@ export function splitColor(color: string): { rgb: string; alpha: number } {
   return { rgb: `#${m[1].toLowerCase()}`, alpha: m[2] ? parseInt(m[2], 16) / 255 : 1 };
 }
 /** Translucency of a highlighter whose colour was stored opaque. */
-export const HIGHLIGHTER_ALPHA = 0.35;
+export const HIGHLIGHTER_ALPHA = 0.40;
 /** Paper colour for a `background` attr: null = transparent ("none"); a hex colour is used as is; any other name is white paper. */
 export function backgroundFill(background: string | null | undefined): string | null {
   if (!background || background === "none" || background === "transparent") return null;

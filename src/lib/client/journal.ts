@@ -155,6 +155,10 @@ export async function flushDrafts(): Promise<{ sent: number; conflicts: number; 
   const rep = { sent: 0, conflicts: 0, stopped: false };
   for (const idb of await listDrafts()) {
     if (activeEditors.has(idb.pageId)) continue;
+    // The page of the address bar is saved by its own editor even when that editor is not mounted yet: the shell can start this
+    // engine before the page component hydrates (its code arrives in a later chunk). Sending its draft from here made the note show
+    // the old text with "Saved" while the server already had the new one (3.0 integration, seen once the shell got lighter).
+    if (typeof location !== "undefined" && location.pathname === `/p/${idb.pageId}`) continue;
     const ls = lsDraft(idb.pageId); const d = ls && ls.updatedAt > idb.updatedAt ? ls : idb;
     const page = await getReplicaPage(d.pageId); if (page?.local) continue; // its creation is still waiting in the journal
     if (await getMeta(conflictKey(d.pageId))) { rep.conflicts++; continue; } // already known: waits for the owner

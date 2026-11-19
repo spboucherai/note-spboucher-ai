@@ -161,7 +161,7 @@ export const CanvasSurface = React.forwardRef<SurfaceHandle, SurfaceProps>(funct
     if (st.tool === "draw" && !st.readOnly) {
       const style = inkStyleRef.current; gesture(true);
       if (style.tool === "eraser") { g.current = { type: "ink", stroke: null, erased: false }; eraseAt(w); }
-      else { const p = e.pressure > 0 && !(e.pointerType === "touch" && e.pressure >= 1) ? Math.min(1, e.pressure) : 0.5; const stroke: InkStroke = { tool: style.tool, color: `${style.color}${style.tool === "highlighter" ? "59" : "ff"}`, width: style.width, points: [[w.x, w.y, p]] }; g.current = { type: "ink", stroke, erased: false }; setLive(stroke); }
+      else { const p = e.pointerType === "pen" && e.pressure > 0 ? Math.min(1, e.pressure) : 1; /* mouse / finger: p = 1 (one width law on every platform) */ const stroke: InkStroke = { tool: style.tool, color: `${style.color}${style.tool === "highlighter" ? "66" : "ff"}`, width: style.width, points: [[w.x, w.y, p]] }; g.current = { type: "ink", stroke, erased: false }; setLive(stroke); }
       return;
     }
     const handle = t.closest("[data-handle]")?.getAttribute("data-handle") as Handle | null; const side = t.closest("[data-connect]")?.getAttribute("data-connect");
@@ -217,7 +217,7 @@ export const CanvasSurface = React.forwardRef<SurfaceHandle, SurfaceProps>(funct
       if (!cur.stroke) { eraseAt(w, M.screenToWorld(store.viewport, prev)); return; }
       const native = e.nativeEvent; const batch = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : []; const events = batch.length ? batch : [native];
       const pts = cur.stroke.points;
-      for (const ev of events) { const q = toWorld(ev); const last = pts[pts.length - 1]; if (Math.hypot(q.x - last[0], q.y - last[1]) * store.viewport.zoom < 1) continue; const pr = ev.pressure > 0 && !(ev.pointerType === "touch" && ev.pressure >= 1) ? Math.min(1, ev.pressure) : 0.5; pts.push([q.x, q.y, pr]); }
+      for (const ev of events) { const q = toWorld(ev); const last = pts[pts.length - 1]; if (Math.hypot(q.x - last[0], q.y - last[1]) * store.viewport.zoom < 1) continue; const pr = ev.pointerType === "pen" && ev.pressure > 0 ? Math.min(1, ev.pressure) : 1; pts.push([q.x, q.y, pr]); }
       setLive({ ...cur.stroke });
     }
   };

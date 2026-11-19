@@ -213,3 +213,23 @@ test("every mutating method of every route.ts refuses a signed-in request withou
     const foreign = await raw(method, route, { origin: "https://evil.example" }); assert.deepEqual([foreign.status, foreign.json?.code], [403, "csrf"], `${method} ${route} with a foreign Origin`);
   }
 });
+
+test("offline-first capture through POST /api/pages: inboxAt | inbox + captureKind land in the server inbox, idempotent on id, in the feed, journaled", async () => {
+  const start = (await api("GET", "/api/sync?since=0&limit=1")).json.head as number; const id = randomUUID(); pages.push(id); const at = "2026-11-19T14:05:06.000Z";
+  const first = await api("POST", "/api/pages", { id, title: `${PFX} captured offline`, inboxAt: at, captureKind: "selection", content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "typed in the tunnel" }] }] } });
+  assert.equal(first.status, 201, first.text); assert.deepEqual([first.json.inboxAt, first.json.captureKind], [at, "selection"]);
+  const again = await api("POST", "/api/pages", { id, title: "other", inbox: true, captureKind: "link" }); assert.equal(again.status, 200); assert.equal(again.headers.get("x-existing"), "1"); assert.deepEqual([again.json.inboxAt, again.json.captureKind, again.json.title], [at, "selection", `${PFX} captured offline`]);
+  assert.ok((await api("GET", "/api/inbox")).text.includes(id), "listed by the inbox");
+  const row = (await api("GET", `/api/sync?since=${start}&limit=500`)).json.pages.find((p: any) => p.id === id); assert.deepEqual([row.inboxAt, row.captureKind], [at, "selection"]);
+  assert.deepEqual((await api("GET", `/api/events?pageId=${id}`)).json.events.map((e: any) => e.kind).sort(), ["capture.created", "page.created"]);
+  const now = await api("POST", "/api/pages", { title: `${PFX} inbox true`, inbox: true }); pages.push(now.json.id); assert.match(now.json.inboxAt, ISO); assert.equal(now.json.captureKind, "note");
+  const kindOnly = await api("POST", "/api/pages", { title: `${PFX} kind only`, captureKind: "voice-memo" }); pages.push(kindOnly.json.id); assert.match(kindOnly.json.inboxAt, ISO); assert.equal(kindOnly.json.captureKind, "voice-memo", "open string");
+  const plain = await api("POST", "/api/pages", { title: `${PFX} plain` }); pages.push(plain.json.id); assert.deepEqual([plain.json.inboxAt, plain.json.captureKind], [null, null]); assert.deepEqual((await api("GET", `/api/events?pageId=${plain.json.id}`)).json.events.map((e: any) => e.kind), ["page.created"]);
+  assert.deepEqual([(await api("POST", "/api/pages", { title: "x", inboxAt: "yesterday" })).json.code, (await api("POST", "/api/pages", { title: "x", captureKind: "k".repeat(33) })).status], ["bad_request", 400]);
+});
+
+test("universal links: the app-site association keeps webcredentials and hands /p/* to the iOS app", async () => {
+  const r = await fetch(`${BASE}/.well-known/apple-app-site-association`); assert.equal(r.status, 200); assert.match(r.headers.get("content-type") ?? "", /json/); const j = await r.json();
+  assert.deepEqual(j.webcredentials, { apps: ["3YM54G49SN.ai.spboucher.spnotes", "3YM54G49SN.ai.spboucher.spnotes.ios"] });
+  assert.deepEqual(j.applinks, { details: [{ appIDs: ["3YM54G49SN.ai.spboucher.spnotes.ios"], components: [{ "/": "/p/*", comment: "a page, optional #blockId" }] }] });
+});

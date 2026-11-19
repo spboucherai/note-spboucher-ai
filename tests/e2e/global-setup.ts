@@ -7,6 +7,7 @@ import { AUTH_DIR, cli, enrollmentToken, saveCredential, saveState, sql, virtual
  * journey once (CLI window → /enroll → virtual authenticator) and keep the resulting session + passkey for the other specs.
  */
 export default async function globalSetup() {
+  process.env.E2E_STARTED = String(Date.now() - 2000); // read by global-teardown.ts
   const base = process.env.E2E_BASE_URL ?? "http://localhost:8481";
   await sql`delete from webauthn_credentials`; await sql`update sessions set revoked_at = now(), revoked_reason = 'e2e-reset' where revoked_at is null`;
   await sql`delete from login_attempts`; await sql`delete from webauthn_challenges`; await sql`update auth_enrollments set closed_reason = 'e2e-reset' where consumed_at is null and closed_reason is null`;

@@ -36,7 +36,7 @@ test("the service worker caches the app shell only — no API, no page HTML", as
 test("desktop layout still works: sidebar, capture to inbox, settings sections", async ({ page }) => {
   await page.goto("/"); await expect(page.getByRole("navigation", { name: "Workspace" })).toBeVisible(); await expect(page.getByRole("navigation", { name: "Primary" })).toBeHidden();
   const t = `E2E-desk ${Date.now()}`; await page.getByRole("navigation", { name: "Workspace" }).getByLabel("Quick capture").fill(t); await page.keyboard.press("Enter"); await expect(page.getByText("Captured to inbox")).toBeVisible();
-  await page.getByRole("navigation", { name: "Workspace" }).getByRole("link", { name: "Inbox" }).click(); await expect(page.getByText(t)).toBeVisible();
+  await page.getByRole("navigation", { name: "Workspace" }).getByRole("link", { name: "Inbox" }).click(); await expect(page.getByRole("main").getByText(t)).toBeVisible(); // in the inbox list (the sidebar tree may list the capture too)
   const [row] = await sql`select id from pages where title = ${t}`; made.push(row.id);
   await page.goto("/settings"); for (const name of ["Security", "Appearance", "Data & backups", "AI & costs", "Indexing", "Jobs", "Tasks", "Profile", "About"]) { await page.getByRole("tab", { name }).click(); await expect(page.locator("main")).not.toContainText(/couldn.t load/i); }
   await page.getByRole("tab", { name: "Jobs" }).click(); await expect(page.getByText(/Worker running/)).toBeVisible(); await expectNoHorizontalOverflow(page);

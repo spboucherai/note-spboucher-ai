@@ -9,7 +9,7 @@ const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleW
 const phone = (width: number, height: number) => ({ viewport: { width, height }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IPHONE_UA });
 export default defineConfig({
   testDir: "./tests/e2e", outputDir: "./test-results", fullyParallel: false, workers: 1, retries: 0, timeout: 60_000,
-  reporter: [["list"]], globalSetup: "./tests/e2e/global-setup.ts",
+  reporter: [["list"]], globalSetup: "./tests/e2e/global-setup.ts", globalTeardown: "./tests/e2e/global-teardown.ts",
   use: { baseURL: process.env.E2E_BASE_URL ?? "http://localhost:8481", storageState: "test-results/.auth/state.json", trace: "retain-on-failure", screenshot: "only-on-failure", locale: "en-CA", timezoneId: "America/Toronto" },
   projects: [
     { name: "auth", testMatch: /auth\.spec\.ts/, use: { ...phone(390, 844), storageState: { cookies: [], origins: [] } } },

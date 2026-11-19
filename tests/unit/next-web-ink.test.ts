@@ -4,6 +4,7 @@
  *   bounds, stroke eraser, simplification, pressure widths and the renderer (against a recording context). Pure logic, no database.
  * author: Simon-Pierre Boucher — contact@spboucher.ai
  */
+import fs from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { emptyInk, serializeInk, parseInk, strokeBounds, inkBounds, eraseAt, simplifyStroke, strokeWidthAt, drawInk, segmentDistance, splitColor, backgroundFill, HIGHLIGHTER_ALPHA, type InkDoc, type InkStroke, type InkPoint, type InkContext } from "../../src/lib/editor/ink";
@@ -33,7 +34,7 @@ test("ink: unknown keys of the document, of a stroke and extra point components 
 });
 test("ink: tolerated inputs are normalised (missing pressure, #rrggbb)", () => {
   const doc = parseInk({ format: "spn-ink-1", width: 10, height: 10, strokes: [{ tool: "pen", color: "#ABCDEF", width: 2, points: [[1, 2]] }] });
-  assert.deepEqual(doc.strokes[0].points, [[1, 2, 0.5]]); assert.equal(doc.strokes[0].color, "#abcdefff");
+  assert.deepEqual(doc.strokes[0].points, [[1, 2, 1]], "a point without pressure counts as p = 1"); assert.equal(doc.strokes[0].color, "#abcdefff");
 });
 test("ink: invalid inputs are rejected with a clear message", () => {
   const ok = { format: "spn-ink-1", width: 10, height: 10, strokes: [{ tool: "pen", color: "#000000ff", width: 2, points: [[1, 2, 0.5]] }] };
@@ -50,25 +51,36 @@ test("ink: invalid inputs are rejected with a clear message", () => {
   assert.doesNotThrow(() => parseInk(ok));
 });
 test("ink: bounds include the stroke's width; an empty document has none", () => {
-  const s = stroke([[10, 20, 0.5], [50, 80, 0.5]]);
-  assert.deepEqual(strokeBounds(s), { minX: 8, minY: 18, maxX: 52, maxY: 82 }, "pen at pressure 0.5 = nominal width 4");
+  const s = stroke([[10, 20, 0.5], [50, 80, 1]]);
+  assert.deepEqual(strokeBounds(s), { minX: 8, minY: 18, maxX: 52, maxY: 82 }, "pen at pressure 1 = nominal width 4");
   assert.equal(strokeBounds(stroke([])), null); assert.equal(inkBounds(emptyInk(10, 10)), null);
   const b = inkBounds({ ...emptyInk(1200, 800), strokes: [s, stroke([]), stroke([[100, 5, 0.5]], { tool: "highlighter", width: 10 })] });
   assert.deepEqual(b, { minX: 8, minY: 0, maxX: 105, maxY: 82 });
 });
-test("ink: widths follow pressure for the pen, mildly for the marker, not at all for the highlighter", () => {
-  const w = (tool: InkStroke["tool"], p: number) => strokeWidthAt({ tool, width: 10 }, p);
-  assert.equal(w("pen", 0.5), 10); assert.ok(w("pen", 0) < 5 && w("pen", 0) > 0); assert.ok(w("pen", 1) > 15); assert.ok(w("pen", 0.2) < w("pen", 0.8));
-  assert.equal(w("marker", 0.5), 10); assert.ok(w("marker", 1) - w("marker", 0) < w("pen", 1) - w("pen", 0)); assert.ok(w("marker", 1) > w("marker", 0));
+test("ink: one width law for every platform — pen = width × (0.35 + 0.65 p), marker and highlighter constant, no pressure = 1", () => {
+  const w = (tool: InkStroke["tool"], p: number) => strokeWidthAt({ tool, width: 10 }, p); const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} ≈ ${b}`);
+  near(w("pen", 1), 10); near(w("pen", 0), 3.5); near(w("pen", 0.5), 6.75); near(w("pen", 0.2), 4.8); assert.ok(w("pen", 0.2) < w("pen", 0.8));
+  assert.equal(w("marker", 0), 10); assert.equal(w("marker", 0.5), 10); assert.equal(w("marker", 1), 10);
   assert.equal(w("highlighter", 0), 10); assert.equal(w("highlighter", 1), 10);
-  assert.equal(w("pen", 5), w("pen", 1), "pressure is clamped"); assert.equal(w("pen", NaN), 10);
+  near(w("pen", 5), 10); near(w("pen", -3), 3.5); near(w("pen", NaN), 10); assert.equal(HIGHLIGHTER_ALPHA, 0.4);
+});
+test("ink: the shared numeric fixture (tests/fixtures/ink/width-law.json) — the Swift core asserts the same numbers", () => {
+  const fx = JSON.parse(fs.readFileSync("tests/fixtures/ink/width-law.json", "utf8")); const doc = parseInk(fx.ink); assert.equal(doc.strokes.length, 3);
+  doc.strokes.forEach((s, i) => {
+    const got = s.points.map((p) => Math.round(strokeWidthAt(s, p[2]) * 1000) / 1000); assert.deepEqual(got, fx.expected[i].widths, `stroke ${i + 1} (${s.tool})`);
+    assert.deepEqual(s.points.map((p) => p[2]), fx.expected[i].pressures, `pressures read for stroke ${i + 1}`);
+    const b = strokeBounds(s)!; assert.deepEqual([b.minX, b.minY, b.maxX, b.maxY].map((v) => Math.round(v * 1000) / 1000), fx.expected[i].bounds, `bounds of stroke ${i + 1}`);
+  });
+  const rec: { alpha: number; lineWidth: number }[] = []; let alpha = 1, lineWidth = 0;
+  const ctx = { save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, arc() {}, fill() { rec.push({ alpha, lineWidth }); }, stroke() { rec.push({ alpha, lineWidth }); }, set globalAlpha(v: number) { alpha = v; }, get globalAlpha() { return alpha; }, set lineWidth(v: number) { lineWidth = v; }, get lineWidth() { return lineWidth; }, lineCap: "round", lineJoin: "round", strokeStyle: "", fillStyle: "", globalCompositeOperation: "source-over" } as unknown as InkContext;
+  drawInk(ctx, { ...doc, strokes: [doc.strokes[2]] }); assert.equal(rec.at(-1)!.alpha, fx.highlighterAlpha, "an opaque highlighter colour is drawn at alpha 0.40"); assert.equal(fx.highlighterAlpha, 0.4);
 });
 test("ink: segment distance — crossing, parallel, touching, degenerate", () => {
   assert.equal(segmentDistance([0, 0], [10, 10], [0, 10], [10, 0]), 0); assert.equal(segmentDistance([0, 0], [10, 0], [0, 3], [10, 3]), 3);
   assert.equal(segmentDistance([0, 0], [10, 0], [13, 4], [20, 4]), 5); assert.equal(segmentDistance([0, 0], [0, 0], [3, 4], [3, 4]), 5); assert.equal(segmentDistance([0, 0], [10, 0], [5, 0], [5, 9]), 0);
 });
 test("ink: the eraser removes exactly the strokes its path passes over", () => {
-  const a = stroke([[0, 100, 0.5], [200, 100, 0.5]]), b = stroke([[0, 200, 0.5], [200, 200, 0.5]]), dot = stroke([[300, 300, 0.5]]), thick = stroke([[0, 400, 0.5], [200, 400, 0.5]], { tool: "highlighter", width: 40 });
+  const a = stroke([[0, 100, 1], [200, 100, 1]]), b = stroke([[0, 200, 1], [200, 200, 1]]), dot = stroke([[300, 300, 1]]), thick = stroke([[0, 400, 1], [200, 400, 1]], { tool: "highlighter", width: 40 }); // p = 1: the nominal width
   const doc: InkDoc = { ...emptyInk(1200, 800), strokes: [a, b, dot, thick] };
   assert.deepEqual(eraseAt(doc, [[100, 0], [100, 150]], 5).strokes, [b, dot, thick], "a swipe crossing A between two of its points");
   assert.deepEqual(eraseAt(doc, [[100, 108]], 5).strokes, [a, b, dot, thick], "8 away > radius 5 + half width 2");

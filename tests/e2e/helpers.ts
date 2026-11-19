@@ -45,3 +45,16 @@ export async function expectNotCovered(page: Page, selector: string) {
 /** 1×1 PNG and a minimal one-page PDF for upload tests. */
 export const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 export const PDF = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length 44>>stream\nBT /F1 12 Tf 20 100 Td (Hello note) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\nxref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \n0000000211 00000 n \n0000000300 00000 n \ntrailer<</Size 6/Root 1 0 R>>\nstartxref\n362\n%%EOF\n");
+
+/**
+ * Remove the 20 000-row benchmark database seeded by scripts/db-seed-bench.ts, with its rows, its index entries and the tombstones
+ * of this removal. Left in the workspace it slowed every other suite down (20 000 pages to index, a 6 MB global graph) and cut the
+ * scans of the knowledge suites. Each database spec seeds it in beforeAll and removes it in afterAll.
+ */
+export async function removeBench(bench: { pageId: string; databaseId: string } | undefined) {
+  if (!bench?.pageId) return;
+  const ids = (await sql`select id from pages where id = ${bench.pageId} or database_id = ${bench.databaseId}`).map((r) => r.id as string);
+  await sql`delete from chunks where page_id = any(${ids}::uuid[])`; await sql`delete from index_state where source_id = any(${ids}::uuid[])`; await sql`delete from knowledge_events where page_id = any(${ids}::uuid[])`;
+  await sql`delete from pages where database_id = ${bench.databaseId}`; await sql`delete from pages where id = ${bench.pageId}`;
+  await sql`delete from sync_tombstones where id = any(${ids}::uuid[]) or (kind like 'database%' and deleted_at > now() - interval '2 minutes')`;
+}

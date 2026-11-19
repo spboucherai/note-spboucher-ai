@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { and, desc, eq, isNull, isNotNull, sql as dsql } from "drizzle-orm";
 import { audit } from "@/lib/audit";
 import { assertDoc } from "@/lib/editor/validate";
+import { recordEvent } from "@/lib/events/service";
 import { parseOffset } from "@/lib/paging";
 
 /**
@@ -29,13 +30,21 @@ export const GET = handler(async ({ req, ws }) => {
   return out(await db.select(cols).from(schema.pages).where(and(...where)).orderBy(order).limit(limit).offset(offset));
 });
 export const POST = handler(async ({ req, ws, user }) => {
-  const b = await parseBody(req, z.object({ id: z.string().uuid().optional(), title: z.string().max(500).optional(), parentId: z.string().uuid().nullable().optional(), section: z.enum(["notes", "documents", "databases", "projects", "research"]).optional(), type: z.enum(["page", "database", "research", "canvas"]).optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional(), properties: z.record(z.string(), z.unknown()).optional() }));
+  const b = await parseBody(req, z.object({ id: z.string().uuid().optional(), title: z.string().max(500).optional(), parentId: z.string().uuid().nullable().optional(), section: z.enum(["notes", "documents", "databases", "projects", "research"]).optional(), type: z.enum(["page", "database", "research", "canvas"]).optional(), content: z.any().optional(), icon: z.string().max(16).nullable().optional(), properties: z.record(z.string(), z.unknown()).optional(),
+    // 3.0 (offline-first capture): a note captured offline by a native client is created through this route under its client id and
+    // must land in the server inbox — `inboxAt` (ISO date) or `inbox: true` (now), and `captureKind` (open string: note, link, photo…)
+    inboxAt: z.string().max(40).nullable().optional(), inbox: z.boolean().optional(), captureKind: z.string().trim().min(1).max(32).nullable().optional() }));
   if (b.content !== undefined) assertDoc(b.content);
+  let inboxAt: Date | null = null;
+  if (b.inboxAt) { inboxAt = new Date(b.inboxAt); if (isNaN(inboxAt.getTime())) throw new HttpError(400, "Invalid inboxAt", "bad_request"); } else if (b.inbox) inboxAt = new Date();
+  if (b.captureKind && !inboxAt) inboxAt = new Date(); // a capture kind means a capture: it goes to the inbox
   // A native client creates notes offline under its own UUID and sends them later, possibly twice (retry after a lost answer): the
   // second time the stored page is returned as it is — never a duplicate, never an overwrite.
   if (b.id) { const existing = await findPageAnyState(ws.id, b.id); if (existing) return Response.json(existing, { status: 200, headers: { "x-existing": "1" } }); }
   if (b.parentId && !(await findPageAnyState(ws.id, b.parentId))) b.parentId = null; // parent purged meanwhile: the note is kept, at the top level
-  const p = await createPage(ws.id, b);
-  await audit(user.id, "page.create", { type: "page", id: p.id }, { title: p.title });
+  const { inboxAt: _a, inbox: _b, captureKind, ...rest } = b; void _a; void _b;
+  const p = await createPage(ws.id, { ...rest, inboxAt, captureKind: inboxAt ? captureKind ?? "note" : null });
+  if (p.inboxAt) await recordEvent(db, { workspaceId: ws.id, kind: "capture.created", pageId: p.id, summary: p.title, data: { kind: p.captureKind ?? "note", attachments: 0, via: "pages" } }); // same journal entry as POST /api/capture
+  await audit(user.id, p.inboxAt ? "inbox.capture" : "page.create", { type: "page", id: p.id }, p.inboxAt ? { kind: p.captureKind, attachments: 0 } : { title: p.title });
   return Response.json(p, { status: 201 });
 });
