@@ -22,7 +22,13 @@ import { API_LEVEL, FEATURES, serverVersion } from "../../src/lib/meta";
 import type { PMNode } from "../../src/lib/editor/text";
 
 let ws: string; const PFX = "nx-know ·";
-before(async () => { ws = await workspace(); }); after(async () => { made.tags.push("nx-know-tag"); await cleanup(ws, PFX); await db.delete(schema.settings).where(eq(schema.settings.key, `brief.summary:${ws}`)).catch(() => {}); });
+// the stored brief summary of the workspace is put back as it was (the fake one written below must never be served by the scratch instance)
+let briefBefore: unknown;
+before(async () => { ws = await workspace(); [briefBefore] = await db.select().from(schema.settings).where(eq(schema.settings.key, `brief.summary:${ws}`)); });
+after(async () => {
+  await db.delete(schema.settings).where(eq(schema.settings.key, `brief.summary:${ws}`)); if (briefBefore) await db.insert(schema.settings).values(briefBefore as typeof schema.settings.$inferInsert);
+  made.tags.push("nx-know-tag"); await cleanup(ws, PFX); // closes the connection: last
+});
 const day = 86_400_000;
 
 test("meta: API level 3, version 3.0.0 and the feature list clients gate on", () => {

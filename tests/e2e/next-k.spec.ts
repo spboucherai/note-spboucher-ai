@@ -27,7 +27,9 @@ const pick = async (page: Page, title: string) => { const dlg = page.getByRole("
 const quiet = async (page: Page) => { await expect(page.locator("[role=status][aria-live=polite].fixed > div")).toHaveCount(0, { timeout: 12_000 }); };
 const palette = async (page: Page, query: string, expectText: string) => { await page.keyboard.press("Control+k"); const dlg = page.getByRole("dialog", { name: "Command center" }); await dlg.locator("[cmdk-input]").fill(query); await expect(dlg.locator("[cmdk-item]").first()).toContainText(expectText); await page.keyboard.press("Enter"); await expect(dlg).toBeHidden(); };
 
+let briefKept: any[] = [];
 test.afterAll(async () => {
+  for (const r of briefKept) await sql`insert into settings (key, value) values (${r.key}, ${sql.json(r.value)}) on conflict (key) do update set value = excluded.value`;
   if (made.length) { await sql`delete from tasks where page_id = any(${made}::uuid[]) or title like ${PFX + "%"}`; await sql`delete from knowledge_edges where from_id = any(${made}::uuid[]) or to_id = any(${made}::uuid[])`; await sql`delete from chunks where page_id = any(${made}::uuid[])`; await sql`delete from knowledge_events where page_id = any(${made}::uuid[])`; await sql`delete from pages where id = any(${made}::uuid[])`; }
   await sql`delete from pages where title like ${PFX + "%"}`; await sql`delete from concepts where name like ${PFX + "%"}`; await sql`delete from knowledge_insights where title like ${PFX + "%"}`; await sql`delete from settings where key like 'graph.constellation:%'`;
 });
@@ -80,7 +82,7 @@ test("graph 2.0: concepts management, insights panel (deterministic lists, AI fi
   const [ins] = await sql`insert into knowledge_insights (workspace_id, kind, status, title, detail, data, origin, model, fingerprint) values (${ws}, 'contradiction', 'suggested', ${`${PFX} two penalties ${s}`}, 'The two notes give different penalties.', ${sql.json({ pageIds: [a.id, b.id], blockIds: [blockA, blockB], a: { pageId: a.id, blockId: blockA }, b: { pageId: b.id, blockId: blockB }, confidence: 0.8 })}, 'ai', 'fixture', ${`e2e-${s}`}) returning id`;
   await page.goto("/graph"); await page.getByTestId("graph-canvas").waitFor();
   // concepts: create, attach a page, see it in the concepts view, delete
-  await page.getByTestId("open-concepts").click(); const cm = page.getByTestId("concepts-manager"); const name = `${PFX} Penalty ${s}`; await cm.getByLabel("New concept name").fill(name); await cm.getByRole("button", { name: "Create concept" }).click(); await expect(cm.getByLabel("Concept name")).toHaveValue(name);
+  await page.getByTestId("open-concepts").click(); const cm = page.getByTestId("concepts-manager"); const name = `${PFX} Penalty ${s}`; await cm.getByLabel("New concept name").fill(name); await cm.getByRole("button", { name: "Create concept" }).click(); await expect(cm.getByLabel("Concept name", { exact: true })).toHaveValue(name);
   await cm.getByRole("button", { name: "Add a page" }).click(); await pick(page, a.title); await expect(cm.getByRole("link", { name: new RegExp(a.title) })).toBeVisible();
   const concept = (await apiCall(page, "GET", "/api/concepts")).body.concepts.find((c: any) => c.name === name); expect(concept.pages).toBe(1);
   await cm.getByRole("button", { name: "Show in graph" }).click(); await expect(page.getByTestId("knowledge-graph")).toHaveAttribute("data-view", "concepts"); await expect(page.getByTestId("graph-node-list").locator(`[data-node="concept:${concept.id}"]`)).toBeAttached(); await expect(page.getByTestId("node-inspector")).toContainText(name);
@@ -220,7 +222,7 @@ test("daily brief is Home: real sections, AI summary only on a click and marked 
   expect((await apiCall(page, "POST", "/api/tasks", { title: `${PFX} late ${s}`, pageId: a.id, dueAt: new Date(Date.now() - 2 * 86_400_000).toISOString() })).status).toBe(201);
   expect((await apiCall(page, "POST", "/api/tasks", { title: `${PFX} now ${s}`, dueAt: new Date().toISOString() })).status).toBe(201);
   expect((await apiCall(page, "POST", "/api/capture", { kind: "note", text: `${PFX} capture ${s}` })).status).toBeLessThan(300);
-  await sql`update knowledge_edges set status = 'rejected' where status = 'suggested' and model = 'fixture'`; await sql`delete from settings where key like 'brief.summary:%'`; /* a summary stored by another suite would hide the "Summarise my day" button */ const sug = await suggest(ws, a.id, b.id, "supports");
+  await sql`update knowledge_edges set status = 'rejected' where status = 'suggested' and model = 'fixture'`; briefKept = await sql`select key, value from settings where key like 'brief.summary:%'`; await sql`delete from settings where key like 'brief.summary:%'`; /* a stored summary would hide the "Summarise my day" button: set aside, put back in afterAll */ const sug = await suggest(ws, a.id, b.id, "supports");
   await page.goto("/"); const brief = page.getByTestId("brief"); await expect(brief.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening|night),/);
   await expect(page.getByTestId("brief-overdue")).toContainText(`late ${s}`); await expect(page.getByTestId("brief-overdue")).toContainText("overdue by 2 days"); await expect(page.getByTestId("brief-today")).toContainText(`now ${s}`);
   await expect(page.getByTestId("brief-recent")).toContainText(`Brief other ${s}`); await expect(page.getByTestId("brief-captures")).toContainText(`capture ${s}`); await expect(page.getByTestId("brief-lede")).toContainText("overdue");

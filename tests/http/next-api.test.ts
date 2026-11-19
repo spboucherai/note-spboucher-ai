@@ -8,12 +8,12 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { randomUUID, createHash } from "node:crypto";
-import { eq, inArray, like, and } from "drizzle-orm";
+import { eq, gte, inArray, like, and } from "drizzle-orm";
 import { db, schema, sql } from "../../src/db/index";
 import { createSession, ownerRow } from "../../src/lib/auth/sessions";
 
-const BASE = (process.env.APP_URL ?? "").replace(/\/$/, ""); const PFX = "nx-http ·";
-const UA = "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) native";
+const BASE = (process.env.APP_URL ?? "").replace(/\/$/, ""); const PFX = "nx-http ·"; const STARTED = new Date(Date.now() - 2000);
+const UA = "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) nx-http-tests";
 let cookie = ""; let ws = ""; const pages: string[] = []; const tasks: string[] = []; const atts: string[] = [];
 type Res = { status: number; headers: Headers; json: any; text: string; bytes: Buffer };
 async function api(method: string, path: string, body?: unknown, extra: Record<string, string> = {}, opts: { anonymous?: boolean; noOrigin?: boolean } = {}): Promise<Res> {
@@ -27,7 +27,7 @@ async function api(method: string, path: string, body?: unknown, extra: Record<s
 before(async () => {
   const host = new URL(BASE).hostname; assert.ok(host === "localhost" || host === "127.0.0.1", "APP_URL must be loopback");
   const up = await fetch(`${BASE}/api/health`).then((r) => r.ok, () => false); assert.ok(up, `no server on ${BASE}: run  bash scripts/next-dev-server.sh start`);
-  const u = await ownerRow(); assert.ok(u, "owner missing: pnpm run bootstrap"); const s = await createSession({ userId: u!.id, credentialId: null, userAgent: "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) native", ip: "127.0.0.1" });
+  const u = await ownerRow(); assert.ok(u, "owner missing: pnpm run bootstrap"); const s = await createSession({ userId: u!.id, credentialId: null, userAgent: "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) nx-http-tests", ip: "127.0.0.1" });
   cookie = `__Host-note_session=${s.token}; note_session=${s.token}`; const [w] = await db.select().from(schema.workspaces).limit(1); ws = w.id;
 });
 after(async () => {
@@ -35,8 +35,8 @@ after(async () => {
   if (tasks.length) await db.delete(schema.tasks).where(inArray(schema.tasks.id, tasks)); if (atts.length) await db.delete(schema.attachments).where(inArray(schema.attachments.id, atts));
   if (ids.length) { await db.delete(schema.knowledgeEdges).where(inArray(schema.knowledgeEdges.fromId, ids)); await db.delete(schema.pages).where(inArray(schema.pages.id, ids)); await db.delete(schema.knowledgeEvents).where(inArray(schema.knowledgeEvents.pageId, ids)); await db.delete(schema.syncTombstones).where(inArray(schema.syncTombstones.id, ids)); }
   await db.delete(schema.knowledgeEvents).where(and(eq(schema.knowledgeEvents.workspaceId, ws), like(schema.knowledgeEvents.summary, `${PFX}%`)));
-  await db.delete(schema.syncTombstones).where(inArray(schema.syncTombstones.kind, ["task", "attachment", "canvas", "edge"]));
-  await db.delete(schema.sessions).where(eq(schema.sessions.userAgent, "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) native")); await sql.end();
+  await db.delete(schema.syncTombstones).where(and(inArray(schema.syncTombstones.kind, ["task", "attachment", "canvas", "edge"]), gte(schema.syncTombstones.deletedAt, STARTED))); // only the tombstones of this run
+  await db.delete(schema.sessions).where(eq(schema.sessions.userAgent, "SPNotes/2.0.0 (Macintosh; Mac OS X 27.0) nx-http-tests")); await sql.end();
 });
 /** A request with exactly the headers given (fetch adds its own): what a client that forgets `Origin` sends. */
 const raw = (method: string, path: string, body: unknown, headers: Record<string, string>) => new Promise<{ status: number; json: any }>((resolve, reject) => {
@@ -82,7 +82,7 @@ test("tasks over HTTP: client id, idempotent POST, PATCH and DELETE by id, 2.x f
   const list = await api("GET", `/api/tasks?pageId=${p.id}`); assert.equal(list.json.length, 1); assert.deepEqual(Object.keys(list.json[0]).slice(0, 12), ["id", "title", "status", "priority", "dueAt", "completedAt", "project", "pageId", "createdAt", "updatedAt", "pageTitle", "pageIcon"], "2.x keys first, in the same order"); assert.equal(list.json[0].pageTitle, `${PFX} task host`);
   assert.equal((await api("POST", "/api/tasks", { title: "x", pageId: randomUUID() })).json.code, "bad_page"); assert.equal((await api("POST", "/api/tasks", { title: "" })).status, 400); assert.equal((await api("PATCH", `/api/tasks/${randomUUID()}`, { title: "x" })).status, 404);
   const d1 = await api("DELETE", `/api/tasks/${id}`); assert.deepEqual(d1.json, { ok: true, deleted: true }); const d2 = await api("DELETE", `/api/tasks/${id}`); assert.deepEqual([d2.status, d2.json], [200, { ok: true, deleted: false }], "idempotent");
-  assert.equal((await api("DELETE", `/api/tasks?id=${id}`)).status, 404, "2.x DELETE keeps its 404 on an already deleted task"); assert.equal((await api("DELETE", `/api/tasks/${randomUUID()}`)).status, 404);
+  assert.equal((await api("DELETE", `/api/tasks?id=${id}`)).status, 404, "2.x DELETE keeps its 404 on an already deleted task"); const unknown = await api("DELETE", `/api/tasks/${randomUUID()}`); assert.deepEqual([unknown.status, unknown.json], [200, { ok: true, deleted: false }], "DELETE is idempotent: an unknown id answers 200");
   const ev = await api("GET", `/api/events?pageId=${p.id}&kinds=task.*`); assert.deepEqual(ev.json.events.map((e: any) => e.kind), ["task.reopened", "task.completed", "task.created"]); assert.equal(ev.json.events[0].actor, "user"); assert.equal(ev.json.events[0].device, "SP Notes · Mac", "events carry the device label of the session");
 });
 test("files: Accept-Ranges, 206 with the exact bytes, 416, If-Range, and a deleted attachment is no longer served", async () => {
@@ -103,6 +103,7 @@ test("files: Accept-Ranges, 206 with the exact bytes, 416, If-Range, and a delet
   assert.equal((await api("GET", `/api/files/${id}`, undefined, { range: "bytes=0-9" })).status, 404);
 });
 test("canvas over HTTP: page of type canvas, GET, PUT with baseVersion, 409 with the server copy", async () => {
+  const start = (await api("GET", "/api/sync?kinds=canvas&since=0&limit=1")).json.head; // the feed is read from here: the scratch workspace may hold more than one window of older changes
   const id = randomUUID(); const p = await page("canvas", { id, type: "canvas" }); assert.equal(p.type, "canvas");
   const g = await api("GET", `/api/canvases/${id}`); assert.equal(g.status, 200); assert.deepEqual(Object.keys(g.json), ["pageId", "title", "data", "version", "rev", "updatedAt"]); assert.equal(g.json.version, 1);
   const data = { format: "spn-canvas-1", nodes: [{ id: "n1", kind: "text", x: 10, y: 20, w: 200, h: 80, z: 0, text: "Idée" }], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
@@ -110,7 +111,7 @@ test("canvas over HTTP: page of type canvas, GET, PUT with baseVersion, 409 with
   const stale = await api("PUT", `/api/canvases/${id}`, { data: { ...data, nodes: [] }, baseVersion: 1 }); assert.equal(stale.status, 409); assert.equal(stale.json.code, "conflict"); assert.equal(stale.json.server.version, 2); assert.equal(stale.json.server.data.nodes[0].text, "Idée");
   assert.equal((await api("PUT", `/api/canvases/${id}`, { data: { format: "x" }, baseVersion: 2 })).json.code, "bad_canvas"); assert.equal((await api("PUT", `/api/canvases/${id}`, { data })).status, 400, "baseVersion is required");
   const plain = await page("plain"); assert.equal((await api("GET", `/api/canvases/${plain.id}`)).json.code, "not_canvas");
-  const feed = await api("GET", "/api/sync?kinds=canvas&since=0&limit=500"); assert.ok(feed.json.entities.canvas.some((c: any) => c.id === id && c.version === 2));
+  const feed = await api("GET", `/api/sync?kinds=canvas&since=${start}&limit=500`); assert.ok(feed.json.entities.canvas.some((c: any) => c.id === id && c.version === 2));
 });
 test("graph, relations, concepts, insights, events, time machine, health, brief, query and zoom answer over HTTP", async () => {
   const a = await page("G a", { content: { type: "doc", content: [{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Titre" }] }, { type: "paragraph", content: [{ type: "text", text: "Première phrase. Seconde." }] }] } }); const b = await page("G b");
@@ -131,10 +132,11 @@ test("graph, relations, concepts, insights, events, time machine, health, brief,
   assert.equal((await api("GET", "/api/health/knowledge")).status, 200); const brief = await api("GET", "/api/brief"); assert.equal(brief.status, 200); assert.ok(brief.json.recentNotes.length >= 1); assert.equal(brief.json.aiSummary === null || brief.json.aiSummary.ai === true, true);
   const q = await api("POST", "/api/query", { source: "pages", filter: { text: `${PFX} G` }, limit: 10 }); assert.equal(q.status, 200, q.text); assert.equal(q.json.total, 2); assert.equal((await api("POST", "/api/query", { source: "nope" })).status, 400);
   const z2 = await api("GET", `/api/pages/${a.id}/zoom?level=2`); assert.deepEqual(z2.json.sections.map((s: any) => [s.heading, s.firstSentence]), [["Titre", "Première phrase."]]); assert.equal((await api("GET", `/api/pages/${a.id}/zoom?level=3`)).json.content.type, "doc");
-  const z1 = await api("GET", `/api/pages/${a.id}/zoom?level=1`); assert.ok(z1.status === 200 || ["not_implemented", "ai_unavailable", "no_provider"].includes(z1.json.code) || z1.status >= 500, `zoom level 1 (AI synopsis, implemented by the AI workstream): ${z1.status}`);
+  const z1 = await api("GET", `/api/pages/${a.id}/zoom?level=1&cachedOnly=1`); /* cachedOnly: this suite never makes a paid model call */ assert.ok(z1.status === 200 || ["not_implemented", "ai_unavailable", "no_provider"].includes(z1.json.code) || z1.status >= 500, `zoom level 1 (AI synopsis, implemented by the AI workstream): ${z1.status}`);
   assert.equal((await api("DELETE", `/api/graph/relations/${rel.json.id}`)).status, 200); assert.equal((await api("GET", `/api/graph/relations/${rel.json.id}`)).status, 404);
 });
 test("parent cycles are refused over HTTP (409 cycle) and a restore by version id works", async () => {
+  const start = (await api("GET", "/api/sync?since=0&limit=1")).json.head;
   const a = await page("cyc a"); const b = await page("cyc b", { parentId: a.id });
   const r = await api("PATCH", `/api/pages/${a.id}`, { parentId: b.id }); assert.deepEqual([r.status, r.json.code], [409, "cycle"]);
   const s1 = await api("PATCH", `/api/pages/${a.id}`, { content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "v2" }] }] }, baseVersion: 1 }); assert.equal(s1.status, 200);
@@ -144,5 +146,5 @@ test("parent cycles are refused over HTTP (409 cycle) and a restore by version i
   assert.equal((await api("POST", `/api/pages/${a.id}/versions/${randomUUID()}/restore`)).status, 404); assert.equal((await api("POST", `/api/pages/${a.id}/versions/abc/restore`)).status, 400);
   // a session made by scripts/dev-session.ts counts as freshly verified, so a purge passes here; with a real session older than 5 minutes it answers 403 reauth_required (unchanged from 2.x)
   assert.equal((await api("DELETE", `/api/pages/${b.id}`)).json.trashed, 1); const purge = await api("DELETE", `/api/pages/${b.id}?purge=1`); assert.equal(purge.status, 200); assert.equal((await api("GET", `/api/pages/${b.id}`)).status, 404);
-  const tomb = await api("GET", "/api/sync?since=0&limit=500"); assert.ok(tomb.json.tombstones.some((t: any) => t.id === b.id && t.kind === "page"));
+  const tomb = await api("GET", `/api/sync?since=${start}&limit=500`); assert.ok(tomb.json.tombstones.some((t: any) => t.id === b.id && t.kind === "page"));
 });

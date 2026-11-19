@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/toast";
 
 const CAPTURABLE = ["Files", "text/uri-list", "text/plain"];
 /** Places that handle a drop themselves. */
-const ownsDrop = (t: EventTarget | null) => t instanceof Element && Boolean(t.closest(".ProseMirror, input, textarea, [contenteditable='true'], [data-nv-stop], [role='dialog']"));
+const ownsDrop = (t: EventTarget | null) => t instanceof Element && Boolean(t.closest(".ProseMirror, input, textarea, [contenteditable='true'], [data-nv-stop], [role='dialog'], .cv-surface"));
 
 export function CaptureDrop() {
   const [over, setOver] = useState<"files" | "content" | null>(null);
@@ -29,7 +29,7 @@ export function CaptureDrop() {
     const onOver = (e: DragEvent) => { const w = wanted(e); if (!w) return; if (ownsDrop(e.target)) { setOver(null); return; } e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"; setOver(w); };
     const onLeave = (e: DragEvent) => { if (!wanted(e)) return; depth.current = Math.max(0, depth.current - 1); if (depth.current === 0 || e.relatedTarget === null) end(); };
     const onDrop = (e: DragEvent) => {
-      const w = wanted(e); end(); if (!w || ownsDrop(e.target)) return;
+      const w = wanted(e); end(); if (!w || e.defaultPrevented || ownsDrop(e.target)) return; // a surface that took the drop (canvas, editor) keeps it
       e.preventDefault(); const dt = e.dataTransfer;
       const prefill = prefillFromDrop({ files: Array.from(dt?.files ?? []), uriList: dt?.getData("text/uri-list") ?? "", text: dt?.getData("text/plain") ?? "" });
       if (prefill) openCapture(prefill); else toast("Nothing to capture in that drop");

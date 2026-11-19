@@ -26,9 +26,10 @@ before(async () => { ws = await workspace(); const [w] = await db.select().from(
 after(() => cleanup(ws, PFX));
 
 test("without `kinds` the answer has exactly the 2.x keys, in the 2.x order, and ignores the new kinds", async () => {
+  const start = (await feed("since=0&limit=1")).head; // read from here: the scratch workspace may hold more than one window of older changes
   const p = await mk(ws, `${PFX} compat`, doc("x")); const { task } = await createTask(ws, { title: `${PFX} t` }); made.tasks.push(task.id);
   const gone = await createTask(ws, { title: `${PFX} gone` }); await db.delete(schema.tasks).where(eq(schema.tasks.id, gone.task.id)); // leaves a `task` tombstone
-  const a = await feed("since=0&limit=500");
+  const a = await feed(`since=${start}&limit=500`);
   assert.deepEqual(Object.keys(a), ["cursor", "head", "more", "reset", "serverTime", "workspace", "user", "pages", "attachments", "tombstones", "tags"]);
   const page = a.pages.find((x: any) => x.id === p.id); assert.ok(page);
   assert.deepEqual(Object.keys(page), ["id", "parentId", "databaseId", "type", "section", "title", "icon", "cover", "content", "properties", "position", "pinned", "archived", "version", "wordCount", "createdAt", "updatedAt", "lastOpenedAt", "deletedAt", "inboxAt", "captureKind", "rev", "tags"]);

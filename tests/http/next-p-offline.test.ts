@@ -36,6 +36,7 @@ after(async () => {
 
 test("GET /api/sync/integrity: needs a session; one fingerprint per page, equal to sha256(canonical JSON of the content)", async () => {
   assert.equal((await api("GET", "/api/sync/integrity", undefined, {}, true)).status, 401);
+  const start = (await api("GET", "/api/sync?since=0&limit=1&kinds=task")).json.head;
   const id = randomUUID(); pages.push(id); const content = doc("integrity é ✓");
   assert.equal((await api("POST", "/api/pages", { id, title: `${PFX} integrity`, content })).status, 201);
   const stored = (await api("GET", `/api/pages/${id}`)).json;
@@ -46,8 +47,8 @@ test("GET /api/sync/integrity: needs a session; one fingerprint per page, equal 
   // the hash follows the content, and the feed delivers the same content the hash was computed from
   const up = await api("PATCH", `/api/pages/${id}`, { content: doc("changed"), baseVersion: stored.version }); assert.equal(up.status, 200);
   const again = (await api("GET", "/api/sync/integrity")).json.pages.find((p: any) => p.id === id); assert.notEqual(again.hash, mine.hash); assert.equal(again.version, up.json.version);
-  const feed = (await api("GET", "/api/sync?since=0&limit=500&kinds=task")).json; const row = feed.pages.find((p: any) => p.id === id);
-  if (row) assert.equal(createHash("sha256").update(stableJson(row.content)).digest("hex"), again.hash);
+  const feed = (await api("GET", `/api/sync?since=${start}&limit=500&kinds=task`)).json; const row = feed.pages.find((p: any) => p.id === id);
+  assert.ok(row, "the page is in the feed read from the cursor taken before it was created"); assert.equal(createHash("sha256").update(stableJson(row.content)).digest("hex"), again.hash);
 });
 test("journal guarantees: a replayed create answers the stored row; a stale versioned save is refused with the server copy", async () => {
   const id = randomUUID(); pages.push(id); const key = `k-${id}`;
