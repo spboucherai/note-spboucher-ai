@@ -3,7 +3,7 @@
  * Description: seeds the benchmark database of Databases Next Generation — one database "BENCH 20k rows" with N rows (default 20 000) of
  *   deterministic data over every stored value type, plus saved views (table, filtered + sorted table, grouped table, board, calendar,
  *   timeline, gallery, list). Pages and rows are inserted in batches straight into the scratch database (never production: the name
- *   must end in _dev / _test / _scratch). Usage: `tsx scripts/db-seed-bench.ts [rows] [--reset] [--name "Title"]`. Prints the ids as JSON.
+ *   must end in _dev / _test / _scratch). Usage: `tsx scripts/db-seed-bench.ts [rows] [--reset] [--drop] [--name "Title"]`. Prints the ids as JSON.
  * Author: Simon-Pierre Boucher · contact@spboucher.ai
  */
 import "./db-one-connection";
@@ -13,7 +13,7 @@ import { db, schema, sql } from "../src/db/index";
 import { createPage } from "../src/lib/pages/service";
 import { ensureDatabase, createProperty, createView, updateView, getDatabase } from "../src/lib/databases/service";
 
-const args = process.argv.slice(2); const N = Number(args.find((a) => /^\d+$/.test(a)) ?? 20000); const reset = args.includes("--reset");
+const args = process.argv.slice(2); const N = Number(args.find((a) => /^\d+$/.test(a)) ?? 20000); const reset = args.includes("--reset") || args.includes("--drop");
 const NAME = args.includes("--name") ? args[args.indexOf("--name") + 1] : "BENCH 20k rows";
 // mulberry32: the same rows on every run
 let seed = 20261119; const rnd = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -25,6 +25,7 @@ const [w] = await db.select().from(schema.workspaces).limit(1); if (!w) throw ne
 const [old] = await db.select({ id: schema.pages.id }).from(schema.pages).where(and(eq(schema.pages.workspaceId, w.id), eq(schema.pages.title, NAME), eq(schema.pages.type, "database"), isNull(schema.pages.deletedAt)));
 if (old && !reset) { const d = await getDatabase(w.id, old.id); const [{ n }] = await sql`select count(*)::int as n from database_rows where database_id = ${d.id} and deleted_at is null`; console.log(JSON.stringify({ existing: true, pageId: d.pageId, databaseId: d.id, rows: n, views: Object.fromEntries(d.views.map((v) => [v.name, v.id])), properties: Object.fromEntries(d.properties.map((p) => [p.name, p.id])) })); await sql.end(); process.exit(0); }
 if (old) { await sql`delete from pages where database_id in (select id from databases where page_id = ${old.id})`; await sql`delete from pages where id = ${old.id}`; }
+if (args.includes("--drop")) { console.log(JSON.stringify({ dropped: !!old })); await sql.end(); process.exit(0); } // remove the benchmark database and stop (suites written for a small scratch database: /api/sync first window, knowledge health caps)
 
 const t0 = Date.now();
 const page = await createPage(w.id, { title: NAME, type: "database", section: "databases", icon: "🧪" });
