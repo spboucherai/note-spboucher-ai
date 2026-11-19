@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, Trash2, CalendarDays, Flag, Hash, Link2, X, Inbox as InboxIcon, Filter, ChevronDown, Search } from "lucide-react";
 import { endOfDay, startOfDay, addDays, isBefore, format } from "date-fns";
+import { createTask, deleteTask, mutate } from "@/lib/client/journal";
 import { api } from "@/lib/client/api";
 import { cn, fmtDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -106,19 +107,19 @@ export function TasksInbox() {
   }, []);
   async function add() {
     const p = preview; if (!p || !p.title) return; setAdding(true);
-    try { await api("/api/tasks", { method: "POST", json: { title: p.title, dueAt: p.dueAt?.toISOString() ?? null, priority: p.priority ?? "medium", project: p.project ?? (project || null) } }); setInput(""); invalidate(); }
+    try { await createTask({ title: p.title, dueAt: p.dueAt?.toISOString() ?? null, priority: p.priority ?? "medium", project: p.project ?? (project || null) }); /* offline-first: client id + mutation journal */ setInput(""); invalidate(); }
     catch (e: any) { toast("Could not add task", { description: e.message, tone: "danger" }); } finally { setAdding(false); }
   }
   async function patch(id: string, body: Record<string, unknown>) {
     qc.setQueryData<Task[]>(["tasks", showDone], (old) => old?.map((t) => (t.id === id ? { ...t, ...body, completedAt: body.status === "done" ? new Date().toISOString() : body.status === "todo" ? null : t.completedAt } as Task : t)));
-    try { await api("/api/tasks", { method: "PATCH", json: { id, ...body } }); } catch (e: any) { toast("Update failed", { description: e.message, tone: "danger" }); } finally { invalidate(); }
+    try { await mutate("task.update", id, body as Record<string, unknown>); } catch (e: any) { toast("Update failed", { description: e.message, tone: "danger" }); } finally { invalidate(); }
   }
   /** Undo of a delete: the task is soft-deleted on the server, so it comes back as it was (same id, anchors and dates). */
   async function restore(t: Task) { try { await api(`/api/tasks/${t.id}?action=restore`, { method: "POST" }); toast("Task restored", { description: t.title, tone: "success" }); } catch (e: any) { toast("Could not restore the task", { description: e.message, tone: "danger" }); } finally { invalidate(); } }
   async function remove(t: Task) {
     if (editingId === t.id) setEditingId(null);
     qc.setQueryData<Task[]>(["tasks", showDone], (old) => old?.filter((x) => x.id !== t.id));
-    try { await api(`/api/tasks?id=${t.id}`, { method: "DELETE" }); toast("Task deleted", { description: t.title, action: { label: "Undo", run: () => restore(t) } }); }
+    try { await deleteTask(t.id); toast("Task deleted", { description: t.title, action: { label: "Undo", run: () => restore(t) } }); }
     catch (e: any) { toast("Delete failed", { description: e.message, tone: "danger" }); } finally { invalidate(); }
   }
   const open = tasks.filter((t) => t.status !== "done").length;
