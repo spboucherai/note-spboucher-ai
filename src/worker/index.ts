@@ -22,7 +22,7 @@ import { handleMaintenance } from "./handlers/maintenance";
 import { handleGraphInsights } from "./handlers/graph-insights";
 import { handleTranscribe } from "./handlers/transcribe";
 
-const boss = new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: 4 });
+const boss = new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: Math.max(1, Math.min(4, Number(process.env.DB_POOL_MAX ?? 4) || 4)) });
 boss.on("error", (e: Error) => log.error({ detail: e.message }, "pg-boss error"));
 await boss.start();
 await ensureQueues(boss);

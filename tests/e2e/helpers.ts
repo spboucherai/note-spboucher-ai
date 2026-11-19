@@ -5,7 +5,7 @@ import type { BrowserContext, Page, CDPSession } from "@playwright/test";
 import "../helpers/testdb";
 
 export const AUTH_DIR = "test-results/.auth"; export const STATE = `${AUTH_DIR}/state.json`; export const CRED = `${AUTH_DIR}/credential.json`;
-export const sql = postgres(process.env.DATABASE_URL!, { max: 2, onnotice: () => {} });
+export const sql = postgres(process.env.DATABASE_URL!, { max: Math.max(1, Math.min(2, Number(process.env.DB_POOL_MAX ?? 2) || 2)), onnotice: () => {} });
 /** Run the passkey admin CLI exactly as the operator would on the node. */
 export function cli(...args: string[]): string { return execFileSync("node", ["node_modules/tsx/dist/cli.mjs", "src/cli/auth.ts", ...args], { encoding: "utf8", env: process.env, stdio: ["ignore", "pipe", "pipe"] }); }
 export function enrollmentToken(out: string): string { const m = out.match(/\/enroll#([A-Za-z0-9_-]{40,64})/); if (!m) throw new Error("no enrollment link in CLI output"); return m[1]; }
