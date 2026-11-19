@@ -40,6 +40,8 @@ after(async () => {
   // jobs queued by these tests were executed by calling the handlers directly: remove them so no worker picks them up later
   if (atts.length) await sql`delete from pgboss.job where name = 'transcribe' and data->>'attachmentId' in ${sql(atts)}`.catch(() => {});
   if (rowsMade.length) await sql`delete from pgboss.job where name = 'ai-property' and data->>'rowId' in ${sql(rowsMade)}`.catch(() => {});
+  // the injected engine is logged like the real one (provider "openai", task "transcribe"): remove those rows so the usage log only holds real calls
+  if (atts.length) await db.delete(schema.aiUsage).where(inArray(schema.aiUsage.refId, atts));
   if (atts.length) await db.delete(schema.attachments).where(inArray(schema.attachments.id, atts));
   for (const id of made) await removeSource("page", id);
   const all = made.length ? await db.execute<{ id: string }>(dsql`with recursive t as (select id from pages where id in ${made} union select p.id from pages p join t on p.parent_id = t.id) select id from t`) : [];
