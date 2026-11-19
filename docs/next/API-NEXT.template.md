@@ -694,6 +694,12 @@ Side effects: `canvas.edited` (coalesced, 10 min); the canvas page's `updatedAt`
 cards of kind `page` make the canvas a **backlink** of those pages (`links` of kind `canvas`, visible in `backlinks` of
 `GET /api/pages/<id>` and in `POST /api/query` source `backlinks`).
 
+**Search (canvas workstream)**: a save also writes the text of the canvas into the canvas page — `plainText` = per node, in array
+order, its `text`, `latex` and `url` (each when present, one per line; a `table` card's Markdown reduced to its cells), then the
+edge `label`s, capped at 200 000 characters; `wordCount` follows. The page is queued for indexing like a page save, and the index
+worker reads a canvas page from that text (it has no document). Nothing changes in the request or the response. The canvas
+format, its operations and the merge rules every client must match are in `docs/next/CANVAS.md`.
+
 {{ex:canvas_put}}
 
 {{ex:canvas_conflict}}

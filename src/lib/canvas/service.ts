@@ -11,6 +11,9 @@ import { HttpError } from "@/lib/errors";
 import { sameJson } from "@/lib/same-json";
 import { recordCoalesced } from "@/lib/events/service";
 import { canvasProblem, canvasRefs, EMPTY_CANVAS, type CanvasData } from "./format";
+import { canvasText } from "./export";
+import { wordCount } from "@/lib/editor/text";
+import { enqueue, QUEUES } from "@/lib/jobs";
 
 const C = schema.canvases; const P = schema.pages;
 export interface CanvasOut { pageId: string; title: string; data: CanvasData; version: number; rev: number; updatedAt: Date }
@@ -46,10 +49,15 @@ export async function putCanvas(wsId: string, pageId: string, data: unknown, bas
     await tx.delete(schema.links).where(and(eq(schema.links.fromPageId, pageId), eq(schema.links.kind, "canvas")));
     const targets = refs.pages.filter((id) => id !== pageId);
     if (targets.length) { const valid = await tx.select({ id: P.id }).from(P).where(and(eq(P.workspaceId, wsId), inArray(P.id, targets))); if (valid.length) await tx.insert(schema.links).values(valid.map((v) => ({ fromPageId: pageId, toPageId: v.id, kind: "canvas" }))).onConflictDoNothing(); }
-    await tx.update(P).set({ updatedAt: new Date() }).where(eq(P.id, pageId)); // the canvas page shows up in "recent" and moves in the page feed
+    // the canvas page shows up in "recent" and moves in the page feed; the text of its cards (text, LaTeX, addresses, edge labels) becomes
+    // the page's plain text, so full-text search (`tsv`) finds a canvas by what is written on it
+    const plain = canvasText(d);
+    await tx.update(P).set({ updatedAt: new Date(), plainText: plain, wordCount: wordCount(plain) }).where(eq(P.id, pageId));
     return row;
   });
   if (!saved) throw new HttpError(409, "This canvas was changed in another session", "conflict", canvasConflict(await getCanvas(wsId, pageId)));
+  // semantic index of the page (same queue and throttle as a page save); never fails the save
+  await enqueue(QUEUES.index, { sourceType: "page", sourceId: pageId, workspaceId: wsId }, { singletonKey: `page:${pageId}`, singletonSeconds: 20, singletonNextSlot: true }).catch(() => {});
   await recordCoalesced({ workspaceId: wsId, kind: "canvas.edited", pageId, entityKind: "canvas", entityId: pageId, summary: p.title, data: { version: saved.version, nodes: d.nodes.length, edges: d.edges.length } });
   return { ...saved, unchanged: false };
 }
