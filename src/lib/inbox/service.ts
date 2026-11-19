@@ -9,6 +9,7 @@ import { createPage, getPage, softDeletePage, restorePage } from "@/lib/pages/se
 import { createRow, deleteRows, ensureDatabase } from "@/lib/databases/service";
 import { addByDoi, createReference, deleteReference } from "@/lib/research/references";
 import { docText, type PMNode } from "@/lib/editor/text";
+import { recordEvent, recordEvents } from "@/lib/events/service";
 
 export type CaptureKind = "note" | "tasks" | "link" | "photo" | "file" | "audio";
 export interface CaptureInput { kind: CaptureKind; text?: string; url?: string; attachmentIds?: string[] }
@@ -40,6 +41,7 @@ export async function capture(wsId: string, input: CaptureInput) {
   if (!title) title = atts.length ? `${input.kind === "photo" ? "Photo" : input.kind === "audio" ? "Voice memo" : atts[0].filename} · ${stamp}` : `Note · ${stamp}`;
   const page = await createPage(wsId, { title, section: "notes", content: { type: "doc", content: content.length ? content : [{ type: "paragraph" }] }, inboxAt: new Date(), captureKind: input.kind });
   if (atts.length) await db.update(schema.attachments).set({ pageId: page.id }).where(inArray(schema.attachments.id, atts.map((a) => a.id)));
+  await recordEvent(db, { workspaceId: wsId, kind: "capture.created", pageId: page.id, summary: page.title, data: { kind: input.kind, attachments: atts.length } });
   return page;
 }
 
@@ -68,7 +70,8 @@ export async function triage(wsId: string, pageId: string, a: TriageAction) {
     set.section = section; set.parentId = a.parentId ?? null; summary = `Filed in ${section}`;
   } else if (a.action === "task") {
     const titles = taskTitles(page.content as PMNode); const list = titles.length ? titles : [page.title];
-    const rows = await db.insert(schema.tasks).values(list.map((title) => ({ workspaceId: wsId, title, pageId: page.id, priority: a.priority ?? "medium", dueAt: a.dueAt ? new Date(a.dueAt) : null }))).returning({ id: schema.tasks.id });
+    const rows = await db.insert(schema.tasks).values(list.map((title) => ({ workspaceId: wsId, title, pageId: page.id, priority: a.priority ?? "medium", dueAt: a.dueAt ? new Date(a.dueAt) : null }))).returning({ id: schema.tasks.id, title: schema.tasks.title });
+    await recordEvents(db, rows.map((r) => ({ workspaceId: wsId, kind: "task.created" as const, pageId: page.id, entityKind: "task", entityId: r.id, summary: r.title, data: { via: "inbox" } })));
     created.taskIds = rows.map((r) => r.id); summary = `${rows.length} task${rows.length > 1 ? "s" : ""} created`; // the note stays, linked from the tasks
   } else if (a.action === "database") {
     const d = await ensureDatabase(wsId, a.databaseId);
@@ -86,6 +89,7 @@ export async function triage(wsId: string, pageId: string, a: TriageAction) {
   else if (a.action === "trash") { await softDeletePage(wsId, pageId); summary = "Moved to trash"; }
   await db.update(schema.pages).set(set as any).where(and(eq(schema.pages.id, pageId), eq(schema.pages.workspaceId, wsId)));
   const [j] = await db.insert(schema.inboxActions).values({ workspaceId: wsId, pageId, action: a.action, before, created }).returning({ id: schema.inboxActions.id });
+  await recordEvent(db, { workspaceId: wsId, kind: "capture.filed", pageId, summary: page.title, data: { action: a.action, actionId: j.id, ...(a.action === "keep" ? { section: set.section as string } : {}) } });
   return { actionId: j.id, summary, created };
 }
 /** Reverse a journaled action: the page returns to the inbox exactly as it was, and what the action created is removed (soft delete where the model has one). */
@@ -104,14 +108,21 @@ export async function undoTriage(wsId: string, actionId: string) {
 
 // ---------- tags
 export async function listTags(wsId: string) {
-  return db.select({ id: schema.tags.id, name: schema.tags.name, color: schema.tags.color, pages: dsql<number>`(select count(*)::int from page_tags pt join pages p on p.id = pt.page_id where pt.tag_id = ${schema.tags.id} and p.deleted_at is null)` }).from(schema.tags).where(eq(schema.tags.workspaceId, wsId)).orderBy(schema.tags.name);
+  return db.select({ id: schema.tags.id, name: schema.tags.name, color: schema.tags.color, // the outer column is written literally: in a single-table select drizzle renders ${schema.tags.id} unqualified, and inside the sub-select a bare "id" binds to pages.id (3.0, defect D-1: every tag counted 0 pages)
+    pages: dsql<number>`(select count(*)::int from page_tags pt join pages p on p.id = pt.page_id where pt.tag_id = "tags"."id" and p.deleted_at is null)` }).from(schema.tags).where(eq(schema.tags.workspaceId, wsId)).orderBy(schema.tags.name);
 }
 export async function setPageTags(wsId: string, pageId: string, names: string[]) {
   await getPage(wsId, pageId);
   const clean = [...new Set(names.map((n) => n.trim().replace(/^#/, "").toLowerCase().slice(0, 40)).filter(Boolean))].slice(0, 20);
   if (clean.length) await db.insert(schema.tags).values(clean.map((name) => ({ workspaceId: wsId, name }))).onConflictDoNothing();
   const rows = clean.length ? await db.select({ id: schema.tags.id, name: schema.tags.name }).from(schema.tags).where(and(eq(schema.tags.workspaceId, wsId), inArray(schema.tags.name, clean))) : [];
-  await db.transaction(async (tx) => { await tx.delete(schema.pageTags).where(eq(schema.pageTags.pageId, pageId)); if (rows.length) await tx.insert(schema.pageTags).values(rows.map((r) => ({ pageId, tagId: r.id }))); });
+  await db.transaction(async (tx) => {
+    const before = (await tx.select({ name: schema.tags.name }).from(schema.pageTags).innerJoin(schema.tags, eq(schema.tags.id, schema.pageTags.tagId)).where(eq(schema.pageTags.pageId, pageId))).map((r) => r.name);
+    const now = rows.map((r) => r.name); const added = now.filter((n) => !before.includes(n)); const removed = before.filter((n) => !now.includes(n));
+    if (!added.length && !removed.length) return; // same set: nothing is rewritten, so the page revision does not move either
+    await tx.delete(schema.pageTags).where(eq(schema.pageTags.pageId, pageId)); if (rows.length) await tx.insert(schema.pageTags).values(rows.map((r) => ({ pageId, tagId: r.id })));
+    await recordEvents(tx, [...added.map((name) => ({ workspaceId: wsId, kind: "tag.added" as const, pageId, entityKind: "tag", entityId: name, summary: name, data: { tag: name } })), ...removed.map((name) => ({ workspaceId: wsId, kind: "tag.removed" as const, pageId, entityKind: "tag", entityId: name, summary: name, data: { tag: name } }))]);
+  });
   return rows.map((r) => r.name).sort();
 }
 export async function pageTags(pageId: string) { return (await db.select({ name: schema.tags.name }).from(schema.pageTags).innerJoin(schema.tags, eq(schema.tags.id, schema.pageTags.tagId)).where(eq(schema.pageTags.pageId, pageId))).map((r) => r.name).sort(); }

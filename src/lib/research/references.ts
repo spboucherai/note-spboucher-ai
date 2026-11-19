@@ -12,6 +12,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, sql as dsql } from "dri
 import { db, schema } from "@/db";
 import { HttpError } from "@/lib/errors";
 import { absPath } from "@/lib/files/storage";
+import { recordEvent } from "@/lib/events/service";
 import { parseBibtexDetailed, formatBibtex, fieldsOf, makeCiteKey, normDoi, bibAuthor, venueTag, bibFile, APP_FIELDS, type ParsedRef } from "./bibtex";
 import { extractsOf, EXTRACT_LIMITS, type Extract } from "./cite";
 const R = schema.researchReferences;
@@ -38,7 +39,7 @@ async function uniqueKey(wsId: string, base: string, excludeId?: string) {
 const plainName = (a: string) => a.replace(/^\{(.*)\}$/, "$1").replace(/\s+/g, " ").trim();
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-export interface ReferenceInput { pageId?: string | null; citeKey?: string | null; entryType?: string; title: string; authors?: string[]; year?: number | null; journal?: string | null; doi?: string | null; url?: string | null; fields?: Record<string, unknown>; verified?: Verified; attachmentId?: string | null; bibtex?: string | null }
+export interface ReferenceInput { id?: string; pageId?: string | null; citeKey?: string | null; entryType?: string; title: string; authors?: string[]; year?: number | null; journal?: string | null; doi?: string | null; url?: string | null; fields?: Record<string, unknown>; verified?: Verified; attachmentId?: string | null; bibtex?: string | null }
 export async function createReference(wsId: string, input: ReferenceInput) {
   const doi = normDoi(input.doi); const entryType = input.entryType ?? "article"; const rawAuthors = (input.authors ?? []).map((a) => a.trim()).filter(Boolean); const authors = rawAuthors.map(plainName);
   const base = input.citeKey?.trim() || makeCiteKey(authors, input.year ?? null, input.title);
@@ -48,7 +49,10 @@ export async function createReference(wsId: string, input: ReferenceInput) {
   const fields = fieldsOf({ title: input.title.trim(), authors, year: input.year ?? null, journal: input.journal ?? null, doi, url: input.url ?? null, entryType, fields: given });
   // the entry as imported is kept only when it carries the key we store
   const bibtex = input.bibtex && citeKey === input.citeKey?.trim() ? input.bibtex : formatBibtex({ citeKey, entryType, fields });
-  const [r] = await db.insert(R).values({ workspaceId: wsId, pageId: input.pageId ?? null, citeKey, entryType, title: input.title.trim(), authors, year: input.year ?? null, journal: input.journal ?? null, doi, url: input.url ?? (doi ? `https://doi.org/${doi}` : null), fields, bibtex, verified: input.verified ?? "user", attachmentId: input.attachmentId ?? null }).returning();
+  if (input.id) { const [old] = await db.select().from(R).where(eq(R.id, input.id)); if (old) { if (old.workspaceId !== wsId) throw new HttpError(409, "This id is already in use", "id_taken"); return old; } } // 3.0: client-chosen id, idempotent
+  const [r] = await db.insert(R).values({ ...(input.id ? { id: input.id } : {}), workspaceId: wsId, pageId: input.pageId ?? null, citeKey, entryType, title: input.title.trim(), authors, year: input.year ?? null, journal: input.journal ?? null, doi, url: input.url ?? (doi ? `https://doi.org/${doi}` : null), fields, bibtex, verified: input.verified ?? "user", attachmentId: input.attachmentId ?? null }).returning();
+  await recordEvent(db, { workspaceId: wsId, kind: "reference.added", pageId: r.pageId, entityKind: "reference", entityId: r.id, summary: r.title, data: { citeKey: r.citeKey, verified: r.verified, ...(r.doi ? { doi: r.doi } : {}) } });
+  if (r.pageId) await recordEvent(db, { workspaceId: wsId, kind: "reference.linked", pageId: r.pageId, entityKind: "reference", entityId: r.id, summary: r.title, data: { referenceId: r.id, citeKey: r.citeKey, title: r.title, via: "page" } });
   return r;
 }
 export async function updateReference(wsId: string, id: string, patch: Partial<ReferenceInput>) {
@@ -78,7 +82,9 @@ export async function updateReference(wsId: string, id: string, patch: Partial<R
     set.fields = fieldsOf({ title: merged.title, authors: merged.authors, year: merged.year, journal: merged.journal, doi: merged.doi, url: merged.url, entryType: merged.entryType, fields });
     set.bibtex = formatBibtex({ citeKey: merged.citeKey, entryType: merged.entryType, fields: set.fields as Record<string, unknown> });
   }
-  const [r] = await db.update(R).set(set).where(and(eq(R.id, id), eq(R.workspaceId, wsId))).returning(); return r;
+  const [r] = await db.update(R).set(set).where(and(eq(R.id, id), eq(R.workspaceId, wsId))).returning();
+  if (r && r.pageId && r.pageId !== prev.pageId) await recordEvent(db, { workspaceId: wsId, kind: "reference.linked", pageId: r.pageId, entityKind: "reference", entityId: r.id, summary: r.title, data: { referenceId: r.id, citeKey: r.citeKey, title: r.title, via: "page" } });
+  return r;
 }
 export async function deleteReference(wsId: string, id: string) { await db.update(R).set({ deletedAt: new Date() }).where(and(eq(R.id, id), eq(R.workspaceId, wsId))); }
 /** Undo of a delete (the Undo toast). */

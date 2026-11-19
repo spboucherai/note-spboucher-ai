@@ -4,6 +4,9 @@ import { requireUser, getWorkspace, jsonError, HttpError, requireFresh } from "@
 import type { SessionUser } from "@/lib/auth/session";
 import { db, schema } from "@/db";
 import { log, newRequestId } from "@/lib/log";
+import { withActor } from "@/lib/events/context";
+import { deviceLabel } from "@/lib/auth/tokens";
+import { clientError, uuid, optUuid, optDate } from "@/lib/http-input";
 
 export interface Ctx { req: Request; user: SessionUser; ws: { id: string; ownerId: string; name: string }; params: Record<string, string>; requestId: string }
 const MUTATING = new Set(["POST", "PATCH", "PUT", "DELETE"]);
@@ -28,8 +31,11 @@ export function handler(fn: (ctx: Ctx) => Promise<Response>, opts: { fresh?: boo
       if (opts.fresh) requireFresh(user);
       const ws = await getWorkspace(user.id); const params = routeCtx ? await routeCtx.params : {};
       const key = MUTATING.has(req.method) ? req.headers.get("idempotency-key") : null;
-      res = key ? await idempotent(key, user.sessionId, req.method, path, () => fn({ req, user, ws, params, requestId })) : await fn({ req, user, ws, params, requestId });
-    } catch (e) {
+      // journal events written while serving this request are stamped with the user and the device label of the session
+      const run = () => withActor({ actor: "user", device: deviceLabel(req.headers.get("user-agent")) }, () => fn({ req, user, ws, params, requestId }));
+      res = key ? await idempotent(key, user.sessionId, req.method, path, run) : await run();
+    } catch (raw) {
+      const e = clientError(raw);
       if (!(e instanceof HttpError)) log.error({ rid: requestId, sid, method: req.method, path, err: (e as Error)?.name, detail: String((e as Error)?.message ?? e).slice(0, 300), stack: (e as Error)?.stack?.split("\n").slice(1, 4).join(" | ") }, "handler error");
       res = jsonError(e, requestId);
     }
@@ -69,5 +75,5 @@ export async function parseBody<T extends z.ZodTypeAny>(req: Request, s: T): Pro
   const r = s.safeParse(j); if (!r.success) throw new HttpError(400, "Validation: " + r.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; "));
   return r.data;
 }
-export const uuid = z.string().uuid();
+export { clientError, uuid, optUuid, optDate };
 export { HttpError, requireFresh };

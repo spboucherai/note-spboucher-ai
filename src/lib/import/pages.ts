@@ -6,6 +6,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, inArray, isNull, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { recordEvent } from "@/lib/events/service";
 import { docText, wordCount, extractPageRefs, emptyDoc, type PMNode } from "@/lib/editor/text";
 import { enqueue, QUEUES } from "@/lib/jobs";
 import { storeFile } from "@/lib/files/storage";
@@ -116,6 +117,7 @@ export async function createPage(ctx: ImportCtx, input: NewPage): Promise<Page> 
   const [{ max }] = await db.select({ max: dsql<number>`coalesce(max(position),0)` }).from(schema.pages).where(and(eq(schema.pages.workspaceId, ctx.workspaceId), input.parentId ? eq(schema.pages.parentId, input.parentId) : isNull(schema.pages.parentId)));
   const content = input.content ?? emptyDoc(); const plain = docText(content);
   const [p] = await db.insert(schema.pages).values({ ...(c.id ? { id: c.id } : {}), workspaceId: ctx.workspaceId, title: (input.title ?? "").trim().slice(0, 500) || "Untitled", parentId: input.parentId ?? null, section: input.section ?? "notes", type: input.type ?? "page", content, plainText: plain, wordCount: wordCount(plain), icon: input.icon ?? null, properties: input.properties ?? {}, databaseId: input.databaseId ?? null, position: Number(max) + 1, ...(input.createdAt ? { createdAt: input.createdAt } : {}), ...(input.updatedAt ? { updatedAt: input.updatedAt } : {}) }).returning();
+  await recordEvent(db, { workspaceId: ctx.workspaceId, kind: "page.created", pageId: p.id, summary: p.title, data: { section: p.section, type: p.type, via: "import" } });
   await afterContentChange(p);
   if (!ctx.titles.has(p.title.toLowerCase())) ctx.titles.set(p.title.toLowerCase(), p.id);
   ctx.stats.pages++;

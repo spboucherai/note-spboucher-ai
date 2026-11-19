@@ -3,13 +3,15 @@ import { and, eq, isNotNull, lt, sql as dsql } from "drizzle-orm";
 import { handler, parseBody, requireFresh } from "@/lib/api";
 import { db, schema } from "@/db";
 import { audit } from "@/lib/audit";
+import { purgePages } from "@/lib/pages/service";
 
 const AUTO_PURGE_DAYS = 30;
 async function purge(wsId: string, olderThanDays: number | null) {
   const where = [eq(schema.pages.workspaceId, wsId), isNotNull(schema.pages.deletedAt)];
   if (olderThanDays != null) where.push(lt(schema.pages.deletedAt, new Date(Date.now() - olderThanDays * 864e5)));
-  const rows = await db.delete(schema.pages).where(and(...where)).returning({ id: schema.pages.id });
-  return rows.length;
+  // through the page service: attachments of the purged pages (rows + files) and index rows go with them, each purge is journaled (3.0)
+  const rows = await db.select({ id: schema.pages.id }).from(schema.pages).where(and(...where));
+  return (await purgePages(wsId, rows.map((r) => r.id))).purged;
 }
 /** DELETE ?olderThanDays=N → purge trashed pages older than N days (all trashed pages when omitted). */
 export const DELETE = handler(async ({ req, ws, user }) => {

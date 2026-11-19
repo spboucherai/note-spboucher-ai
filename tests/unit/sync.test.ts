@@ -40,7 +40,7 @@ test("a permanent deletion leaves a tombstone with a newer revision; children go
   const before = Math.max(await rev(parent.id), await rev(child.id));
   await softDeletePage(ws, parent.id); await purgePage(ws, parent.id);
   const t = await db.select().from(schema.syncTombstones).where(inArray(schema.syncTombstones.id, [parent.id, child.id]));
-  assert.equal(t.filter((x) => x.kind === "page" && x.workspaceId === ws).length, 1, "the purged page has a tombstone (the child row is orphaned by the model, not deleted)");
+  assert.equal(t.filter((x) => x.kind === "page" && x.workspaceId === ws).length, 2, "3.0: the sub-page trashed by the same action is purged with its parent (2.x left it orphaned in the trash); see next-defects.test.ts for the children that are kept");
   assert.ok(t.every((x) => Number(x.rev) > before));
 });
 test("a client-chosen id creates the page once and never a second time", async () => {

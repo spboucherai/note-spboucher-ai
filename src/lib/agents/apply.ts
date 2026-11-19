@@ -16,6 +16,8 @@ import { HttpError } from "@/lib/errors";
 import { audit } from "@/lib/audit";
 import type { PMNode } from "@/lib/editor/text";
 import type { Proposal } from "./types";
+import { withActor } from "@/lib/events/context";
+import { recordEvent } from "@/lib/events/service";
 
 const E = schema.aiExecutions;
 const errText = (e: unknown) => String((e as Error)?.message ?? e).slice(0, 300);
@@ -46,7 +48,9 @@ export async function decideProposals(ws: { id: string }, userId: string, execut
   for (const idx of new Set(decision.approve)) {
     if (!open(idx)) continue; const p = proposals[idx]; p.decidedAt = at; approvals.push({ change: idx, approved: true, at });
     try {
-      const r = await applyOne(ws.id, executionId, p); p.result = r.result; p.undo = r.undo; p.status = "applied"; p.appliedAt = new Date().toISOString(); applied.push(idx);
+      // journal: what the proposal writes is stamped `agent`, and the approval itself is one `agent.applied` event
+      const r = await withActor({ actor: "agent" }, () => applyOne(ws.id, executionId, p)); p.result = r.result; p.undo = r.undo; p.status = "applied"; p.appliedAt = new Date().toISOString(); applied.push(idx);
+      await recordEvent(db, { workspaceId: ws.id, kind: "agent.applied", actor: "agent", pageId: typeof r.result.pageId === "string" ? r.result.pageId : null, entityKind: "execution", entityId: executionId, summary: `${ex.agent} · ${p.kind}`, data: { executionId, agent: ex.agent, change: idx, kind: p.kind, model: ex.model, ...r.result } });
       await audit(userId, "agent.proposal_apply", { type: "execution", id: executionId }, { change: idx, kind: p.kind, destructive: p.destructive, ...r.result });
     } catch (e) { p.status = "failed"; p.error = errText(e); failed.push({ idx, error: p.error }); await audit(userId, "agent.proposal_fail", { type: "execution", id: executionId }, { change: idx, kind: p.kind }); }
     // Persist after every change: a crash mid-batch never leaves an applied change recorded as "proposed" (it could be applied twice).
@@ -105,6 +109,7 @@ async function applyOne(wsId: string, executionId: string, p: Proposal): Promise
     }
     case "task": {
       const [t] = await db.insert(schema.tasks).values({ workspaceId: wsId, pageId: p.payload.pageId, title: p.payload.title, priority: p.payload.priority, dueAt: p.payload.dueAt ? new Date(p.payload.dueAt) : null, status: "todo" }).returning({ id: schema.tasks.id });
+      await recordEvent(db, { workspaceId: wsId, kind: "task.created", pageId: p.payload.pageId ?? null, entityKind: "task", entityId: t.id, summary: p.payload.title, data: { via: "agent" } });
       return { result: { taskId: t.id }, undo: { taskId: t.id } };
     }
     default: throw new HttpError(400, "This kind of proposal is no longer supported");

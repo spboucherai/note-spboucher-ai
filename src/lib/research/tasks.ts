@@ -2,6 +2,7 @@
 import { and, asc, eq, isNull, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { HttpError } from "@/lib/errors";
+import { recordEvent } from "@/lib/events/service";
 const T = schema.tasks;
 export type TaskRow = typeof T.$inferSelect;
 export interface TaskInput { pageId: string; title: string; status?: "todo" | "doing" | "done"; priority?: "low" | "medium" | "high"; dueAt?: string | null; project?: string | null }
@@ -11,6 +12,7 @@ export async function listTasks(wsId: string, pageId: string) {
 }
 export async function createTask(wsId: string, input: TaskInput) {
   const [t] = await db.insert(T).values({ workspaceId: wsId, pageId: input.pageId, title: input.title.trim() || "Task", status: input.status ?? "todo", priority: input.priority ?? "medium", dueAt: input.dueAt ? new Date(input.dueAt) : null, project: input.project ?? null, completedAt: input.status === "done" ? new Date() : null }).returning();
+  await recordEvent(db, { workspaceId: wsId, kind: "task.created", pageId: t.pageId, entityKind: "task", entityId: t.id, summary: t.title, data: { via: "research" } });
   return t;
 }
 export async function createTasks(wsId: string, pageId: string, items: Omit<TaskInput, "pageId">[]) {
@@ -25,7 +27,9 @@ export async function updateTask(wsId: string, id: string, patch: Partial<TaskIn
   if (patch.dueAt !== undefined) set.dueAt = patch.dueAt ? new Date(patch.dueAt) : null;
   if (patch.project !== undefined) set.project = patch.project;
   if (patch.pageId !== undefined) set.pageId = patch.pageId;
-  const [t] = await db.update(T).set(set).where(eq(T.id, id)).returning(); return t;
+  const [t] = await db.update(T).set(set).where(eq(T.id, id)).returning();
+  if (patch.status !== undefined && (prev.status === "done") !== (t.status === "done")) await recordEvent(db, { workspaceId: wsId, kind: t.status === "done" ? "task.completed" : "task.reopened", pageId: t.pageId, entityKind: "task", entityId: t.id, summary: t.title, data: { via: "research" } });
+  return t;
 }
 export async function deleteTask(wsId: string, id: string) { await db.update(T).set({ deletedAt: new Date() }).where(and(eq(T.id, id), eq(T.workspaceId, wsId))); }
 /** Undo of a delete. */

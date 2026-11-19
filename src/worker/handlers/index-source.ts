@@ -2,7 +2,13 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "../../db/index";
 import { indexSource, removeSource } from "../../lib/search/index";
 import { ensureBlockIds } from "../../lib/editor/text";
-/** Pages written before block ids were assigned server-side: add them once, in place. The version is NOT bumped (no text changes, and an open editor must not see a conflict). */
+/**
+ * Pages written before block ids were assigned server-side (and, since 3.0, list items written before they carried one): add them once,
+ * in place. The version is NOT bumped (no text changes, and an open editor must not see a conflict); the revision IS (the trigger sees
+ * a new document), so native clients receive the ids. This is safe because ids are now stable: a client that still holds the document
+ * without these ids and saves it gets the SAME ids back (`ensureBlockIds(doc, prev)` re-uses them by type + text) — see
+ * docs/next/API-NEXT.md §0.4 "rev and version".
+ */
 async function withIds(p: { id: string; content: unknown }) { const r = ensureBlockIds(p.content as any); if (r.changed) await db.update(schema.pages).set({ content: r.doc as any }).where(eq(schema.pages.id, p.id)); return r.doc; }
 export async function handleIndex(d: { sourceType: "page" | "attachment" | "row"; sourceId: string; workspaceId: string }) {
   if (d.sourceType === "page") {
