@@ -24,12 +24,14 @@ import { db, schema } from "@/db";
 import { log } from "@/lib/log";
 import { hybridSearch, type Hit } from "@/lib/search";
 import { approxTokens } from "@/lib/search/chunk";
-import { toMarkdown, type PMNode } from "@/lib/editor/text";
+import { toMarkdown, docBlocks, type PMNode } from "@/lib/editor/text";
+import { blocksOfChunk, bestBlock, citingSentences, norm, type DocBlock } from "./citations";
 import { streamAI, callAI } from "./providers";
 import { route, classifyTask, type RouteDecision } from "./router";
 import { MODE_SYSTEMS, INSUFFICIENT } from "./prompts";
 import { recordUsage, expensiveReason, budgetStatus, budgetMessage, type BudgetStatus } from "./usage";
 import { costUsd, getModel, providerConfigured } from "./catalog";
+import { configuredMap, loadProviders } from "./registry";
 import type { ChatMessage, TaskClass, AIEvent, Provider } from "./types";
 
 export const CHAT_MODES = ["notes", "summarise", "actions", "contradictions", "draft", "general"] as const;
@@ -46,18 +48,29 @@ const MODE_TASK: Record<ChatMode, TaskClass | null> = { notes: "chat", summarise
 export const RETRIEVAL = { candidates: 12, keep: 8, excerptChars: 600, minSemantic: 0.3, pageChars: 40_000, history: 20, outputTokens: 8000 } as const;
 export const isSupporting = (h: Pick<Hit, "semantic" | "keyword">) => h.keyword > 0 || h.semantic >= RETRIEVAL.minSemantic;
 
-export interface ChatRequest { conversationId?: string | null; clientId?: string | null; message: string; mode?: ChatMode | null; pageId?: string | null; model?: string | null; task?: TaskClass | null; useWorkspace?: boolean; confirmExpensive?: boolean; images?: { mime: string; dataBase64: string }[]; scopePageIds?: string[] }
-export interface SourceRef { n: number; chunkId: string; pageId: string | null; title: string; icon: string | null; heading: string | null; blockId: string | null; excerpt: string; score: number; semantic: number; sourceType: string }
+/**
+ * Ask-my-knowledge scope (SPEC §4.10): `all` the workspace (default) · `page` the open page only · `project` the project the page belongs
+ * to (its root ancestor and every descendant; or `projectId` and its descendants) · `selection` only the text passed in `selection`.
+ */
+export const CHAT_SCOPES = ["all", "page", "project", "selection"] as const;
+export type ChatScope = (typeof CHAT_SCOPES)[number];
+export interface ChatRequest { conversationId?: string | null; clientId?: string | null; message: string; mode?: ChatMode | null; pageId?: string | null; model?: string | null; task?: TaskClass | null; useWorkspace?: boolean; confirmExpensive?: boolean; images?: { mime: string; dataBase64: string }[]; scopePageIds?: string[]; scope?: ChatScope | null; projectId?: string | null; selection?: string | null; selectionBlockId?: string | null }
+/**
+ * One citable source. `blockId` is the block of the page that best supports the citation (see citations.ts), `blockIds` every block the
+ * retrieved passage covers, `quote` the start of the anchored block as it is in the page now. `anchor`: block = verified in the current
+ * page content · page = verified text but the block has no id yet · file = attachment text (no block) · selection = the passed selection.
+ */
+export interface SourceRef { n: number; chunkId: string; pageId: string | null; title: string; icon: string | null; heading: string | null; blockId: string | null; excerpt: string; score: number; semantic: number; sourceType: string; blockIds?: string[]; anchor?: "block" | "page" | "file" | "selection"; quote?: string | null }
 /** What was (or will be) sent to the answering provider. Counts only — never content. */
 export interface Sent { pageChars: number; excerpts: number; references: number; images: number; history: number; embeddedBy: Provider | null; rankedBy: { provider: Provider; model: string } | null }
 export type Evidence = "ok" | "none" | "insufficient" | "n/a";
 export interface ChatPlan {
-  configured: { openai: boolean; anthropic: boolean; any: boolean }; mode: ChatMode; task: TaskClass | null; provider: Provider | null; model: string | null; reason: string | null;
+  configured: { openai: boolean; anthropic: boolean; any: boolean } & Record<string, boolean>; mode: ChatMode; task: TaskClass | null; provider: Provider | null; model: string | null; reason: string | null;
   estTokens: number; estCostUsd: number | null; expensive: string | null; budget: BudgetStatus; budgetNote: string | null;
   sends: { pageChars: number; maxExcerpts: number; embeddedBy: Provider | null; rankedBy: { provider: Provider; model: string } | null }; error: string | null;
 }
 export type ChatEvent =
-  | { type: "meta"; conversationId: string; clientId: string | null; mode: ChatMode; model: string | null; provider: Provider | null; reason: string; task: TaskClass | null; sources: SourceRef[]; weak: SourceRef[]; evidence: Evidence; sent: Sent; budgetNote: string | null; replayed: boolean }
+  | { type: "meta"; conversationId: string; clientId: string | null; mode: ChatMode; model: string | null; provider: Provider | null; reason: string; task: TaskClass | null; sources: SourceRef[]; weak: SourceRef[]; evidence: Evidence; sent: Sent; budgetNote: string | null; replayed: boolean; scope?: ChatScope; scopePages?: number | null; staleDropped?: number }
   | { type: "text"; delta: string }
   | { type: "done"; messageId: string; content: string; usage: unknown; costUsd: number | null; latencyMs: number; ttftMs: number | null; sources: SourceRef[]; evidence: Evidence; invalidCitations: number[]; uncited: boolean; replayed: boolean }
   | { type: "needs_confirmation"; reason: string; plan: ChatPlan }
@@ -101,6 +114,59 @@ async function rerank(workspaceId: string, query: string, hits: Hit[], keep: num
   finally { clearTimeout(t); }
 }
 
+// ---------- scope and block anchoring (SPEC §4.10)
+const SELECTION_CHARS = 20_000; const SCOPE_MAX_PAGES = 2000;
+/** Pages a scope covers; null = no restriction. Throws a coded error for a scope that cannot be resolved (nothing written, nothing sent). */
+export async function resolveScope(workspaceId: string, r: Pick<ChatRequest, "scope" | "pageId" | "projectId" | "scopePageIds">): Promise<{ scope: ChatScope; pageIds: string[] | null }> {
+  const scope = r.scope ?? "all"; const explicit = r.scopePageIds?.length ? r.scopePageIds : null;
+  const live = async (id: string) => (await db.select({ id: schema.pages.id, parentId: schema.pages.parentId }).from(schema.pages).where(and(eq(schema.pages.id, id), eq(schema.pages.workspaceId, workspaceId), isNull(schema.pages.deletedAt))))[0] ?? null;
+  if (scope === "all" || scope === "selection") return { scope, pageIds: explicit };
+  if (scope === "page") {
+    if (!r.pageId || !(await live(r.pageId))) throw Object.assign(new Error("This scope works on an open page: open a page first."), { code: "page_required" });
+    return { scope, pageIds: [r.pageId] };
+  }
+  let root = r.projectId ?? null;
+  if (root) { if (!(await live(root))) throw Object.assign(new Error("Project not found."), { code: "not_found" }); }
+  else {
+    if (!r.pageId) throw Object.assign(new Error("This scope needs a project or an open page."), { code: "page_required" });
+    let cur = await live(r.pageId); if (!cur) throw Object.assign(new Error("Page not found."), { code: "not_found" });
+    for (let i = 0; i < 50 && cur.parentId; i++) { const up = await live(cur.parentId); if (!up) break; cur = up; }
+    root = cur.id;
+  }
+  const rows = await db.execute<{ id: string }>(dsql`with recursive t as (select id from pages where id = ${root} and workspace_id = ${workspaceId} union all select p.id from pages p join t on p.parent_id = t.id where p.workspace_id = ${workspaceId} and p.deleted_at is null) select id from t limit ${SCOPE_MAX_PAGES}`);
+  const ids = [...rows].map((x) => x.id);
+  return { scope, pageIds: explicit ? ids.filter((id) => explicit.includes(id)) : ids };
+}
+/**
+ * Verify retrieved sources against the pages as they are NOW and anchor each one to its best block for `text`.
+ * A page source whose passage is no longer in the page (edited or deleted since indexing) is dropped: it could not be verified by
+ * following the citation. Attachment sources have no block and are kept as `file`. Sources are renumbered 1…k.
+ */
+export async function anchorSources(workspaceId: string, sources: SourceRef[], fullText: Map<string, string>, text: string): Promise<{ sources: SourceRef[]; blocks: Map<string, DocBlock[]>; dropped: number }> {
+  const pageIds = [...new Set(sources.filter((s) => s.sourceType === "page" && s.pageId).map((s) => s.pageId!))];
+  const pages = pageIds.length ? await db.select({ id: schema.pages.id, content: schema.pages.content }).from(schema.pages).where(and(eq(schema.pages.workspaceId, workspaceId), inArray(schema.pages.id, pageIds), isNull(schema.pages.deletedAt))) : [];
+  const byPage = new Map(pages.map((p) => [p.id, docBlocks(p.content as PMNode)]));
+  const out: SourceRef[] = []; const blocks = new Map<string, DocBlock[]>(); let dropped = 0;
+  for (const s of sources) {
+    if (s.sourceType !== "page" || !s.pageId) { out.push({ ...s, anchor: s.sourceType === "selection" ? "selection" : "file", blockIds: s.blockId ? [s.blockId] : [] }); continue; }
+    const doc = byPage.get(s.pageId); const cands = doc ? blocksOfChunk(doc, fullText.get(s.chunkId) ?? s.excerpt) : [];
+    if (!cands.length) {
+      // a page whose only content is its title is indexed as one title chunk: nothing to anchor, but the page exists
+      if (doc && !doc.length) { out.push({ ...s, blockId: null, blockIds: [], anchor: "page", quote: null }); continue; }
+      dropped++; continue;
+    }
+    // only the first RETRIEVAL.excerptChars of a passage are sent to the model: a block it never saw must not become the anchor
+    const ex = norm(s.excerpt); const seen = cands.filter((b) => ex.includes(norm(b.text).slice(0, 40))); if (seen.length) cands.splice(0, cands.length, ...seen);
+    const best = bestBlock(cands, text); blocks.set(s.chunkId, cands);
+    out.push({ ...s, blockId: best?.id ?? null, blockIds: cands.map((b) => b.id).filter((x): x is string => Boolean(x)), anchor: best?.id ? "block" : "page", quote: (best ?? cands[0]).text.slice(0, 300) });
+  }
+  return { sources: out.map((s, i) => ({ ...s, n: i + 1 })), blocks, dropped };
+}
+/** After generation: move each cited source to the block that best matches the sentences citing it. */
+export function refineAnchors(cited: SourceRef[], blocks: Map<string, DocBlock[]>, answer: string): SourceRef[] {
+  return cited.map((s) => { const cands = blocks.get(s.chunkId); if (!cands?.length) return s; const sent = citingSentences(answer, s.n); if (!sent) return s; const b = bestBlock(cands, sent); return b?.id ? { ...s, blockId: b.id, anchor: "block" as const, quote: b.text.slice(0, 300) } : s; });
+}
+
 // ---------- context helpers
 const defaultMode = (r: Pick<ChatRequest, "mode" | "useWorkspace">): ChatMode => r.mode ?? (r.useWorkspace === false ? "general" : "notes");
 const semanticOn = () => providerConfigured("openai");
@@ -119,7 +185,7 @@ const friendly = (msg: string, status?: number) => status === 401 || status === 
 
 /** Dry run for the UI: which provider/model would answer, what would be sent, whether it is an expensive class. Calls NO provider. */
 export async function planChat(workspaceId: string, r: { mode?: ChatMode | null; pageId?: string | null; model?: string | null; message?: string; images?: number; historyTokens?: number }): Promise<ChatPlan> {
-  const mode = r.mode ?? "notes"; const configured = { openai: providerConfigured("openai"), anthropic: providerConfigured("anthropic"), any: false }; configured.any = configured.openai || configured.anthropic;
+  const mode = r.mode ?? "notes"; await loadProviders(); const configured = configuredMap();
   const budget = await budgetStatus(); const usesPage = PAGE_MODES.includes(mode); const usesRetrieval = RETRIEVAL_MODES.includes(mode);
   const page = usesPage ? await loadPage(workspaceId, r.pageId) : null;
   const pageChars = page ? page.markdown.length : 0;
@@ -162,11 +228,19 @@ export async function* chat(workspaceId: string, r: ChatRequest, signal?: AbortS
   const priorUser = prior.user;
 
   // 2 — everything that can refuse the request happens BEFORE any write or provider call.
-  const configured = { openai: providerConfigured("openai"), anthropic: providerConfigured("anthropic"), any: providerConfigured("openai") || providerConfigured("anthropic") };
+  await loadProviders(); const configured = configuredMap();
   if (!configured.any) { yield { type: "error", code: "not_configured", retryable: false, message: "AI is not configured on this server: no provider API key is set." }; return; }
   const usesPage = PAGE_MODES.includes(mode); const usesRetrieval = RETRIEVAL_MODES.includes(mode);
   const page = usesPage ? await loadPage(workspaceId, r.pageId) : null;
   if (usesPage && !page) { yield { type: "error", code: "page_required", retryable: false, message: "This mode works on an open page: open a page first." }; return; }
+  // scope (SPEC §4.10): resolved before anything is written or sent
+  let scoped: { scope: ChatScope; pageIds: string[] | null } = { scope: "all", pageIds: r.scopePageIds?.length ? r.scopePageIds : null };
+  const selection = (r.selection ?? "").trim().slice(0, SELECTION_CHARS);
+  if (r.scope && r.scope !== "all") {
+    if (!usesRetrieval) { yield { type: "error", code: "bad_scope", retryable: false, message: "A scope applies to questions answered from your notes (modes notes, draft, contradictions)." }; return; }
+    if (r.scope === "selection" && (mode !== "notes" || !selection)) { yield { type: "error", code: mode !== "notes" ? "bad_scope" : "selection_required", retryable: false, message: mode !== "notes" ? "The selection scope works in the notes mode." : "Select some text first." }; return; }
+    try { scoped = await resolveScope(workspaceId, r); } catch (e) { yield { type: "error", code: (e as { code?: string }).code ?? "bad_scope", retryable: false, message: String((e as Error).message) }; return; }
+  }
   let convId = priorUser?.conversationId ?? r.conversationId ?? null;
   if (convId) { const [c] = await db.select({ id: schema.aiConversations.id }).from(schema.aiConversations).where(and(eq(schema.aiConversations.id, convId), eq(schema.aiConversations.workspaceId, workspaceId))); if (!c) { yield { type: "error", code: "not_found", retryable: false, message: "Conversation not found." }; return; } }
   const all = convId ? await db.select().from(schema.aiMessages).where(eq(schema.aiMessages.conversationId, convId)).orderBy(asc(schema.aiMessages.createdAt)) : [];
@@ -190,14 +264,24 @@ export async function* chat(workspaceId: string, r: ChatRequest, signal?: AbortS
 
   // 4 — retrieval and the evidence gate.
   let sources: SourceRef[] = []; let weak: SourceRef[] = []; let rankedBy: Sent["rankedBy"] = null; let refBlock = ""; let references = 0; let retrievalFailed = false;
-  if (usesRetrieval) {
+  const fullText = new Map<string, string>(); let chunkBlocks = new Map<string, DocBlock[]>(); let staleDropped = 0;
+  if (scoped.scope === "selection") {
+    // the selection is the only evidence: one source, anchored to the block it was selected in when the client says which
+    let blockId: string | null = null; let title = "Selection";
+    if (r.pageId) { const [p] = await db.select({ title: schema.pages.title, content: schema.pages.content }).from(schema.pages).where(and(eq(schema.pages.id, r.pageId), eq(schema.pages.workspaceId, workspaceId), isNull(schema.pages.deletedAt))); if (p) { title = p.title; if (r.selectionBlockId && docBlocks(p.content as PMNode).some((b) => b.id === r.selectionBlockId)) blockId = r.selectionBlockId; } }
+    sources = [{ n: 1, chunkId: "selection", pageId: r.pageId ?? null, title, icon: null, heading: null, blockId, excerpt: selection.slice(0, RETRIEVAL.excerptChars), score: 1, semantic: 1, sourceType: "selection", blockIds: blockId ? [blockId] : [], anchor: "selection", quote: selection.slice(0, 300) }];
+    fullText.set("selection", selection);
+  } else if (usesRetrieval) {
     try {
       const query = mode === "contradictions" && page ? `${page.title}\n${r.message}\n${page.markdown.slice(0, 400)}`.slice(0, 1000) : r.message.slice(0, 1000);
-      let hits = await hybridSearch(workspaceId, query, { limit: RETRIEVAL.candidates, pageIds: r.scopePageIds, sourceTypes: mode === "draft" ? ["attachment"] : undefined });
+      let hits = scoped.pageIds && !scoped.pageIds.length ? [] : await hybridSearch(workspaceId, query, { limit: RETRIEVAL.candidates, pageIds: scoped.pageIds ?? undefined, sourceTypes: mode === "draft" ? ["attachment"] : undefined });
       if (mode === "contradictions" && page) hits = hits.filter((h) => h.pageId !== page.id);
       const support = hits.filter(isSupporting);
       const ranked = await rerank(workspaceId, r.message, support, RETRIEVAL.keep); rankedBy = ranked.rankedBy;
-      sources = toSources(ranked.hits);
+      for (const h of ranked.hits) fullText.set(h.chunkId, h.content);
+      const anchored = await anchorSources(workspaceId, toSources(ranked.hits), fullText, r.message);
+      sources = anchored.sources; chunkBlocks = anchored.blocks; staleDropped = anchored.dropped;
+      const order = new Map(sources.map((s) => [s.chunkId, s.n])); ranked.hits = ranked.hits.filter((h) => order.has(h.chunkId));
       weak = toSources((ranked.rejectedAll ? support : hits.filter((h) => !isSupporting(h))).slice(0, 3));
       if (mode === "draft" && sources.length) {
         const attIds = [...new Set(ranked.hits.filter((h) => h.sourceType === "attachment").map((h) => h.sourceId))];
@@ -208,7 +292,7 @@ export async function* chat(workspaceId: string, r: ChatRequest, signal?: AbortS
       }
     } catch (e) { retrievalFailed = true; log.error({ ws: workspaceId, conv: convId, err: (e as Error)?.name }, "chat retrieval failed"); }
   }
-  const sent: Sent = { pageChars: page?.markdown.length ?? 0, excerpts: sources.length, references, images: r.images?.length ?? 0, history: history.length, embeddedBy: usesRetrieval && semanticOn() ? "openai" : null, rankedBy };
+  const sent: Sent = { pageChars: page?.markdown.length ?? 0, excerpts: sources.length, references, images: r.images?.length ?? 0, history: history.length, embeddedBy: usesRetrieval && scoped.scope !== "selection" && semanticOn() ? "openai" : null, rankedBy };
   const needsEvidence = mode === "notes" || mode === "draft";
   if (needsEvidence && !sources.length) {
     // No answering provider is called: saying "insufficient" is deterministic and free.
@@ -217,16 +301,16 @@ export async function* chat(workspaceId: string, r: ChatRequest, signal?: AbortS
       : `**No supporting ${what} found.** I searched your ${mode === "draft" ? "reference documents" : "workspace"} and found nothing relevant enough to support an answer${weak.length ? " (the closest passages are listed below; they are under the relevance threshold)" : ""}. I am not answering from general knowledge as if it came from your notes.`;
     const [msg] = await db.insert(schema.aiMessages).values({ conversationId: convId, role: "assistant", content, model: null, provider: null, sources: [], usage: {}, costUsd: 0, latencyMs: 0, meta: { mode, clientId, evidence: "none", sent: nothingSent, task } }).returning({ id: schema.aiMessages.id });
     await db.update(schema.aiConversations).set({ updatedAt: new Date() }).where(eq(schema.aiConversations.id, convId));
-    yield { type: "meta", conversationId: convId, clientId, mode, model: null, provider: null, reason: "no supporting source — no answering provider called", task, sources: [], weak, evidence: "none", sent: nothingSent, budgetNote: null, replayed: false };
+    yield { type: "meta", conversationId: convId, clientId, mode, model: null, provider: null, reason: "no supporting source — no answering provider called", task, sources: [], weak, evidence: "none", sent: nothingSent, budgetNote: null, replayed: false, scope: scoped.scope, scopePages: scoped.pageIds?.length ?? null, staleDropped };
     yield { type: "text", delta: content };
     yield { type: "done", messageId: msg.id, content, usage: null, costUsd: 0, latencyMs: 0, ttftMs: null, sources: [], evidence: "none", invalidCitations: [], uncited: false, replayed: false };
     return;
   }
-  yield { type: "meta", conversationId: convId, clientId, mode, model: dec.model.id, provider: dec.provider, reason: dec.reason, task, sources, weak, evidence: usesRetrieval ? (sources.length ? "ok" : "none") : "n/a", sent, budgetNote, replayed: false };
+  yield { type: "meta", conversationId: convId, clientId, mode, model: dec.model.id, provider: dec.provider, reason: dec.reason, task, sources, weak, evidence: usesRetrieval ? (sources.length ? "ok" : "none") : "n/a", sent, budgetNote, replayed: false, scope: scoped.scope, scopePages: scoped.pageIds?.length ?? null, staleDropped };
 
   // 5 — one provider call. Workspace content travels as data inside <workspace> tags.
   const pageCtx = page ? `<workspace kind="current-page" title="${page.title.replace(/"/g, "'")}" id="${page.id}">\n${page.markdown}\n</workspace>` : "";
-  const srcBlock = sources.length ? `<workspace kind="retrieved-sources">\n${sources.map((s) => `[${s.n}] "${s.title}"${s.heading ? ` › ${s.heading}` : ""}\n${s.excerpt}`).join("\n\n")}\n</workspace>` : usesRetrieval ? `<workspace kind="retrieved-sources">\n(no excerpt retrieved)\n</workspace>` : "";
+  const srcBlock = sources.length ? `<workspace kind="retrieved-sources">\n${sources.map((s) => `[${s.n}] "${s.title}"${s.heading ? ` › ${s.heading}` : ""}\n${s.sourceType === "selection" ? fullText.get(s.chunkId) ?? s.excerpt : s.excerpt}`).join("\n\n")}\n</workspace>` : usesRetrieval ? `<workspace kind="retrieved-sources">\n(no excerpt retrieved)\n</workspace>` : "";
   const messages: ChatMessage[] = history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
   messages.push({ role: "user", content: [pageCtx, srcBlock, refBlock, r.message].filter(Boolean).join("\n\n"), images: r.images });
   let text = ""; let done: Extract<AIEvent, { type: "done" }> | null = null; let err: Extract<AIEvent, { type: "error" }> | null = null; let settled = false;
@@ -251,10 +335,12 @@ export async function* chat(workspaceId: string, r: ChatRequest, signal?: AbortS
     const cost = costUsd(dec.model, done.usage);
     const insufficient = needsEvidence && text.includes(INSUFFICIENT);
     let content = text.replace(INSUFFICIENT, "").trim(); let invalid: number[] = []; let kept: SourceRef[] = [];
-    if (usesRetrieval) { const v = validateCitations(content, new Set(insufficient ? [] : sources.map((s) => s.n))); content = v.text; invalid = insufficient ? [] : v.invalid; kept = sources.filter((s) => v.cited.includes(s.n)); }
+    if (usesRetrieval) { const v = validateCitations(content, new Set(insufficient ? [] : sources.map((s) => s.n))); content = v.text; invalid = insufficient ? [] : v.invalid; kept = refineAnchors(sources.filter((s) => v.cited.includes(s.n)), chunkBlocks, content); }
     if (insufficient) content = `**No supporting ${mode === "draft" ? "reference extract" : "note"} found.** ${content}`;
-    const evidence: Evidence = !usesRetrieval ? "n/a" : insufficient ? "insufficient" : sources.length ? "ok" : "none";
+    // An answer "from the notes" that cites no retrieved block cannot be verified: it is withheld rather than shown as grounded.
     const uncited = needsEvidence && !insufficient && kept.length === 0;
+    if (uncited) content = `**No supporting ${mode === "draft" ? "reference extract" : "note"} found.** The model wrote an answer without citing any of the retrieved passages, so it cannot be verified against your ${mode === "draft" ? "reference documents" : "notes"} and is not shown.`;
+    const evidence: Evidence = !usesRetrieval ? "n/a" : insufficient || uncited ? "insufficient" : sources.length ? "ok" : "none";
     const [msg] = await db.insert(schema.aiMessages).values({ conversationId: convId, role: "assistant", content, model: dec.model.id, provider: dec.provider, sources: kept as never, usage: done.usage, costUsd: cost, latencyMs: Math.round(done.totalMs), ttftMs: done.ttftMs == null ? null : Math.round(done.ttftMs), meta: { task, reason: dec.reason, stop: done.stop, mode, clientId, evidence, sent, invalidCitations: invalid, uncited } }).returning({ id: schema.aiMessages.id });
     await db.update(schema.aiConversations).set({ updatedAt: new Date(), model: dec.model.id }).where(eq(schema.aiConversations.id, convId));
     await recordUsage({ workspaceId, provider: dec.provider, model: dec.model.id, task, usage: done.usage, costUsd: cost, latencyMs: done.totalMs, ttftMs: done.ttftMs, ok: true, refId: convId });
@@ -268,18 +354,18 @@ export async function* chat(workspaceId: string, r: ChatRequest, signal?: AbortS
 }
 
 // ---------- inline actions (selection in the editor)
-export const ACTION_IDS = ["rewrite", "fix", "translate", "summarize", "expand", "explain", "to_list", "to_tasks", "table", "shorten", "formal", "simplify", "translate_fr", "translate_en", "explain_math", "continue", "outline", "study_notes", "action_items", "contradictions", "custom"] as const;
+export const ACTION_IDS = ["rewrite", "fix", "translate", "summarize", "expand", "explain", "to_list", "to_tasks", "table", "shorten", "formal", "simplify", "translate_fr", "translate_en", "explain_math", "continue", "outline", "study_notes", "action_items", "contradictions", "custom", "coherence", "questions", "links", "synthesis", "structure"] as const;
 export type ActionId = (typeof ACTION_IDS)[number];
-const ACTION_TASK: Partial<Record<ActionId, TaskClass>> = { explain_math: "reason", contradictions: "reason", table: "extract", to_list: "extract", to_tasks: "extract", action_items: "extract", fix: "quick", custom: "chat", explain: "chat" };
-export interface ActionPlan { configured: { openai: boolean; anthropic: boolean; any: boolean }; task: TaskClass; provider: Provider | null; model: string | null; reason: string | null; estTokens: number; estCostUsd: number | null; expensive: string | null; budgetNote: string | null; error: string | null }
+const ACTION_TASK: Partial<Record<ActionId, TaskClass>> = { explain_math: "reason", contradictions: "reason", table: "extract", to_list: "extract", to_tasks: "extract", action_items: "extract", fix: "quick", custom: "chat", explain: "chat", coherence: "chat", questions: "chat", links: "extract" };
+export interface ActionPlan { configured: { openai: boolean; anthropic: boolean; any: boolean } & Record<string, boolean>; task: TaskClass; provider: Provider | null; model: string | null; reason: string | null; estTokens: number; estCostUsd: number | null; expensive: string | null; budgetNote: string | null; error: string | null }
 /** Route an inline action without calling any provider. `dec` is null when nothing can serve it (the plan says why). */
 export async function planAction(action: ActionId, chars: number, model?: string | null): Promise<{ plan: ActionPlan; dec: RouteDecision | null }> {
-  const configured = { openai: providerConfigured("openai"), anthropic: providerConfigured("anthropic"), any: providerConfigured("openai") || providerConfigured("anthropic") };
+  await loadProviders(); const configured = configuredMap();
   const task: TaskClass = ACTION_TASK[action] ?? "write"; const estTokens = Math.ceil(chars / 3.6) + 400;
   const budget = await budgetStatus(); const base = { configured, task, estTokens, budgetNote: budgetMessage(budget) };
   if (!configured.any) return { dec: null, plan: { ...base, provider: null, model: null, reason: null, estCostUsd: null, expensive: null, error: "AI is not configured on this server: no provider API key is set." } };
   try {
-    const dec = await route({ task, preferred: model ?? null, estTokens: estTokens * 2 + 2000 });
+    const dec = await route({ task, preferred: model ?? null, estTokens: estTokens * 2 + 2000, schema: action === "links" });
     return { dec, plan: { ...base, provider: dec.provider, model: dec.model.id, reason: dec.reason, estCostUsd: costUsd(dec.model, { inputTokens: estTokens, outputTokens: Math.min(RETRIEVAL.outputTokens, estTokens) }), expensive: expensiveReason(task, estTokens), error: null } };
   } catch (e) { return { dec: null, plan: { ...base, provider: null, model: null, reason: null, estCostUsd: null, expensive: null, error: String((e as Error)?.message ?? e).slice(0, 200) } }; }
 }

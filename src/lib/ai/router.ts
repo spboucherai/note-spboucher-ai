@@ -1,4 +1,5 @@
 import { listModels, type ModelRow, providerConfigured } from "./catalog";
+import { providerDef } from "./registry";
 import type { Provider, TaskClass, Effort } from "./types";
 import { db, schema } from "@/db";
 import { eq, gte, sql as dsql } from "drizzle-orm";
@@ -22,16 +23,33 @@ export const TASK_LABELS: Record<TaskClass, string> = { chat: "Chat & Q&A", quic
 export interface RouteNeeds { task: TaskClass; tools?: boolean; schema?: boolean; vision?: boolean; estTokens?: number; preferred?: string | null; }
 export interface RouteDecision { model: ModelRow; provider: Provider; effort: Effort; reason: string; alternatives: string[] }
 
-function eligible(m: ModelRow, n: RouteNeeds) {
+/**
+ * Can this model serve the request?
+ *  - automatic routing (`manual=false`): unchanged rule — the model must have passed the measured probes (`probes.text === ok`, plus the
+ *    probe of each needed capability). Models of new providers have no probe data, so they are never picked automatically.
+ *  - manual selection (`manual=true`, the owner chose this model): an unprobed model of an OpenAI-compatible provider is accepted on
+ *    the capabilities its provider declares (tools, vision). A JSON schema is always accepted: the adapter states the schema in the
+ *    prompt when the model does not declare structured outputs, and every caller validates the JSON it gets back.
+ */
+function eligible(m: ModelRow, n: RouteNeeds, manual = false) {
   if (!m.available || !m.enabled || m.category === "embedding" || !providerConfigured(m.provider as Provider)) return false;
   const p = m.probes ?? {};
-  if (p.text?.status !== "ok") return false;
+  if (p.text?.status !== "ok") {
+    if (!manual || providerDef(m.provider)?.kind !== "openai_compatible") return false;
+    const c = (m.capabilities ?? {}) as { tools?: boolean | null; vision?: boolean | null };
+    if (n.tools && c.tools !== true) return false;
+    if (n.vision && c.vision !== true) return false;
+    if (n.estTokens && m.contextWindow && m.contextWindow < n.estTokens * 1.2) return false;
+    return true;
+  }
   if (n.tools && p.tool_use?.status !== "ok") return false;
   if (n.schema && p.structured_output?.status !== "ok") return false;
   if (n.vision && p.vision?.status !== "ok") return false;
   if (n.estTokens && m.contextWindow && m.contextWindow < n.estTokens * 1.2) return false;
   return true;
 }
+/** True when the model takes part in automatic routing (it passed the measured text probe). */
+export const autoRoutable = (m: Pick<ModelRow, "probes" | "category">) => m.category !== "embedding" && (m.probes ?? {}).text?.status === "ok";
 function measured(m: ModelRow, cats: string[]) {
   const by = (m.benchmark as any)?.by_category ?? {}; const vals = cats.map((c) => by[c]?.score).filter((x) => typeof x === "number");
   return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : -1;
@@ -57,8 +75,8 @@ export async function route(n: RouteNeeds): Promise<RouteDecision> {
   if ((task === "deep" || task === "reason") && (await overBudget())) task = task === "deep" ? "reason" : "chat";
   const r = routes[task];
   const avoid = new Set(r.avoid ?? []);
-  const pick = (id: string | null | undefined) => (id ? models.find((m) => m.id === id && eligible(m, n) && !avoid.has(m.id)) ?? null : null);
-  const pref = pick(n.preferred);
+  const pick = (id: string | null | undefined, manual = false) => (id ? models.find((m) => m.id === id && eligible(m, n, manual) && !avoid.has(m.id)) ?? null : null);
+  const pref = pick(n.preferred, true);
   if (pref) return { model: pref, provider: pref.provider as Provider, effort: r.effort, reason: "user selection", alternatives: [r.primary, r.fallback].filter((x) => x !== pref.id) };
   const prim = pick(r.primary); if (prim) return { model: prim, provider: prim.provider as Provider, effort: r.effort, reason: `primary route for ${task}${task !== n.task ? " (budget downgrade)" : ""}`, alternatives: [r.fallback] };
   const fb = pick(r.fallback); if (fb) return { model: fb, provider: fb.provider as Provider, effort: r.effort, reason: `fallback for ${task} (${r.primary} unavailable)`, alternatives: [] };
