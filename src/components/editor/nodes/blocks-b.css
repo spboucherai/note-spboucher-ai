@@ -1,0 +1,132 @@
+/*
+ * file: src/components/editor/nodes/blocks-b.css
+ * description: styles of three Next Generation blocks — runnable code (rc-*), PDF reader (pdfv-*) and voice note (au-*). Plain CSS on
+ *   the tokens of globals.css; nothing here widens the page (bodies scroll inside themselves) and every animation yields to
+ *   prefers-reduced-motion. The pdfv-text rules are the subset of pdf.js' text-layer stylesheet the reader needs.
+ * author: Simon-Pierre Boucher — contact@spboucher.ai
+ */
+
+/* ---------- runCode ---------- */
+.rc { min-width: 0; }
+.rc-hint { display: inline-flex; align-items: center; gap: .3rem; min-width: 0; font-weight: 400; font-size: 0.75rem; color: var(--fg-muted); }
+.rc-hint svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--success); }
+.rc-lang { display: inline-flex; align-items: center; gap: .375rem; min-width: 0; }
+.rc-note { margin-left: auto; min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.rc-code { max-height: 28rem; border-radius: 0; }
+.rc-code-ro { min-height: 0; margin: 0; resize: none; }
+.rc-status { padding: .375rem 1rem; border-top: 1px solid var(--line); }
+.rc-out { border-top: 1px solid var(--line); min-width: 0; }
+.rc-out-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .25rem .5rem .25rem 1rem; min-height: 2rem; }
+.rc-out-label { font-size: 0.6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-faint); }
+.rc-out[data-error="true"] .rc-out-label { color: var(--danger); }
+.rc-clear { margin-left: auto; }
+.rc-out-text { margin: 0; padding: .25rem 1rem .75rem; max-height: 20rem; overflow: auto; overscroll-behavior: contain; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; background: transparent; border: 0; border-radius: 0; }
+.rc-out[data-error="true"] .rc-out-text { color: var(--danger); }
+.rc-out-text:focus-visible, .rc-code-ro:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+/* ---------- pdf ---------- */
+.pdfv { min-width: 0; }
+.pdfv-progress, .au-progress { display: block; width: min(16rem, 100%); height: 6px; margin-top: .375rem; accent-color: var(--accent); }
+.pdfv-toolbar { row-gap: .25rem; }
+.pdfv-gap { flex: 1 1 0; min-width: .25rem; }
+.pdfv-pagebox { display: inline-flex; align-items: center; gap: .375rem; white-space: nowrap; }
+.pdfv-pagefield { width: 3.25rem; text-align: center; font-variant-numeric: tabular-nums; }
+.pdfv-zoom { min-width: 3rem; text-align: right; }
+@media (max-width: 480px) { .pdfv-zoom { display: none; } }
+.pdfv-stage { position: relative; min-height: 10rem; background: var(--bg-sunk); outline: none; }
+.pdfv-stage:focus-visible { box-shadow: inset 0 0 0 2px var(--ring); }
+.pdfv-page { position: relative; margin-inline: auto; background: #fff; box-shadow: var(--shadow-card); overflow: hidden; isolation: isolate; }
+.pdfv-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; z-index: 0; }
+.pdfv-page[data-rendering="true"] .pdfv-canvas { opacity: .6; transition: opacity var(--dur-fast); }
+.pdfv-marks { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.pdfv-mark { position: absolute; border-radius: 2px; background: color-mix(in srgb, var(--pdfv-c, #ffd84d) 45%, transparent); mix-blend-mode: multiply; }
+.pdfv-mark[data-kind="note"] { background: color-mix(in srgb, var(--pdfv-c, #ffd84d) 22%, transparent); box-shadow: inset 0 -2px 0 var(--pdfv-c, #ffd84d); }
+.pdfv-mark[data-selected="true"] { outline: 2px solid var(--accent); outline-offset: 1px; mix-blend-mode: normal; }
+.pdfv-ink { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* pdf.js text layer: transparent, selectable text laid exactly over the canvas (kept light-scheme: the page is always white) */
+.pdfv-text { position: absolute; top: 0; left: 0; z-index: 2; overflow: clip; opacity: 1; line-height: 1; text-align: initial; letter-spacing: normal; word-spacing: normal; color-scheme: only light;
+  -webkit-text-size-adjust: none; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; caret-color: CanvasText; user-select: text; -webkit-user-select: text;
+  --min-font-size: 1; --total-scale-factor: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.pdfv-text[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.pdfv-text[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.pdfv-text[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+.pdfv-text :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; user-select: text; -webkit-user-select: text; }
+.pdfv-text > :not(.markedContent):not(.pdfv-eoc), .pdfv-text .markedContent span:not(.markedContent) { z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height)); --scale-x: 1; --rotate: 0deg; transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.pdfv-text .markedContent { display: contents; }
+.pdfv-text span[role="img"] { user-select: none; -webkit-user-select: none; cursor: default; }
+.pdfv-text ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: transparent; }
+.pdfv-text br::selection { background: transparent; }
+.pdfv-text .pdfv-eoc { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; -webkit-user-select: none; }
+.pdfv-text.selecting .pdfv-eoc { top: 0; }
+.pdfv-seltools { position: absolute; z-index: 3; transform: translateX(-50%); display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: .125rem; width: max-content; max-width: min(100%, 22rem); padding: .25rem; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg-elev); box-shadow: var(--shadow-pop); color: var(--fg); }
+.pdfv-swatches { display: inline-flex; align-items: center; gap: .125rem; padding-inline: .125rem; }
+.pdfv-swatch { position: relative; width: 1.75rem; height: 1.75rem; border-radius: var(--r-pill); display: inline-grid; place-items: center; }
+.pdfv-swatch::before { content: ""; width: 1.125rem; height: 1.125rem; border-radius: var(--r-pill); background: var(--pdfv-c); border: 1px solid color-mix(in srgb, #000 18%, var(--pdfv-c)); }
+.pdfv-swatch[aria-checked="true"]::before { box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--accent); }
+.pdfv-swatch:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+@media (pointer: coarse) { .pdfv-swatch { width: 2.75rem; height: 2.75rem; } .pdfv-swatch::before { width: 1.5rem; height: 1.5rem; } }
+.pdfv-panel { border-top: 1px solid var(--line); padding: .5rem .75rem .75rem; display: grid; gap: .5rem; min-width: 0; }
+.pdfv-panel-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+.pdfv-quote { margin: 0; padding: 0 0 0 .625rem; border-left: 3px solid var(--line-strong); color: var(--fg-muted); font-size: 0.8125rem; line-height: 1.35rem; max-height: 6.75rem; overflow: auto; overflow-wrap: anywhere; }
+.pdfv-note { display: block; width: 100%; min-height: 3rem; resize: vertical; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg); padding: .375rem .5rem; font-size: 0.875rem; line-height: 1.4rem; color: var(--fg); outline: none; }
+.pdfv-note:focus { border-color: color-mix(in oklab, var(--accent) 60%, transparent); }
+.pdfv-note-ro { margin: 0; font-size: 0.875rem; line-height: 1.4rem; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-editor .pdfv-list, .pdfv-list { list-style: none; margin: 0; padding: .25rem; border-top: 1px solid var(--line); max-height: 16rem; overflow-y: auto; overscroll-behavior: contain; }
+.note-editor .pdfv-list > li, .pdfv-list > li { margin: 0; padding: 0; }
+.pdfv-row { display: flex; align-items: center; gap: .5rem; width: 100%; min-width: 0; min-height: 2rem; padding: .25rem .5rem; border-radius: var(--r-sm); text-align: left; font-size: 0.8125rem; line-height: 1.25rem; color: var(--fg); }
+.pdfv-row:hover { background: var(--bg-hover); } .pdfv-row.is-active { background: var(--accent-soft); }
+.pdfv-row:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.pdfv-rowtext { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdfv-dot { width: .625rem; height: .625rem; border-radius: var(--r-pill); flex-shrink: 0; background: var(--pdfv-c); border: 1px solid color-mix(in srgb, #000 18%, var(--pdfv-c)); }
+.pdfv-dot[data-kind="ink"] { border-radius: 2px; }
+@media (pointer: coarse) { .pdfv-row { min-height: 2.75rem; } .pdfv-note { font-size: 1rem; } }
+
+/* ---------- audio ---------- */
+.au { display: grid; gap: .5rem; padding: .625rem .75rem .75rem; min-width: 0; }
+.au-title { width: 100%; font-weight: 500; }
+.au-player { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+.au-play { border-radius: var(--r-pill); width: 2.25rem; height: 2.25rem; padding: 0; flex-shrink: 0; }
+@media (pointer: coarse) { .au-play { width: 2.75rem; height: 2.75rem; } .au-title, .au-rate { height: 2.75rem; font-size: 1rem; } }
+.au-time { min-width: 2.25rem; text-align: center; font-size: 0.75rem; }
+.au-seek { flex: 1 1 7rem; min-width: 0; height: 1.75rem; margin: 0; accent-color: var(--accent); cursor: pointer; touch-action: pan-y; }
+.au-seek:disabled { cursor: default; opacity: .5; }
+.au-seek:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--r-xs); }
+@media (pointer: coarse) { .au-seek { height: 2.75rem; } }
+.au-rate { flex-shrink: 0; padding-inline: .25rem; }
+.au-wave { display: block; width: 100%; height: 3rem; cursor: pointer; touch-action: pan-y; }
+.au-wave-load { display: inline-flex; align-items: center; gap: .375rem; justify-self: start; min-height: 1.75rem; padding: 0 .375rem; border-radius: var(--r-sm); }
+button.au-wave-load:hover { background: var(--bg-hover); color: var(--fg); }
+button.au-wave-load:focus-visible { outline: 2px solid var(--ring); }
+.au-wave-load svg, .au-tr svg { width: 14px; height: 14px; flex-shrink: 0; }
+@media (pointer: coarse) { .au-wave-load { min-height: 2.75rem; } }
+.note-editor .au-transcript, .au-transcript { list-style: none; margin: 0; padding: 0; max-height: 18rem; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--line); padding-top: .25rem; }
+.note-editor .au-transcript > li, .au-transcript > li { margin: 0; padding: 0; }
+.au-line { display: flex; align-items: baseline; gap: .5rem; width: 100%; min-width: 0; padding: .25rem .375rem; border-radius: var(--r-sm); text-align: left; font-size: 0.875rem; line-height: 1.4rem; color: var(--fg); }
+.au-line:hover { background: var(--bg-hover); }
+.au-line.is-active { background: var(--accent-soft); }
+.au-line:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.au-stamp { flex-shrink: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.au-line.is-active .au-stamp { color: var(--accent); }
+.au-line-text { min-width: 0; overflow-wrap: anywhere; }
+@media (pointer: coarse) { .au-line { min-height: 2.75rem; align-items: center; } }
+.au-tr { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; min-width: 0; }
+.au-failed { color: var(--danger); }
+.au-summary { border: 1px solid color-mix(in oklab, var(--ai) 26%, transparent); border-radius: var(--r-md); background: color-mix(in oklab, var(--ai-soft) 55%, transparent); padding: .625rem .75rem; min-width: 0; }
+.au-summary-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .375rem; }
+.au-ai-mark { display: inline-flex; align-items: center; gap: .25rem; border-radius: var(--r-xs); background: var(--ai-soft); color: var(--ai); padding: 0 .375rem; font-size: 0.6875rem; line-height: 1.125rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.au-ai-mark svg { width: 12px; height: 12px; }
+.au-summary-text { margin: 0; font-size: 0.875rem; line-height: 1.45rem; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.au-summary-h { margin: .5rem 0 .125rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-faint); }
+.note-editor .au-summary-list, .au-summary-list { margin: 0; padding-left: 1.125rem; list-style: disc; font-size: 0.875rem; line-height: 1.45rem; color: var(--fg); overflow-wrap: anywhere; }
+.au-rec { display: flex; align-items: center; gap: .625rem; flex-wrap: wrap; padding: .625rem .75rem; min-width: 0; }
+.au-rec-dot { width: .625rem; height: .625rem; border-radius: var(--r-pill); background: var(--danger); flex-shrink: 0; animation: au-pulse 1.4s ease-in-out infinite; }
+.au-rec-time { font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; color: var(--fg); min-width: 3rem; }
+.au-meter { flex: 1 1 5rem; min-width: 2rem; height: .375rem; border-radius: var(--r-pill); background: var(--bg-sunk); overflow: hidden; }
+.au-meter-fill { display: block; width: 100%; height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left center; will-change: transform; }
+.au-rec-actions { margin-left: auto; display: inline-flex; align-items: center; gap: .25rem; }
+@keyframes au-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .au-rec-dot { animation: none; }
+  .au-meter { display: none; }
+  .pdfv-page[data-rendering="true"] .pdfv-canvas { transition: none; }
+}

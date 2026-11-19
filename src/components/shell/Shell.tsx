@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { useUI } from "@/lib/client/store";
+import { useUI, followSystemTheme } from "@/lib/client/store";
+import { RightPanel, registerBuiltInPanels } from "./RightPanel";
+import { useShellCommands } from "./shell-commands";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav, MobileHeader } from "./MobileNav";
@@ -21,7 +23,10 @@ import { applyPrefs, readLocalPrefs } from "@/components/settings/prefs";
 export function Shell({ user, workspace, initialTree, children }: { user: ShellUser; workspace: { id: string; name: string }; initialTree: TreeNode[]; children: React.ReactNode }) {
   const ui = useUI(); const r = useRouter(); const pathname = usePathname(); const [help, setHelp] = useState(false);
   const { data: tree = initialTree } = useQuery({ queryKey: ["tree"], queryFn: () => api<TreeNode[]>("/api/tree"), initialData: initialTree, staleTime: 10_000 });
-  useEffect(() => { ui.setTheme(ui.theme); try { applyPrefs(readLocalPrefs()); } catch {} /* eslint-disable-next-line */ }, []);
+  useEffect(() => { ui.setTheme(ui.theme); try { applyPrefs(readLocalPrefs()); } catch {} registerBuiltInPanels(); return followSystemTheme(); /* eslint-disable-next-line */ }, []);
+  useShellCommands(tree, () => setHelp(true));
+  // Handles for the end-to-end suites and for debugging from the console (UI state and motion helpers only — no data, no credentials).
+  useEffect(() => { const w = window as unknown as Record<string, unknown>; w.__noteUI = () => useUI.getState(); w.__noteMotion = () => import("@/lib/client/motion"); }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -57,8 +62,8 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
   const sidebar = ui.sidebarOpen && !ui.focusMode;
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-bg">
-      <a href="#main-scroll" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-bg-elev focus:px-3 focus:py-2 focus:text-[13px] focus:shadow-pop">Skip to content</a>
-      <aside className={cn("hidden md:flex shrink-0 flex-col overflow-hidden border-r border-line bg-bg-side transition-[width] duration-200 ease-out", sidebar ? "w-[17rem]" : "w-0 border-r-0")}><div className="h-full w-[17rem] shrink-0"><Sidebar tree={tree} user={user} workspace={workspace} /></div></aside>
+      <a href="#main-scroll" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-control focus:bg-bg-elev focus:px-3 focus:py-2 focus:text-ui focus:shadow-pop">Skip to content</a>
+      <aside className={cn("sidebar-glass hidden md:flex shrink-0 flex-col overflow-hidden border-r border-line transition-[width] duration-base ease-standard", sidebar ? "w-[17rem]" : "w-0 border-r-0")}><div className="h-full w-[17rem] shrink-0"><Sidebar tree={tree} user={user} workspace={workspace} /></div></aside>
       <div className="flex min-w-0 flex-1 flex-col">
         {!ui.focusMode && <TopBar tree={tree} />}
         {!ui.focusMode && <MobileHeader tree={tree} />}
@@ -66,6 +71,7 @@ export function Shell({ user, workspace, initialTree, children }: { user: ShellU
         <MobileNav tree={tree} />
       </div>
       {ui.aiOpen && !ui.focusMode && <AIPanel pathname={pathname} />}
+      {!ui.aiOpen && !ui.focusMode && <RightPanel pathname={pathname} />}
       <CommandPalette tree={tree} />
       <CaptureSheet />
       {update && <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-[70] mx-auto flex max-w-md items-center gap-3 rounded-xl border border-line bg-bg-elev p-3 text-[13.5px] shadow-pop"><span className="min-w-0 flex-1">A new version is ready.</span><button className="h-9 rounded-lg bg-accent px-3 font-medium text-accent-fg" onClick={() => { (window as any).__noteUpdateAccepted = true; update.postMessage({ type: "SKIP_WAITING" }); }}>Reload</button><button aria-label="Later" className="h-9 px-2 text-fg-muted" onClick={() => setUpdate(null)}>Later</button></div>}

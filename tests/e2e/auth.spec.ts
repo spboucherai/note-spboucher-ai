@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
-import { cli, enrollmentToken, sql, STATE, virtualAuthenticator, withSavedPasskey, saveState, expectNoHorizontalOverflow } from "./helpers";
+import { cli, enrollmentToken, sql, STATE, virtualAuthenticator, withSavedPasskey, saveState, expectNoHorizontalOverflow, ORIGIN } from "./helpers";
 
 const saved = () => JSON.parse(fs.readFileSync(STATE, "utf8"));
 test.describe.configure({ mode: "serial" });
@@ -21,19 +21,19 @@ test("every API route refuses anonymous reads and writes", async ({ request }) =
   expect(routes.length).toBeGreaterThan(50);
   for (const r of routes.filter((r) => !open.has(r))) {
     const g = await request.get(r); expect([401], `GET ${r} → ${g.status()}`).toContain(g.status());
-    const p = await request.post(r, { data: {}, headers: { origin: "http://localhost:8481" } }); expect([401], `POST ${r} → ${p.status()}`).toContain(p.status());
+    const p = await request.post(r, { data: {}, headers: { origin: ORIGIN } }); expect([401], `POST ${r} → ${p.status()}`).toContain(p.status());
   }
 });
 test("ceremony endpoints refuse cross-site callers and unknown tokens", async ({ request }) => {
   expect((await request.post("/api/auth/login/options", { headers: { origin: "https://evil.example" } })).status()).toBe(403);
-  expect((await request.post("/api/auth/login/options", { headers: { origin: "http://localhost:8481", "sec-fetch-site": "cross-site" } })).status()).toBe(403);
-  const r = await request.post("/api/auth/enroll/options", { headers: { origin: "http://localhost:8481" }, data: { token: "A".repeat(43) } }); expect(r.status()).toBe(403); expect((await r.json()).code).toBe("enrollment_closed");
+  expect((await request.post("/api/auth/login/options", { headers: { origin: ORIGIN, "sec-fetch-site": "cross-site" } })).status()).toBe(403);
+  const r = await request.post("/api/auth/enroll/options", { headers: { origin: ORIGIN }, data: { token: "A".repeat(43) } }); expect(r.status()).toBe(403); expect((await r.json()).code).toBe("enrollment_closed");
   // a forged assertion (well-formed, unknown credential) is refused, burns its challenge and is audited
-  const ctx = await request.post("/api/auth/login/options", { headers: { origin: "http://localhost:8481" } }); expect(ctx.status()).toBe(200);
+  const ctx = await request.post("/api/auth/login/options", { headers: { origin: ORIGIN } }); expect(ctx.status()).toBe(200);
   const forged = { id: "Zm9yZ2VkLWNyZWRlbnRpYWwtaWQ", rawId: "Zm9yZ2VkLWNyZWRlbnRpYWwtaWQ", type: "public-key", response: { clientDataJSON: "e30", authenticatorData: "AAAA", signature: "AAAA" }, clientExtensionResults: {} };
-  const v = await request.post("/api/auth/login/verify", { headers: { origin: "http://localhost:8481" }, data: { response: forged } }); expect(v.status()).toBe(400); expect((await v.json()).code).toBe("unknown_credential");
-  const v2 = await request.post("/api/auth/login/verify", { headers: { origin: "http://localhost:8481" }, data: { response: forged } }); expect((await v2.json()).code).toBe("challenge_used");
-  const bad = await request.post("/api/auth/login/verify", { headers: { origin: "http://localhost:8481" }, data: { response: { id: "x" } } }); expect(bad.status()).toBe(400);
+  const v = await request.post("/api/auth/login/verify", { headers: { origin: ORIGIN }, data: { response: forged } }); expect(v.status()).toBe(400); expect((await v.json()).code).toBe("unknown_credential");
+  const v2 = await request.post("/api/auth/login/verify", { headers: { origin: ORIGIN }, data: { response: forged } }); expect((await v2.json()).code).toBe("challenge_used");
+  const bad = await request.post("/api/auth/login/verify", { headers: { origin: ORIGIN }, data: { response: { id: "x" } } }); expect(bad.status()).toBe(400);
   expect((v.headers()["set-cookie"] ?? "")).not.toContain("note_session");
   await sql`delete from login_attempts`;
 });
@@ -70,9 +70,9 @@ test("a passkey prompt without user verification is refused", async ({ page }) =
 test("sensitive actions need a fresh passkey: add, rename, remove; the last passkey cannot be removed", async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: saved(), viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); const page = await ctx.newPage(); const va = await withSavedPasskey(page);
   await sql`update sessions set verified_at = now() - interval '10 minutes' where revoked_at is null`;
-  const stale = await page.request.post("/api/auth/passkeys/options", { headers: { origin: "http://localhost:8481" } }); expect(stale.status()).toBe(403); expect((await stale.json()).code).toBe("reauth_required");
+  const stale = await page.request.post("/api/auth/passkeys/options", { headers: { origin: ORIGIN } }); expect(stale.status()).toBe(403); expect((await stale.json()).code).toBe("reauth_required");
   const [cur] = await sql`select id from webauthn_credentials`;
-  const only = await page.request.delete(`/api/auth/passkeys/${cur.id}`, { headers: { origin: "http://localhost:8481" } }); expect(only.status(), "stale session cannot delete").toBe(403);
+  const only = await page.request.delete(`/api/auth/passkeys/${cur.id}`, { headers: { origin: ORIGIN } }); expect(only.status(), "stale session cannot delete").toBe(403);
   await page.goto("/settings#security");
   const pk = page.locator("#sec-passkeys"); await expect(pk.getByText("E2E phone", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "Remove E2E phone" })).toBeDisabled();
   const before = saved().cookies.find((x: any) => x.name.endsWith("note_session")).value;
@@ -91,13 +91,13 @@ test("sensitive actions need a fresh passkey: add, rename, remove; the last pass
   await expect(pk.getByText("Spare key", { exact: true })).toHaveCount(0);
   const [{ n }] = await sql`select count(*)::int as n from webauthn_credentials`; expect(n).toBe(1);
   // with a fresh verification the server still refuses to delete the only passkey
-  const [c] = await sql`select id from webauthn_credentials`; const last = await page.request.delete(`/api/auth/passkeys/${c.id}`, { headers: { origin: "http://localhost:8481" } }); expect(last.status()).toBe(409); expect((await last.json()).code).toBe("last_passkey");
+  const [c] = await sql`select id from webauthn_credentials`; const last = await page.request.delete(`/api/auth/passkeys/${c.id}`, { headers: { origin: ORIGIN } }); expect(last.status()).toBe(409); expect((await last.json()).code).toBe("last_passkey");
   await saveState(ctx); await expectNoHorizontalOverflow(page); await ctx.close();
 });
 test("another device can be signed out; global revocation ends every session", async ({ browser }) => {
   const a = await browser.newContext({ storageState: saved() }); const pa = await a.newPage(); await withSavedPasskey(pa);
   const b = await browser.newContext(); const pb = await b.newPage(); await withSavedPasskey(pb);
-  await pb.goto("/login"); await pb.getByRole("button", { name: /Continue with/ }).click(); await expect(pb).toHaveURL(/localhost:8481\/$/);
+  await pb.goto("/login"); await pb.getByRole("button", { name: /Continue with/ }).click(); await expect(pb).toHaveURL(/localhost:\d+\/$/);
   await pa.goto("/settings#security"); await expect(pa.locator("#sec-sessions").getByText("this device", { exact: true })).toBeVisible();
   await pa.getByRole("button", { name: "Others" }).click(); await pa.getByRole("dialog").getByRole("button", { name: "Sign out" }).click();
   await expect(pa.getByText(/\d+ sessions? ended/).first()).toBeVisible();
@@ -112,7 +112,7 @@ test("recovery: a CLI window replaces every passkey and signs every device out",
   await page.getByLabel("Name of this device").fill("E2E phone"); await page.getByRole("button", { name: /Create passkey/ }).click(); await page.getByText("Passkey registered").waitFor(); await page.waitForURL(/\/settings/);
   expect((await po.request.get("/api/tree")).status(), "old session revoked by recovery").toBe(401);
   const rows = await sql`select label from webauthn_credentials`; expect(rows.length).toBe(1);
-  const again = await page.request.post("/api/auth/enroll/options", { headers: { origin: "http://localhost:8481" }, data: { token } }); expect(again.status(), "window is single use").toBe(403);
+  const again = await page.request.post("/api/auth/enroll/options", { headers: { origin: ORIGIN }, data: { token } }); expect(again.status(), "window is single use").toBe(403);
   const { credentials } = await va.cdp.send("WebAuthn.getCredentials", { authenticatorId: va.id }); fs.writeFileSync("test-results/.auth/credential.json", JSON.stringify(credentials[0]), { mode: 0o600 });
   await saveState(ctx); await ctx.close(); await old.close(); await sql`delete from login_attempts`;
 });

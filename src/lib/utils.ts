@@ -1,5 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+// The design-system utilities are declared to tailwind-merge: without this `text-ui` / `text-micro` (font sizes) are taken for text
+// colours and silently dropped next to `text-fg-muted`, and the semantic radii / shadows do not override Tailwind's own.
+const twMerge = extendTailwindMerge({ extend: { classGroups: { "font-size": [{ text: ["micro", "ui", "body", "h3", "h2", "h1", "display"] }], rounded: [{ rounded: ["chip", "control", "pop", "card", "sheet", "pill"] }], shadow: [{ shadow: ["card", "pop", "glass"] }] } } });
 export const cn = (...i: ClassValue[]) => twMerge(clsx(i));
 export const fmtDate = (d: Date | string | null | undefined, opts: Intl.DateTimeFormatOptions = { dateStyle: "medium" }) => (d ? new Intl.DateTimeFormat("en-CA", opts).format(new Date(d)) : "");
 export function timeAgo(d: Date | string) {

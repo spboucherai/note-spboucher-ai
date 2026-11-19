@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Editor as TEditor } from "@tiptap/react";
-import { Editor } from "@/components/editor/Editor";
+import { Editor, getEditorDoc, setEditorDoc, type EditorLock } from "@/components/editor/Editor";
+import { registerCommands } from "@/lib/client/commands";
 import { api } from "@/lib/client/api";
 import { toast } from "@/components/ui/toast";
 import { Clock, Link2, MoreHorizontal, Trash2, RotateCcw, Image as ImageIcon, Smile, Star, Copy, Download, History, FileDown, Sparkles, Check, CloudOff, TriangleAlert, GitCompareArrows, RefreshCw, Archive, Inbox, Tag, X } from "lucide-react";
@@ -27,10 +28,11 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
   const [title, setTitle] = useState(page.title === "Untitled" ? "" : page.title); const [icon, setIcon] = useState<string | null>(page.icon); const [cover, setCover] = useState<string | null>(page.cover);
   const [versions, setVersions] = useState<any[] | null>(null); const [preview, setPreview] = useState<any | null>(null); const [compare, setCompare] = useState(false); const [resolving, setResolving] = useState<string | null>(null);
   const [pinned, setPinned] = useState<boolean>(page.pinned); const [tags, setTags] = useState<string[] | null>(null); const [tagOpen, setTagOpen] = useState(false); const [tagDraft, setTagDraft] = useState("");
-  const editorRef = useRef<TEditor | null>(null); const titleRef = useRef(title); titleRef.current = title; const docRef = useRef<any>(page.content); const restored = useRef<any>(null); const editorSynced = useRef(false);
+  const editorRef = useRef<TEditor | null>(null); const lockRef = useRef<EditorLock | null>(null); const titleRef = useRef(title); titleRef.current = title; const docRef = useRef<any>(page.content); const restored = useRef<any>(null); const editorSynced = useRef(false);
   const sync = usePageSync(page, {
-    current: () => ({ title: titleRef.current, content: editorRef.current?.getJSON() ?? docRef.current }),
-    applyRemote: (c: ServerCopy) => { setTitle(c.title === "Untitled" ? "" : c.title); docRef.current = c.content; restored.current = c.content; const ed = editorRef.current; if (ed) { ed.commands.setContent(c.content, { emitUpdate: false }); editorSynced.current = true; } },
+    // a locked editor (newer content it cannot hold) is never the source of what gets saved: the copy received from the server is
+    current: () => ({ title: titleRef.current, content: !lockRef.current && editorRef.current ? getEditorDoc(editorRef.current) : docRef.current }),
+    applyRemote: (c: ServerCopy) => { setTitle(c.title === "Untitled" ? "" : c.title); docRef.current = c.content; restored.current = c.content; const ed = editorRef.current; if (ed) { setEditorDoc(ed, c.content); editorSynced.current = true; } },
     onSaved: (patch) => { if (patch.title !== undefined || patch.icon !== undefined) qc.invalidateQueries({ queryKey: ["tree"] }); },
     onDraftRestored: () => toast("Unsaved changes restored", { description: "Text typed before the last interruption was recovered from this device." }),
   });
@@ -52,6 +54,16 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
     const t = setInterval(() => { let el = document.getElementById(id); if (el) { done = true; const hl = (new URLSearchParams(location.search).get("hl") ?? "").toLowerCase().split(/\s+/).filter((w) => w.length > 2); if (hl.length) { /* the anchor is the first block of the indexed passage: walk on to the paragraph that actually holds the words */ for (let n: Element | null = el, i = 0; n && i < 40; n = n.nextElementSibling, i++) { const txt = (n.textContent ?? "").toLowerCase(); if (hl.some((w) => txt.includes(w))) { el = n as HTMLElement; break; } } } clearInterval(t); const target = el; target.scrollIntoView({ block: "center" }); /* Web Animations, not a class: ProseMirror owns the attributes of its nodes and would strip it */ try { const c = getComputedStyle(target).getPropertyValue("--accent-soft").trim() || "rgba(80,110,255,.18)"; target.animate([{ backgroundColor: c, boxShadow: `0 0 0 6px ${c}` }, { backgroundColor: c, boxShadow: `0 0 0 6px ${c}`, offset: 0.7 }, { backgroundColor: "transparent", boxShadow: "0 0 0 6px transparent" }], { duration: 2600, easing: "ease-out" }); } catch { /* no animation support */ } } else if (++tries > 25) { clearInterval(t); if (!done) toast("That paragraph was edited or removed", { description: "The page is shown from the top." }); } }, 120);
     return () => clearInterval(t);
   }, []);
+  // Universal Command Center: page-level commands exist while this page is on screen.
+  useEffect(() => registerCommands([
+    { id: "page.versions", group: "Page", title: "Version history", keywords: "history versions restore snapshot", icon: "history", run: () => { void loadVersions(); } },
+    { id: "page.tags", group: "Page", title: "Edit tags", keywords: "tags labels", icon: "tag", run: () => setTagOpen(true) },
+    { id: "page.export.md", group: "Page", title: "Export as Markdown", keywords: "export markdown download", icon: "file-down", run: () => { window.open(`/api/export?format=md&pageId=${page.id}`, "_blank"); } },
+    { id: "page.export.pdf", group: "Page", title: "Print / PDF", keywords: "export print pdf", icon: "download", run: () => { window.open(`/api/export?format=pdf&pageId=${page.id}`, "_blank"); } },
+    { id: "page.ask", group: "AI", title: "Ask about this page", keywords: "ai assistant question", icon: "sparkles", run: () => ui.openAI({ pageId: page.id }) },
+    { id: "page.side", group: "View", title: "Open this page to the side", keywords: "split side pane second editor", icon: "panel-right", when: () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches, run: () => ui.openPanel("page", page.id) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ]), [page.id]);
   async function loadVersions() { setVersions(await api(`/api/pages/${page.id}/versions`)); }
   async function restore(v: number) { await sync.flush(); const res = await api<{ version: number }>(`/api/pages/${page.id}/versions`, { method: "POST", json: { version: v } }); toast("Version restored", { description: "The previous state was saved to the history first." }); setVersions(null); setPreview(null); window.location.reload(); void res; }
   const isTrashed = Boolean(page.deletedAt); const isDb = page.type === "database";
@@ -62,7 +74,7 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
         <span className="flex min-w-0 items-center gap-1 md:hidden">{breadcrumb.slice(0, -1).map((b) => <span key={b.id} className="flex min-w-0 items-center gap-1"><Link href={`/p/${b.id}`} className="truncate hover:text-fg">{b.icon} {b.title}</Link><span>/</span></span>)}<span className="truncate text-fg-muted">{title || "Untitled"}</span></span>
         <span className="ml-auto flex items-center gap-1">
           <span role="status" aria-live="polite" className={cn("flex min-h-8 items-center gap-1.5 rounded-full px-2 text-[12px]", status === "saved" && "text-fg-faint", status === "saving" && "text-fg-muted", status === "error" && "bg-danger/10 text-danger", status === "offline" && "bg-warning/15 text-fg", status === "conflict" && "bg-danger/10 text-danger")}>
-            {status === "saved" ? <Check className="size-3.5" /> : status === "saving" ? <span className="size-2 animate-pulse rounded-full bg-fg-faint" /> : status === "offline" ? <CloudOff className="size-3.5" /> : <TriangleAlert className="size-3.5" />}
+            {status === "saved" ? <Check className="size-3.5" /> : status === "saving" ? <span className="lumen-dot animate-pulse" /> : status === "offline" ? <CloudOff className="size-3.5" /> : <TriangleAlert className="size-3.5" />}
             <span>{status === "saved" ? <>Saved<span className="max-[380px]:hidden"> · {timeAgo(sync.savedAt)}</span></> : status === "saving" ? "Saving…" : status === "offline" ? "Offline · kept on this device" : status === "conflict" ? "Conflict" : "Not saved"}</span>
             {(status === "offline" || status === "error") && <button onClick={sync.retry} className="-mr-1 flex h-8 items-center gap-1 rounded-full px-2 font-medium underline-offset-2 hover:underline"><RefreshCw className="size-3.5" />Retry</button>}
           </span>
@@ -103,7 +115,7 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
         </div>}
         <div className="flex flex-col items-start gap-2">
           {icon && <Popover><PopoverTrigger asChild><button aria-label="Change icon" className={cn("grid size-16 place-items-center rounded-2xl text-[2.75rem] leading-none transition hover:bg-bg-hover", cover && "bg-bg shadow-card")}>{icon}</button></PopoverTrigger><PopoverContent className="w-64"><div className="grid grid-cols-8 gap-1">{EMOJI.map((e) => <button key={e} className="grid size-7 place-items-center rounded text-lg hover:bg-bg-sunk" onClick={() => { setIcon(e); queue({ icon: e }); }}>{e}</button>)}</div><button className="mt-2 text-[12px] text-fg-muted hover:text-fg" onClick={() => { setIcon(null); queue({ icon: null }); }}>Remove icon</button></PopoverContent></Popover>}
-          <textarea value={title} onChange={(e) => { setTitle(e.target.value); queue({ title: e.target.value }); }} placeholder="Untitled" rows={1} disabled={isTrashed} aria-label="Page title" style={{ outline: "none" }} className="w-full resize-none overflow-hidden break-words bg-transparent [field-sizing:content] [overflow-wrap:anywhere] text-[clamp(1.5rem,6.2vw,1.875rem)] font-bold leading-[1.18] tracking-[-0.025em] outline-none placeholder:text-fg-faint/70 md:text-display" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); editorRef.current?.commands.focus("start"); } }} onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }} />
+          <textarea value={title} onChange={(e) => { setTitle(e.target.value); queue({ title: e.target.value }); }} placeholder="Untitled" rows={1} disabled={isTrashed} aria-label="Page title" style={{ outline: "none" }} data-page-title={page.id} className="page-title vt-page-title w-full resize-none overflow-hidden break-words bg-transparent [field-sizing:content] [overflow-wrap:anywhere] text-[clamp(1.625rem,6.4vw,1.875rem)] leading-[1.16] outline-none placeholder:text-fg-faint/70 md:text-display" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); editorRef.current?.commands.focus("start"); } }} onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }} />
         </div>
       </div>
       {page.databaseId && <RowBanner databaseId={page.databaseId} />}
@@ -114,7 +126,7 @@ export function PageView({ page, breadcrumb, backlinks }: { page: any; breadcrum
         <div className="mt-4"><DatabaseView pageId={page.id} /></div>
       ) : (
         <div className="mt-3">
-          <Editor content={page.content} pageId={page.id} editable={!isTrashed} autofocus={!title} onReady={(e) => { editorRef.current = e; /* a recovered draft or a remote copy may have arrived before the editor existed: show it now, without emitting an edit */ if (restored.current && !editorSynced.current) { e.commands.setContent(restored.current, { emitUpdate: false }); editorSynced.current = true; } }} onChange={(doc) => { docRef.current = doc; queue({ content: doc }); }} />
+          <Editor content={page.content} pageId={page.id} editable={!isTrashed} autofocus={!title} onReady={(e) => { editorRef.current = e; /* a recovered draft or a remote copy may have arrived before the editor existed: show it now, without emitting an edit */ if (restored.current && !editorSynced.current) { setEditorDoc(e, restored.current); editorSynced.current = true; } }} onLock={(l) => { lockRef.current = l; }} onChange={(doc) => { if (lockRef.current) return; docRef.current = doc; queue({ content: doc }); }} />
         </div>
       )}
       {!isTrashed && <div className="mt-16 border-t border-line pt-5"><div className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-faint">Connections</div><PageGraphCard pageId={page.id} /></div>}

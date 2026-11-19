@@ -1,0 +1,19 @@
+[
+ {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Next Generation blocks"}]},
+ {"type":"callout","attrs":{"kind":"decision","icon":"⚖️"},"content":[{"type":"paragraph","content":[{"type":"text","text":"We ship the Lumen visual system with the 3.0 editor."}]}]},
+ {"type":"callout","attrs":{"kind":"question","icon":"❓"},"content":[{"type":"paragraph","content":[{"type":"text","text":"Which pages should adopt live views first?"}]}]},
+ {"type":"callout","attrs":{"kind":"hypothesis","icon":"🧪"},"content":[{"type":"paragraph","content":[{"type":"text","text":"Readers stay longer on pages with an outline."}]}]},
+ {"type":"taskList","content":[{"type":"taskItem","attrs":{"checked":false,"due":"2026-11-25","priority":"high","taskId":null},"content":[{"type":"paragraph","content":[{"type":"text","text":"Review the design tokens"}]}]},{"type":"taskItem","attrs":{"checked":true,"due":"2026-11-12","priority":"low","taskId":null},"content":[{"type":"paragraph","content":[{"type":"text","text":"Measure typing latency"}]}]}]},
+ {"type":"mermaid","attrs":{"code":"flowchart LR\n  Idea --> Draft\n  Draft --> Review\n  Review -->|accepted| Published","preview":null,"previewHash":null}},
+ {"type":"chart","attrs":{"kind":"bar","title":"Notes per month","columns":["Month","Notes","Tasks"],"rows":[["Aug",12,5],["Sep",18,9],["Oct",25,11],["Nov",31,14]],"x":"Month","y":["Notes","Tasks"],"source":null}},
+ {"type":"runCode","attrs":{"language":"javascript","code":"const xs = [1, 2, 3, 4];\nconsole.log('sum', xs.reduce((a, b) => a + b, 0));","output":{"text":"sum 10","error":false,"ms":3,"at":"2026-11-19T15:00:00.000Z"}}},
+ {"type":"paragraph","content":[{"type":"text","text":"Liquidity dries up in a panic "},{"type":"citation","attrs":{"refId":null,"locator":"p. 12","label":"Gorton & Metrick 2019"}},{"type":"text","text":" and the argument follows."}]},
+ {"type":"bibliography","attrs":{"style":"apa","title":"Références"}},
+ {"type":"queryView","attrs":{"source":"tasks","databaseId":null,"viewId":null,"filter":{"status":"open"},"layout":"list","limit":10,"title":"Open tasks"}},
+ {"type":"blockRef","attrs":{"pageId":null,"blockId":null,"mode":"embed"}},
+ {"type":"drawing","attrs":{"ink":null,"preview":null,"pk":null,"width":0,"height":0,"background":"none"}},
+ {"type":"pdf","attrs":{"attachmentId":null,"name":"","page":1,"annotations":[]}},
+ {"type":"audio","attrs":{"attachmentId":null,"duration":0,"title":"","recordedAt":null,"transcript":[],"transcriptStatus":"none","transcriptEngine":null,"summary":null}},
+ {"type":"canvasLink","attrs":{"pageId":null}},
+ {"type":"aiBlock","attrs":{"model":"assistant","prompt":null,"at":"2026-11-19T12:00:00Z","action":"synthesis","sources":[{"pageId":"00000000-0000-4000-8000-000000000001","blockId":"abc","title":"Field notes"}]},"content":[{"type":"paragraph","content":[{"type":"text","text":"Synthesis with its sources shown as chips."}]}]}
+]
