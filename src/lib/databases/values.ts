@@ -9,19 +9,22 @@ export const optionOf = (p: Property, id: unknown): SelectOption | undefined => 
 export const isEmpty = (v: unknown): boolean => v == null || v === "" || (Array.isArray(v) && v.length === 0) || isPending(v) || isError(v);
 export const numberOf = (v: unknown): number | null => { if (typeof v === "number") return Number.isFinite(v) ? v : null; if (typeof v === "boolean") return v ? 1 : 0; if (typeof v === "string" && v.trim() !== "") { const n = Number(v.replace(/[\s,$%]/g, "")); return Number.isNaN(n) ? null : n; } return null; };
 export const dateOf = (v: unknown): Date | null => (typeof v === "string" || typeof v === "number" || v instanceof Date ? toDate(v) : null);
+// 3.0: Intl formatters are built once (constructing one per cell made a 20 000-row search spend most of its time here)
+const NF: Record<string, Intl.NumberFormat> = { integer: new Intl.NumberFormat("en-CA", { maximumFractionDigits: 0, useGrouping: false }), percent: new Intl.NumberFormat("en-CA", { style: "percent", maximumFractionDigits: 1 }), currency: new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 2 }), plain: new Intl.NumberFormat("en-CA", { maximumFractionDigits: 6, useGrouping: false }), grouped: new Intl.NumberFormat("en-CA", { maximumFractionDigits: 6, useGrouping: true }) };
+const DF = { date: new Intl.DateTimeFormat("en-CA", { dateStyle: "medium" }), time: new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeStyle: "short" }) };
 export function fmtNumber(n: number | null, format?: string): string {
   if (n == null) return "";
   switch (format) {
-    case "integer": return new Intl.NumberFormat("en-CA", { maximumFractionDigits: 0, useGrouping: false }).format(n);
-    case "percent": return new Intl.NumberFormat("en-CA", { style: "percent", maximumFractionDigits: 1 }).format(n / 100);
-    case "currency": return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 2 }).format(n);
-    default: return new Intl.NumberFormat("en-CA", { maximumFractionDigits: 6, useGrouping: Math.abs(n) >= 10000 }).format(n);
+    case "integer": return NF.integer.format(n);
+    case "percent": return NF.percent.format(n / 100);
+    case "currency": return NF.currency.format(n);
+    default: return (Math.abs(n) >= 10000 ? NF.grouped : NF.plain).format(n);
   }
 }
 export function fmtDateValue(v: unknown, includeTime?: boolean): string {
   const d = dateOf(v); if (!d) return "";
   const hasTime = includeTime || (typeof v === "string" && v.includes("T") && !/T00:00(:00)?/.test(v));
-  return new Intl.DateTimeFormat("en-CA", hasTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" }).format(d);
+  return (hasTime ? DF.time : DF.date).format(d);
 }
 export function relativeDate(v: unknown): string {
   const d = dateOf(v); if (!d) return "";
@@ -43,7 +46,7 @@ export function displayValue(p: Property, v: unknown): string {
     case "multi_select": return (Array.isArray(v) ? v : [v]).map((x) => optionOf(p, x)?.name ?? String(x)).join(", ");
     case "relation": return (Array.isArray(v) ? (v as RelationRef[]) : []).map((r) => r.title).join(", ");
     case "file": return (Array.isArray(v) ? (v as FileRef[]) : []).map((f) => f.name).join(", ");
-    case "rollup": return Array.isArray(v) ? v.map((x) => (typeof x === "object" && x && "title" in x ? (x as any).title : String(x))).join(", ") : typeof v === "number" ? fmtNumber(v) : String(v);
+    case "rollup": return Array.isArray(v) ? v.map((x) => (typeof x === "object" && x && "title" in x ? (x as any).title : String(x))).join(", ") : typeof v === "number" ? (String(p.config.aggregate ?? "").startsWith("percent") ? `${fmtNumber(v)} %` : fmtNumber(v)) : typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? fmtDateValue(v) : String(v);
     case "formula": return typeof v === "boolean" ? (v ? "true" : "false") : typeof v === "number" ? fmtNumber(v) : typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? fmtDateValue(v) : String(v);
     default: return Array.isArray(v) ? v.map(String).join(", ") : String(v);
   }
