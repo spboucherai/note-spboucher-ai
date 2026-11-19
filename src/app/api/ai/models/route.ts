@@ -2,7 +2,7 @@ import { handler } from "@/lib/api";
 import { listModels, refreshDiscovery, invalidateCatalog } from "@/lib/ai/catalog";
 import { DEFAULT_ROUTES, getRoutes, TASK_LABELS } from "@/lib/ai/router";
 import { loadProviders } from "@/lib/ai/registry";
-import { modelView, providerView } from "@/lib/ai/models-view";
+import { modelView, providerView, isKeylessCompat } from "@/lib/ai/models-view";
 import { CREATORS, creatorInfo, GENERIC_LOGO } from "@/lib/ai/creators";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
@@ -14,13 +14,17 @@ import { audit } from "@/lib/audit";
  * `taskLabels`, `benchmark`); every model gains creator / logo / route / context / prices / normalised capabilities / availability, every
  * provider gains kind / baseUrl / keyEnv (the NAME of the variable, never its value) / label / available, and `creators` lists the logo
  * registry. Filters: `all=1` (also disabled, unlisted and embedding models), `provider=`, `creator=`, `available=1`, `q=`.
- * Models of a provider without key are returned with `available:false, unavailableReason:"no_key"`.
+ * Models of an OpenAI-compatible provider that has no key (`available:false, unavailableReason:"no_key"` — several hundred for OpenRouter)
+ * are left out of the default answer and counted in `hiddenUnavailable`; `unavailable=1` (or `all=1`, or `provider=`) includes them.
  */
 export const GET = handler(async ({ req }) => {
   const u = new URL(req.url).searchParams; const all = u.get("all") === "1";
   const provider = u.get("provider"); const creator = u.get("creator"); const onlyAvailable = u.get("available") === "1"; const q = (u.get("q") ?? "").trim().toLowerCase();
   const defs = await loadProviders();
   let models = (await listModels()).filter((m) => all || (m.available && m.enabled && m.category !== "embedding")).map(modelView);
+  const includeUnavailable = all || u.get("unavailable") === "1" || Boolean(provider);
+  const hiddenUnavailable = includeUnavailable ? 0 : models.filter(isKeylessCompat).length;
+  if (!includeUnavailable) models = models.filter((m) => !isKeylessCompat(m));
   if (provider) models = models.filter((m) => m.provider === provider);
   if (creator) models = models.filter((m) => m.creator === creator);
   if (onlyAvailable) models = models.filter((m) => m.available);
@@ -32,7 +36,7 @@ export const GET = handler(async ({ req }) => {
   return Response.json({
     models: models.sort((a, b) => a.provider.localeCompare(b.provider) || ((b.benchmark as any)?.mean_score ?? -1) - ((a.benchmark as any)?.mean_score ?? -1) || a.id.localeCompare(b.id)),
     providers: defs.filter((d) => rows.has(d.id)).map((d) => providerView(d, rows.get(d.id))),
-    creators, routes: await getRoutes(), defaultRoutes: DEFAULT_ROUTES, taskLabels: TASK_LABELS, benchmark: summary?.value ?? null,
+    creators, hiddenUnavailable, routes: await getRoutes(), defaultRoutes: DEFAULT_ROUTES, taskLabels: TASK_LABELS, benchmark: summary?.value ?? null,
   });
 });
 /** POST { action: "discover", provider? } → live re-discovery (all providers, or one); { action: "toggle", id, enabled } ; { action: "routes", routes } ; { action: "budget", usd } */

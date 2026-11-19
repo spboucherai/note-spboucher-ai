@@ -72,7 +72,8 @@ export function toEngineResult(resp: any, model: string): EngineResult {
   const text = clean(resp?.text); const kind = timestampSupport(model);
   const raw: any[] = Array.isArray(resp?.segments) ? resp.segments : [];
   const segs: Segment[] = raw.map((s) => ({ t: Math.max(0, Math.round(Number(s.start ?? 0) * 100) / 100), text: kind === "diarized" && s.speaker ? `${clean(s.speaker)}: ${clean(s.text)}` : clean(s.text) })).filter((s) => s.text && Number.isFinite(s.t));
-  const duration = typeof resp?.duration === "number" ? resp.duration : typeof resp?.usage?.seconds === "number" ? resp.usage.seconds : raw.length ? Number(raw[raw.length - 1].end ?? 0) || null : null;
+  const d = typeof resp?.duration === "number" ? resp.duration : typeof resp?.usage?.seconds === "number" ? resp.usage.seconds : raw.length ? Number(raw[raw.length - 1].end ?? 0) || null : null;
+  const duration = d == null ? null : Math.round(d * 100) / 100;
   if (segs.length) return { segments: segs, text: text || segs.map((s) => s.text).join(" "), language: resp?.language ?? null, duration, hasSegments: true };
   return { segments: text ? [{ t: 0, text }] : [], text, language: resp?.language ?? null, duration, hasSegments: false };
 }

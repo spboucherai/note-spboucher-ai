@@ -17,7 +17,7 @@ import { loadProviders, providerConfigured, providerDef, configuredMap, BUILTIN_
 import { listModels, refreshDiscovery, invalidateCatalog, getModel, costUsd } from "../../src/lib/ai/catalog";
 import { route, DEFAULT_ROUTES, autoRoutable } from "../../src/lib/ai/router";
 import { creatorOf, creatorInfo, CREATORS, ROUTE_LOGOS, GENERIC_LOGO, logoOf, SIMPLE_ICONS_VERSION } from "../../src/lib/ai/creators";
-import { modelView, normaliseCapabilities, providerView } from "../../src/lib/ai/models-view";
+import { modelView, normaliseCapabilities, providerView, isKeylessCompat } from "../../src/lib/ai/models-view";
 import type { AIEvent } from "../../src/lib/ai/types";
 
 const P = `fake_${Date.now().toString(36)}`; let fake: FakeLLM; let cleanup: () => Promise<void>;
@@ -252,6 +252,7 @@ test("model view: creator ≠ route, logo, context, prices, normalised capabilit
   assert.equal(v.available, true); assert.equal(v.unavailableReason, null); assert.equal(v.autoRoutable, false); assert.equal(v.benchmarked, false);
   const env = providerDef(P)!.keyEnv!; const saved = process.env[env]; delete process.env[env];
   const nk = modelView((await getModel(`${P}:anthropic/claude-test-9`))!); assert.equal(nk.available, false); assert.equal(nk.unavailableReason, "no_key"); assert.equal(nk.listed, true);
+  assert.equal(isKeylessCompat(nk), true, "left out of the default catalogue answer"); assert.equal(isKeylessCompat(v), false); assert.equal(isKeylessCompat({ unavailableReason: "no_key", routeKind: "openai" }), false, "native providers keep their historical listing");
   process.env[env] = saved;
   const haiku = await getModel("claude-haiku-5-5"); assert.ok(haiku, "seeded catalogue present (pnpm seed:ai)");
   const h = modelView(haiku!); assert.equal(h.creator, "anthropic"); assert.equal(h.route, "anthropic"); assert.equal(h.capabilities.source, "measured"); assert.equal(h.capabilities.tools, true); assert.equal(h.autoRoutable, true);

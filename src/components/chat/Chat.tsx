@@ -8,6 +8,7 @@
  *  - citations open the page and the exact block; answers without support say so.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ModelPicker } from "@/components/ai/ModelPicker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BookOpenText, ChevronDown, Copy, FilePlus2, FileText, History, ListChecks, MessageCircle, Paperclip, PenLine, Plus, RotateCcw, Scale, SearchX, Send, ShieldCheck, Sparkles, Square, ArrowDownToLine, WifiOff, X, ListTodo } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -57,7 +58,6 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
   const abort = useRef<AbortController | null>(null); const list = useRef<HTMLDivElement>(null); const ta = useRef<HTMLTextAreaElement>(null); const liveConv = useRef<string | null>(null); const stick = useRef(true);
   const def = MODE_BY_ID[mode]; const pageMissing = def.page && !pageId;
 
-  const { data: models } = useQuery<{ models: { id: string; provider: string }[] }>({ queryKey: ["ai-models"], queryFn: () => api("/api/ai/models"), staleTime: 60_000 });
   const { data: convs = [], isLoading: convsLoading, isError: convsError, refetch: refetchConvs } = useQuery<{ id: string; title: string; updatedAt: string }[]>({ queryKey: ["convs", pageId ?? "all"], queryFn: () => api(`/api/ai/conversations${pageId ? `?pageId=${pageId}` : ""}`), staleTime: 10_000, enabled: histOpen });
   // Dry run on our own server (routing tables + page length): tells which provider/model would get what. No provider is contacted.
   const planQ = useQuery<ChatPlan>({ queryKey: ["ai-plan", mode, pageId ?? null, model, images.length], queryFn: () => api(`/api/ai/chat/plan?mode=${mode}${pageId ? `&pageId=${pageId}` : ""}${model ? `&model=${encodeURIComponent(model)}` : ""}${images.length ? `&images=${images.length}` : ""}`), staleTime: 30_000, enabled: online && !pageMissing, retry: 1 });
@@ -144,11 +144,8 @@ export function Chat({ pageId, conversationId: initialConv, prefill, compact, on
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="flex shrink-0 items-center gap-1 border-b border-line px-2 py-1.5">
-        <label className="flex min-w-0 flex-1 items-center gap-1.5 text-[12px] text-fg-muted"><span className="sr-only">Model</span><Sparkles className="size-3.5 shrink-0 text-ai" />
-          <select value={model ?? ""} onChange={(e) => setModel(e.target.value || null)} aria-label="Model" className="h-11 min-w-0 flex-1 truncate rounded-md bg-transparent pr-1 text-[16px] font-medium text-fg outline-none hover:bg-bg-sunk md:h-8 md:text-[12.5px]">
-            <option value="">Auto (measured routing)</option>{(models?.models ?? []).map((m) => <option key={m.id} value={m.id}>{m.provider} · {m.id}</option>)}
-          </select>
-        </label>
+        {/* NEXT-AI: model selector with creator logo, route badge, capabilities, context, price (same choices as before: Auto + every selectable model) */}
+        <ModelPicker value={model} onChange={setModel} aria-label="Model" />
         <button type="button" onClick={() => setHistOpen(true)} className={cn("grid shrink-0 place-items-center rounded-md text-fg-muted hover:bg-bg-sunk", tap)} aria-label="Conversation history"><History className="size-[18px] md:size-4" /></button>
         <button type="button" onClick={newConversation} className={cn("grid shrink-0 place-items-center rounded-md text-fg-muted hover:bg-bg-sunk", tap)} aria-label="New conversation"><Plus className="size-[18px] md:size-4" /></button>
       </div>

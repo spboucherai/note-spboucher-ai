@@ -34,6 +34,8 @@ export function modelView(m: ModelRow) {
   };
 }
 export type ModelView = ReturnType<typeof modelView>;
+/** Model of an OpenAI-compatible provider that has no key: left out of the default catalogue answer (counted in `hiddenUnavailable`). */
+export const isKeylessCompat = (m: Pick<ModelView, "unavailableReason" | "routeKind">) => m.unavailableReason === "no_key" && m.routeKind === "openai_compatible";
 export function providerView(def: ProviderDef, row?: { lastDiscoveryAt: Date | null; status: string | null; statusDetail: string | null } | null) {
   const configured = providerConfigured(def.id);
   return { id: def.id, name: def.name, enabled: def.enabled, lastDiscoveryAt: row?.lastDiscoveryAt ?? null, status: row?.status ?? "unknown", statusDetail: row?.statusDetail ?? null,
