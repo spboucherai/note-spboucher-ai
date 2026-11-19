@@ -57,7 +57,7 @@ export async function suggestLinksForPage(wsId: string, pageId: string, opts: { 
     for (const x of parsed.results ?? []) {
       const c = byId.get(String(x.id)); if (!c) continue; byId.delete(c.id);
       const related = Boolean(x.related) && clamp01(x.confidence) >= 0.35;
-      await db.insert(schema.knowledgeEdges).values({ workspaceId: wsId, fromId: pageId, toId: c.id, fromType: "page", toType: "page", kind: "ai_suggested", status: related ? "suggested" : "rejected", confidence: clamp01(x.confidence), rationale: String(x.rationale ?? "").slice(0, 600), model: r.model.id, decidedAt: null }).onConflictDoNothing();
+      await db.insert(schema.knowledgeEdges).values({ workspaceId: wsId, fromId: pageId, toId: c.id, fromType: "page", toType: "page", kind: "ai_suggested", origin: "ai", status: related ? "suggested" : "rejected", confidence: clamp01(x.confidence), rationale: String(x.rationale ?? "").slice(0, 600), model: r.model.id, decidedAt: null }).onConflictDoNothing();
       if (related) suggested++; else declined++;
     }
     return { pageId, candidates: cands.length, suggested, declined, model: r.model.id, costUsd: res.costUsd };

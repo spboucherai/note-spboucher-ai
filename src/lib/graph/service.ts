@@ -6,6 +6,7 @@
 import { and, eq, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { HttpError } from "@/lib/errors";
+import { recordEvent } from "@/lib/events/service";
 import { NODE_KINDS, type EdgeKind, type GraphData, type GraphEdge, type GraphFilters, type GraphNode, type NodeKind, type Suggestion } from "./types";
 
 /** Postgres array literal for parameterised any() */
@@ -112,9 +113,11 @@ export async function suggestionCounts(wsId: string) {
 
 /** Accept (→ links kind=ai so it becomes a real backlink) or reject (never re-suggested) an AI suggestion. */
 export async function decideSuggestion(wsId: string, id: string, status: "accepted" | "rejected") {
-  const [k] = await db.select().from(schema.knowledgeEdges).where(and(eq(schema.knowledgeEdges.id, id), eq(schema.knowledgeEdges.workspaceId, wsId)));
+  // 3.0: only a link suggestion can be decided here (the id of a `link` mirror edge used to be accepted and flipped its status)
+  const [k] = await db.select().from(schema.knowledgeEdges).where(and(eq(schema.knowledgeEdges.id, id), eq(schema.knowledgeEdges.workspaceId, wsId), eq(schema.knowledgeEdges.kind, "ai_suggested")));
   if (!k) throw new HttpError(404, "Suggestion not found");
   await db.update(schema.knowledgeEdges).set({ status, decidedAt: new Date() }).where(eq(schema.knowledgeEdges.id, id));
+  if (k.status !== status) await recordEvent(db, { workspaceId: wsId, kind: status === "accepted" ? "relation.accepted" : "relation.rejected", pageId: k.fromId, entityKind: "edge", entityId: k.id, summary: k.rationale ?? "", data: { relationId: k.id, relType: k.relType, origin: k.origin, fromId: k.fromId, toId: k.toId, sourceKind: "page", targetKind: "page", ...(k.model ? { model: k.model } : {}) } });
   if (status === "accepted") await db.insert(schema.links).values({ fromPageId: k.fromId, toPageId: k.toId, kind: "ai" }).onConflictDoNothing();
   else await db.delete(schema.links).where(and(eq(schema.links.fromPageId, k.fromId), eq(schema.links.toPageId, k.toId), eq(schema.links.kind, "ai")));
   return { ...k, status };

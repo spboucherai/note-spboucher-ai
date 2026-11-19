@@ -1,4 +1,4 @@
-export const QUEUES = { index: "index-source", importFile: "import-file", backup: "backup", agent: "agent-run", suggestLinks: "suggest-links", aiProperty: "ai-property", reindexAll: "reindex-all", maintenance: "maintenance" } as const;
+export const QUEUES = { index: "index-source", importFile: "import-file", backup: "backup", agent: "agent-run", suggestLinks: "suggest-links", aiProperty: "ai-property", reindexAll: "reindex-all", maintenance: "maintenance", graphInsights: "graph-insights" } as const;
 export const DEAD_LETTER = "dead-letter";
 /**
  * Per-queue policy (pg-boss queue options). Rules:
@@ -18,4 +18,5 @@ export const QUEUE_POLICY: Record<string, { retryLimit: number; retryDelay?: num
   "suggest-links": { retryLimit: 0, expireInSeconds: 600, timeoutMs: 540_000, deadLetter: true },
   "ai-property": { retryLimit: 1, retryDelay: 20, expireInSeconds: 300, timeoutMs: 240_000, deadLetter: true },
   "maintenance": { retryLimit: 0, expireInSeconds: 300, timeoutMs: 240_000 },
+  "graph-insights": { retryLimit: 0, expireInSeconds: 600, timeoutMs: 540_000, deadLetter: true }, // 3.0: one paid analysis call — never retried behind the user's back
 };
