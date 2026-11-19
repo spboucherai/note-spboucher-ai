@@ -1,35 +1,75 @@
 /**
  * file: src/lib/editor/markdown-client.ts
  * description: Markdown ↔ ProseMirror JSON on the client. Import (`markdownToDoc`): headings, paragraphs, lists, tasks, quotes, code,
- *   tables, hr, inline marks, math — and, since 3.0, the Markdown forms of the Next Generation nodes (SPEC §2) wherever the form
+ *   tables, hr, inline marks, math (pandoc `$` rule), and the forms `toMarkdown` writes: `==highlight==`, `<u>` / `<sub>` / `<sup>`,
+ *   `> [!KIND]` callouts and AI blocks, `<details>`, footnotes — and, since 3.0, the Markdown forms of the Next Generation nodes (SPEC §2) wherever the form
  *   identifies the node. Export (`docToMarkdown`): the new nodes are first expanded to their SPEC form, then the shared `toMarkdown`
  *   of text.ts (owned by the backend workstream) does the rest. Used for AI output insertion, Markdown paste and "copy as Markdown".
  * author: Simon-Pierre Boucher — contact@spboucher.ai
  */
-import { marked, type Token, type Tokens } from "marked";
+import { Marked, type Token, type Tokens } from "marked";
 import { toMarkdown, type PMNode } from "./text";
-import { NEXT_NODE_NAMES } from "./next-node-defs";
-function inline(tokens: Token[] | undefined, marks: { type: string; attrs?: any }[] = []): PMNode[] {
-  const out: PMNode[] = [];
-  for (const t of tokens ?? []) {
-    const tt = t as any;
+import { NEXT_NODE_NAMES, CALLOUT_KINDS } from "./next-node-defs";
+/**
+ * Inline math, pandoc rule (`tex_math_dollars`): the opening `$` is not followed by whitespace, the closing `$` is not preceded by
+ * whitespace and not followed by a digit, `\$` is a literal dollar and the formula stays on one line. "costs $5 and $10" is therefore
+ * plain text while `$x^2$` and `$\alpha + \beta$` are formulas. The formula is taken from the raw source BEFORE marked tokenises it,
+ * so `_`, `*` and `\{` inside LaTeX are not eaten by emphasis / escape rules.
+ */
+const INLINE_MATH = /^\$(?!\s)((?:\\[^\n]|[^$\\\n])+?)(?<!\s)\$(?!\d)/;
+/** `$$ … $$` alone on its lines (the form `toMarkdown` writes); the formula may hold blank lines but no `$$`. */
+const BLOCK_MATH = /^\$\$((?:(?!\$\$)[\s\S])+?)\$\$[ \t]*(?:\n+|$)/;
+/** `==highlighted==`: both delimiters touch the text, and the opening one does not follow a word character or `=` (so `a==b` stays text). */
+const HIGHLIGHT = /^==(?=[^\s=])([^\n]*?[^\s=])==(?!=)/;
+const FOOTNOTE_REF = /^\[\^([^\]\s^]{1,64})\]/;
+const FOOTNOTE_DEF = /^\[\^([^\]\s^]{1,64})\]:[ \t]*([^\n]*)(?:\n|$)/;
+const lastChar = (tokens: Token[] | undefined) => (tokens?.[tokens.length - 1]?.raw ?? "").slice(-1);
+const at = (src: string, needle: string) => { const i = src.indexOf(needle); return i < 0 ? undefined : i; };
+/** Own marked instance (the global one is left untouched): GFM + the forms `toMarkdown` writes that CommonMark does not know. */
+const MD = new Marked({ gfm: true });
+MD.use({ extensions: [
+  { name: "blockMath", level: "block", tokenizer(src: string) { const m = BLOCK_MATH.exec(src); if (m && m[1].trim()) return { type: "blockMath", raw: m[0], latex: m[1].trim() }; return undefined; } },
+  { name: "footnoteDef", level: "block", tokenizer(this: any, src: string) { const m = FOOTNOTE_DEF.exec(src); if (!m) return undefined; const token = { type: "footnoteDef", raw: m[0], id: m[1], tokens: [] as Token[] }; this.lexer.inline(m[2], token.tokens); return token; } },
+  { name: "inlineMath", level: "inline", start: (src: string) => at(src, "$"), tokenizer(src: string) { const m = INLINE_MATH.exec(src); return m ? { type: "inlineMath", raw: m[0], latex: m[1] } : undefined; } },
+  { name: "highlight", level: "inline", start: (src: string) => at(src, "=="), tokenizer(this: any, src: string, tokens: Token[]) { if (/[\p{L}\p{N}_=]/u.test(lastChar(tokens))) return undefined; const m = HIGHLIGHT.exec(src); return m ? { type: "highlight", raw: m[0], tokens: this.lexer.inlineTokens(m[1]) } : undefined; } },
+  { name: "footnoteRef", level: "inline", start: (src: string) => at(src, "[^"), tokenizer(src: string) { const m = FOOTNOTE_REF.exec(src); return m ? { type: "footnoteRef", raw: m[0], id: m[1] } : undefined; } },
+] as any });
+const lex = (md: string): Token[] => MD.lexer(md);
+/** Inline HTML tags that are marks of the editor schema (`toMarkdown` writes `<u>`, `<sub>`, `<sup>`; `<mark>` / `<ins>` come from other tools). */
+const HTML_MARKS: Record<string, string> = { u: "underline", ins: "underline", sub: "subscript", sup: "superscript", mark: "highlight" };
+const htmlTag = (t: Token | undefined): { tag: string; close: boolean } | null => { if (t?.type !== "html") return null; const m = String((t as any).raw ?? "").match(/^<(\/?)(u|ins|sub|sup|mark)>$/i); return m ? { tag: m[2].toLowerCase(), close: m[1] === "/" } : null; };
+type Mark = { type: string; attrs?: any };
+function inline(tokens: Token[] | undefined, marks: Mark[] = []): PMNode[] {
+  const out: PMNode[] = []; const list = tokens ?? [];
+  // `cur` = the marks in force; an inline `<u>…</u>` pair pushes / pops one (an unpaired tag stays literal text)
+  let cur = marks; const stack: { tag: string; prev: Mark[] }[] = [];
+  for (let i = 0; i < list.length; i++) {
+    const t = list[i]; const tt = t as any; const mk = cur.length ? { marks: cur } : {};
     switch (t.type) {
-      case "text": if (tt.tokens) out.push(...inline(tt.tokens, marks)); else if (tt.text) out.push({ type: "text", text: unescape(tt.text), ...(marks.length ? { marks } : {}) }); break;
-      case "strong": out.push(...inline(tt.tokens, [...marks, { type: "bold" }])); break;
-      case "em": out.push(...inline(tt.tokens, [...marks, { type: "italic" }])); break;
-      case "del": out.push(...inline(tt.tokens, [...marks, { type: "strike" }])); break;
-      case "codespan": { const m = tt.text.match(/^\$(.+)\$$/); if (m) out.push({ type: "inlineMath", attrs: { latex: m[1] } }); else out.push({ type: "text", text: unescape(tt.text), marks: [...marks, { type: "code" }] }); break; }
-      case "link": out.push(...inline(tt.tokens, [...marks, { type: "link", attrs: { href: tt.href } }])); break;
+      case "text": if (tt.tokens) out.push(...inline(tt.tokens, cur)); else if (tt.text) out.push({ type: "text", text: unescape(tt.text), ...mk }); break;
+      case "strong": out.push(...inline(tt.tokens, [...cur, { type: "bold" }])); break;
+      case "em": out.push(...inline(tt.tokens, [...cur, { type: "italic" }])); break;
+      case "del": out.push(...inline(tt.tokens, [...cur, { type: "strike" }])); break;
+      case "highlight": out.push(...inline(tt.tokens, cur.some((m) => m.type === "highlight") ? cur : [...cur, { type: "highlight" }])); break;
+      case "inlineMath": out.push({ type: "inlineMath", attrs: { latex: tt.latex } }); break;
+      case "footnoteRef": out.push({ type: "footnoteRef", attrs: { id: tt.id } }); break;
+      case "codespan": { const m = tt.text.match(/^\$(.+)\$$/); if (m) out.push({ type: "inlineMath", attrs: { latex: m[1] } }); else out.push({ type: "text", text: unescape(tt.text), marks: [...cur, { type: "code" }] }); break; }
+      case "link": out.push(...inline(tt.tokens, [...cur, { type: "link", attrs: { href: tt.href } }])); break;
       case "br": out.push({ type: "hardBreak" }); break;
-      case "escape": out.push({ type: "text", text: tt.text, ...(marks.length ? { marks } : {}) }); break;
-      case "html": out.push({ type: "text", text: tt.text, ...(marks.length ? { marks } : {}) }); break;
-      case "image": out.push({ type: "text", text: `[image: ${tt.text || tt.href}]`, ...(marks.length ? { marks } : {}) }); break;
-      default: if (tt.tokens) out.push(...inline(tt.tokens, marks)); else if (tt.text) out.push({ type: "text", text: unescape(tt.text), ...(marks.length ? { marks } : {}) });
+      case "escape": out.push({ type: "text", text: tt.text, ...mk }); break;
+      case "html": {
+        const h = htmlTag(t);
+        if (h && !h.close && list.slice(i + 1).some((x) => { const c = htmlTag(x); return c?.close && c.tag === h.tag; })) { stack.push({ tag: h.tag, prev: cur }); const type = HTML_MARKS[h.tag]; if (!cur.some((m) => m.type === type)) cur = [...cur, { type }]; break; }
+        if (h?.close && stack[stack.length - 1]?.tag === h.tag) { cur = stack.pop()!.prev; break; }
+        out.push({ type: "text", text: tt.text, ...mk }); break;
+      }
+      case "image": out.push({ type: "text", text: `[image: ${tt.text || tt.href}]`, ...mk }); break;
+      default: if (tt.tokens) out.push(...inline(tt.tokens, cur)); else if (tt.text) out.push({ type: "text", text: unescape(tt.text), ...mk });
     }
   }
-  // split inline $...$ math and [@citation] markers inside plain text nodes
+  // split [@citation] markers inside plain text nodes (inline math is tokenised by the lexer extension above)
   const res: PMNode[] = [];
-  for (const n of out) { if (n.type !== "text" || !n.text || n.marks?.some((m) => m.type === "code")) { res.push(n); continue; } const parts = n.text.split(/(\$[^$\n]+?\$|\[@[^\]\n]{1,200}\])/g); for (const p of parts) { if (!p) continue; const m = p.match(/^\$([^$]+)\$$/); const c = p.match(/^\[@([^\]]+)\]$/); if (m) res.push({ type: "inlineMath", attrs: { latex: m[1] } }); else if (c) res.push(citationFrom(c[1])); else res.push({ ...n, text: p }); } }
+  for (const n of out) { if (n.type !== "text" || !n.text || n.marks?.some((m) => m.type === "code")) { res.push(n); continue; } const parts = n.text.split(/(\[@[^\]\n]{1,200}\])/g); for (const p of parts) { if (!p) continue; const c = p.match(/^\[@([^\]]+)\]$/); if (c) res.push(citationFrom(c[1])); else res.push({ ...n, text: p }); } }
   return res;
 }
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -56,12 +96,39 @@ function nextNodeFromParagraph(raw: string): PMNode | null {
 }
 const unescape = (s: string) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 const para = (content: PMNode[]): PMNode => (content.length ? { type: "paragraph", content } : { type: "paragraph" });
+/**
+ * `> [!KIND] tail` as the first line of a quote (the form `toMarkdown` writes for `callout` and `aiBlock`, also Obsidian / GitHub alerts).
+ * `[!AI]` followed by nothing or by a model name (ASCII letters / digits) is an `aiBlock` (model = tail); followed by an icon it is the
+ * callout of kind `ai`. Any other kind is a callout: a kind of the schema is kept, the usual aliases of other tools are mapped
+ * (tip → info, caution → warning, error → danger…), an unknown kind becomes `note`. The tail is the icon; a tail holding ASCII
+ * letters or digits is a title (Obsidian), kept as a bold first paragraph with the default icon of the kind.
+ */
+const CALLOUT_HEAD = /^\[!([A-Za-z][\w-]{0,30})\][ \t]*(.*)$/;
+const CALLOUT_ALIAS: Record<string, string> = { tip: "info", hint: "info", important: "info", abstract: "info", summary: "info", tldr: "info", todo: "info", example: "info", quote: "note", cite: "note", success: "note", check: "note", done: "note", caution: "warning", attention: "warning", error: "danger", bug: "danger", failure: "danger", fail: "danger", missing: "danger", faq: "question", help: "question" };
+function calloutFrom(text: string): PMNode | null {
+  const nl = text.indexOf("\n"); const first = nl < 0 ? text : text.slice(0, nl); const m = first.trim().match(CALLOUT_HEAD); if (!m) return null;
+  const rest = nl < 0 ? "" : text.slice(nl + 1); const body = rest.trim() ? blocks(lex(rest)) : []; const k = m[1].toLowerCase(); const tail = m[2].trim(); const wordy = /[A-Za-z0-9]/.test(tail);
+  if (k === "ai" && (!tail || wordy)) return { type: "aiBlock", attrs: { model: tail || null }, content: body.length ? body : [para([])] };
+  const known = CALLOUT_KINDS.find((c) => c.kind === k) ?? CALLOUT_KINDS.find((c) => c.kind === CALLOUT_ALIAS[k]) ?? CALLOUT_KINDS[0];
+  const content = wordy ? [para([{ type: "text", text: tail, marks: [{ type: "bold" }] }]), ...body] : body;
+  return { type: "callout", attrs: { kind: known.kind, icon: tail && !wordy ? tail : known.icon }, content: content.length ? content : [para([])] };
+}
+/** `<details><summary>…</summary>` … `</details>` (the form `toMarkdown` writes) → details node. `summary` is Markdown inline text. */
+const DETAILS_OPEN = /^\s*<details[^>]*>\s*(?:<summary>([\s\S]*?)<\/summary>)?\s*$/i; const DETAILS_CLOSE = /^\s*<\/details>\s*$/i;
+const DETAILS_WHOLE = /^\s*<details[^>]*>\s*(?:<summary>([\s\S]*?)<\/summary>)?([\s\S]*?)<\/details>\s*$/i;
+function detailsNode(summary: string, body: PMNode[]): PMNode {
+  const s = summary.trim() ? inline((lex(summary.trim().replace(/\s*\n\s*/g, " "))[0] as any)?.tokens ?? [{ type: "text", raw: summary.trim(), text: summary.trim() }]) : [];
+  return { type: "details", content: [s.length ? { type: "detailsSummary", content: s } : { type: "detailsSummary" }, { type: "detailsContent", content: body.length ? body : [para([])] }] };
+}
 function blocks(tokens: Token[]): PMNode[] {
   const out: PMNode[] = [];
-  for (const t of tokens) {
-    const tt = t as any;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]; const tt = t as any;
     switch (t.type) {
+      // the editor schema has heading levels 1–3 only (StarterKit `heading: { levels: [1, 2, 3] }`): deeper headings become level 3
       case "heading": out.push({ type: "heading", attrs: { level: Math.min(3, tt.depth) }, content: inline(tt.tokens) }); break;
+      case "blockMath": out.push({ type: "blockMath", attrs: { latex: tt.latex } }); break;
+      case "footnoteDef": { const c = inline(tt.tokens); out.push({ type: "footnote", attrs: { id: tt.id }, ...(c.length ? { content: c } : {}) }); break; }
       case "paragraph": {
         const m = tt.text?.match(/^\$\$([\s\S]+?)\$\$$/); if (m) { out.push({ type: "blockMath", attrs: { latex: m[1].trim() } }); break; }
         const prev = out[out.length - 1]; const lines: string[] = String(tt.text ?? "").split("\n").map((l: string) => l.trim()).filter(Boolean);
@@ -74,6 +141,7 @@ function blocks(tokens: Token[]): PMNode[] {
         // annotation lines right after a PDF link: `> p.<page> — <text> — <note>`
         const prev = out[out.length - 1]; const lines: string[] = String(tt.text ?? "").split("\n").map((l: string) => l.trim()).filter(Boolean);
         if (prev?.type === "pdf" && lines.length && lines.every((l) => /^p\.\s?\d+\s+—/.test(l))) { const base = (prev.attrs?.annotations ?? []).length; const add = lines.map((l, i) => { const [p, text = "", ...note] = l.split(/\s+—\s+/); return { id: `md${base + i + 1}`, page: Number(p.replace(/\D/g, "")) || 1, kind: note.join(" — ").trim() && !text.trim() ? "note" : "highlight", color: "#f5c542", rects: [], text: text.trim(), note: note.join(" — ").trim(), createdAt: new Date(0).toISOString() }; }); out[out.length - 1] = { ...prev, attrs: { ...prev.attrs, annotations: [...(prev.attrs?.annotations ?? []), ...add] } }; break; }
+        const callout = calloutFrom(String(tt.text ?? "")); if (callout) { out.push(callout); break; }
         out.push({ type: "blockquote", content: blocks(tt.tokens) }); break;
       }
       case "code": {
@@ -95,14 +163,24 @@ function blocks(tokens: Token[]): PMNode[] {
         const row = (cells: any[], header: boolean) => ({ type: "tableRow", content: cells.map((c) => ({ type: header ? "tableHeader" : "tableCell", content: [para(inline(c.tokens))] })) });
         out.push({ type: "table", content: [row(tt.header, true), ...tt.rows.map((r: any[]) => row(r, false))] }); break;
       }
-      case "html": out.push(para([{ type: "text", text: tt.text }])); break;
+      case "html": {
+        const raw = String(tt.text ?? tt.raw ?? "");
+        const whole = raw.match(DETAILS_WHOLE); if (whole) { out.push(detailsNode(whole[1] ?? "", whole[2].trim() ? blocks(lex(whole[2].trim())) : [])); break; }
+        const open = raw.match(DETAILS_OPEN);
+        if (open) { // the body is made of the following tokens, up to the matching `</details>`
+          let depth = 1; let j = i + 1;
+          for (; j < tokens.length; j++) { const r = tokens[j].type === "html" ? String((tokens[j] as any).text ?? "") : ""; if (!r) continue; if (DETAILS_CLOSE.test(r)) { if (--depth === 0) break; } else if (DETAILS_OPEN.test(r)) depth++; }
+          if (j < tokens.length) { out.push(detailsNode(open[1] ?? "", blocks(tokens.slice(i + 1, j)))); i = j; break; }
+        }
+        out.push(para([{ type: "text", text: tt.text }])); break;
+      }
       default: if (tt.tokens) out.push(para(inline(tt.tokens))); else if (tt.raw?.trim()) out.push(para([{ type: "text", text: tt.raw }]));
     }
   }
   return out;
 }
 export function markdownToDoc(md: string): PMNode[] {
-  const tokens = marked.lexer(md.replace(/\r\n/g, "\n"), { gfm: true });
+  const tokens = lex(md.replace(/\r\n/g, "\n"));
   const nodes = blocks(tokens);
   return nodes.length ? nodes : [para([])];
 }

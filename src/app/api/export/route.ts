@@ -1,5 +1,5 @@
 /**
- * GET /api/export?format=md|zip|json|csv|pdf|bib[&pageId=][&databaseId=] — authenticated downloads.
+ * GET /api/export?format=md|zip|json|csv|pdf|html|bib[&pageId=][&databaseId=] — authenticated downloads.
  *
  * Whole-workspace exports (format=zip without pageId, format=json) hand over everything at once: they require a passkey verification
  * younger than 5 minutes (`reauth_required` otherwise). A browser cannot run a passkey ceremony during a plain download navigation, so the
@@ -14,7 +14,7 @@ import { db, schema } from "@/db";
 import { audit } from "@/lib/audit";
 import { slugify } from "@/lib/utils";
 import { fmtDate } from "@/lib/utils";
-import { loadExportSet, pageMarkdown, standaloneResolvers, docToHtml, printHtml, databaseCsv, workspaceJson, exportZip, ExportTooLarge, ExportNotFound, tagsOf, rowValuesByName } from "@/lib/export";
+import { loadExportSet, pageMarkdown, standaloneResolvers, docToHtml, printHtml, databaseCsv, workspaceJson, exportZip, ExportTooLarge, ExportNotFound, tagsOf, rowValuesByName, EXPORT_FORMATS, badFormatMessage } from "@/lib/export";
 import { bibFile } from "@/lib/research/bibtex";
 import type { PMNode } from "@/lib/editor/text";
 
@@ -22,13 +22,12 @@ const dispo = (name: string, inline = false) => `${inline ? "inline" : "attachme
 const stamp = () => new Date().toISOString().slice(0, 10);
 /** ASCII-only JSON for a response header (counts and flags, no titles). */
 const reportHeader = (r: Record<string, unknown>) => JSON.stringify(r).replace(/[^\x20-\x7e]/g, "?");
-const FORMATS = ["md", "zip", "json", "csv", "pdf", "html", "bib"];
 /** Formats that export the whole workspace in one file → fresh passkey. */
 const sensitive = (format: string, pageId: string | null) => format === "json" || (format === "zip" && !pageId);
 
 export const GET = handler(async ({ req, ws, user }) => {
   const u = new URL(req.url); const format = u.searchParams.get("format") ?? "zip";
-  if (!FORMATS.includes(format)) throw new HttpError(400, "format must be one of md, zip, json, csv, pdf, bib");
+  if (!EXPORT_FORMATS.includes(format)) throw new HttpError(400, badFormatMessage());
   const idOf = (k: string) => { const v = u.searchParams.get(k); if (!v) return null; const p = uuid.safeParse(v); if (!p.success) throw new HttpError(400, `Invalid ${k}`); return p.data; };
   const pageId = idOf("pageId"); const databaseId = idOf("databaseId");
   const appUrl = (process.env.APP_URL ?? u.origin).replace(/\/$/, "");

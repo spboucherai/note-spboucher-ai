@@ -85,6 +85,18 @@ export async function openZip(buf: Buffer): Promise<ZipPlan> {
   for (const m of meta) ignored.push(m.norm);
   return { notion, obsidian, ownExport: meta.some((m) => m.norm === "workspace.json"), strip, md, csvKeys, bibs, others, ignored, files: facts.files, totalUncompressed: facts.totalUncompressed };
 }
+/**
+ * Reads every CSV of the plan once. A CSV without a header line is empty: it is taken out of the plan (the Markdown files of its folder
+ * then are ordinary pages) and its name is returned, so the preview and the import skip it the same way instead of failing the archive.
+ */
+export async function readCsvs(plan: ZipPlan): Promise<{ texts: Map<string, string>; empty: string[] }> {
+  const texts = new Map<string, string>(); const empty: string[] = [];
+  for (const [key, csv] of [...plan.csvKeys]) { const t = await readText(csv); if (parseCsv(t).header.length) texts.set(key, t); else { plan.csvKeys.delete(key); empty.push(csv.norm); } }
+  return { texts, empty };
+}
+/** Files of one database folder in the order the export numbered them: `row.md`, `row-2.md`, `row-3.md`… `row-10.md`. */
+export const rowFileOrder = (a: ZEntry, b: ZEntry) => { const x = noExt(a.norm), y = noExt(b.norm); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0); };
+const dateOf = (v: unknown): Date | undefined => { if (v === null || v === undefined || v === "") return undefined; const d = new Date(String(v)); return isNaN(d.getTime()) ? undefined : d; };
 /** Markdown files that become ordinary pages (the files directly inside a database folder are row bodies). */
 export const pageEntries = (plan: ZipPlan) => plan.md.filter((e) => !plan.csvKeys.has(dirOf(noExt(e.norm))));
 /** The non-Markdown member a relative reference points to (relative to the referencing file, raw or normalised names). */
@@ -103,11 +115,12 @@ export function findOther(plan: ZipPlan, fromKey: string, ref: string): ZEntry |
 export async function importZip(ctx: ImportCtx, buf: Buffer, opts: { parentId?: string | null; filename?: string }) {
   const plan = await openZip(buf);
   const { md, csvKeys, bibs, others } = plan;
+  // texts that are needed twice (count, then import) are read once; an empty CSV leaves the plan here, before the pages are listed
+  const { texts: csvText, empty: emptyCsv } = await readCsvs(plan); const bibText = new Map<string, string>();
+  for (const name of emptyCsv) ctx.stats.skipped.push(`“${name}” is empty — skipped`);
   const pages = pageEntries(plan);
-  // texts that are needed twice (count, then import) are read once
-  const csvText = new Map<string, string>(); const bibText = new Map<string, string>();
   let total = pages.length * 2;
-  for (const [key, csv] of csvKeys) { const t = await readText(csv); csvText.set(key, t); total += 1 + parseCsv(t).rows.length; }
+  for (const t of csvText.values()) total += 1 + parseCsv(t).rows.length;
   for (const b of bibs) { const t = await readText(b); bibText.set(b.norm, t); try { total += parseBibtexSafe(t).length; } catch { /* reported when imported */ } }
   ctx.total += total;
   await ctx.progress?.({ done: ctx.done, total: ctx.total, message: `Reading ${plan.files} files` });
@@ -138,7 +151,7 @@ export async function importZip(ctx: ImportCtx, buf: Buffer, opts: { parentId?: 
     }
     mdText.set(key, { text, data });
     const parent = await folderPage(dirOf(key));
-    const p = await createPage(ctx, { key: `zip:${key}`, title, parentId: parent, section: typeof data.section === "string" ? data.section : "notes", icon: typeof data.icon === "string" ? data.icon.slice(0, 16) : null });
+    const p = await createPage(ctx, { key: `zip:${key}`, title, parentId: parent, section: typeof data.section === "string" ? data.section : "notes", icon: typeof data.icon === "string" ? data.icon.slice(0, 16) : null, createdAt: dateOf(data.created) }); // pass 2 only updates: the creation date of the front-matter is set here
     pageByKey.set(key, p); ctx.paths.set(key, p.id);
     await tick(ctx, `Page ${title}`);
   }
@@ -155,10 +168,11 @@ export async function importZip(ctx: ImportCtx, buf: Buffer, opts: { parentId?: 
   for (const [key, csv] of csvKeys) {
     const parent = await folderPage(dirOf(key));
     const rowFiles = md.filter((e) => dirOf(noExt(e.norm)) === key);
-    const bodies = new Map<string, ZEntry>(); for (const rf of rowFiles) { const { title } = await titleOf(rf); bodies.set(title.toLowerCase(), rf); }
+    // several rows may share a title: each title keeps a queue of files, taken in the order the export wrote them (`row.md`, `row-2.md`…)
+    const bodies = new Map<string, ZEntry[]>(); for (const rf of [...rowFiles].sort(rowFileOrder)) { const { title } = await titleOf(rf); const k = title.toLowerCase(); const q = bodies.get(k); if (q) q.push(rf); else bodies.set(k, [rf]); }
     const name = path.posix.basename(key);
     const existing = pageByKey.get(key); // `Name.md` next to `Name.csv` (Notion inline db page) → use its text as description
-    const res = await importCsv(ctx, csvText.get(key)!, { key: `zip:${key}`, name, parentId: parent, rowContent: async (title) => { const rf = bodies.get(title.toLowerCase()); if (!rf) return undefined; bodies.delete(title.toLowerCase()); const t = await readText(rf); const { body } = parseFrontMatter(t); const nh = parseNotionHeader(body); return mdToDoc(ctx, nh.body, { resolveFile: resolverFor(noExt(rf.norm), null), resolvePath: resolvePath(noExt(rf.norm)) }); } });
+    const res = await importCsv(ctx, csvText.get(key)!, { key: `zip:${key}`, name, parentId: parent, rowContent: async (title) => { const q = bodies.get(title.toLowerCase()); const rf = q?.shift(); if (!rf) return undefined; if (!q!.length) bodies.delete(title.toLowerCase()); const t = await readText(rf); const { data, body } = parseFrontMatter(t); const nh = parseNotionHeader(body); return { content: await mdToDoc(ctx, nh.body, { resolveFile: resolverFor(noExt(rf.norm), null), resolvePath: resolvePath(noExt(rf.norm)) }), createdAt: dateOf(data.created), updatedAt: dateOf(data.updated) }; } });
     dbByKey.set(key, { page: res.page, csv }); ctx.paths.set(key, res.page.id);
     if (res.duplicate) continue; // the database already exists: its row files belong to it, nothing to add
     if (existing) { // merge: the standalone page becomes redundant → keep as child "(notes)" page only if it has a body
@@ -169,7 +183,7 @@ export async function importZip(ctx: ImportCtx, buf: Buffer, opts: { parentId?: 
       pageByKey.delete(key); mdText.delete(key); await tick(ctx);
     }
     // row subpages that did not match a CSV row → ordinary children of the database page
-    for (const rf of bodies.values()) { const { text: t, title, data } = await titleOf(rf); const k = noExt(rf.norm); mdText.set(k, { text: t, data }); const p = await createPage(ctx, { key: `zip:${k}`, title, parentId: res.page.id }); pageByKey.set(k, p); ctx.paths.set(k, p.id); }
+    for (const rf of [...bodies.values()].flat()) { const { text: t, title, data } = await titleOf(rf); const k = noExt(rf.norm); mdText.set(k, { text: t, data }); const p = await createPage(ctx, { key: `zip:${k}`, title, parentId: res.page.id, createdAt: dateOf(data.created) }); pageByKey.set(k, p); ctx.paths.set(k, p.id); }
   }
   // ---- pass 2: bodies with resolved links/attachments (a body already written by an earlier attempt is not redone)
   for (const [key, p] of pageByKey) {

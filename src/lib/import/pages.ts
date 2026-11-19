@@ -154,8 +154,8 @@ export async function createDatabase(ctx: ImportCtx, input: NewDatabase) {
   ctx.stats.databases++;
   return { page, database, titleProp, properties };
 }
-export async function addRow(ctx: ImportCtx, d: { id: string; pageId: string; titlePropId?: string | null }, input: { key?: string; title: string; values: Record<string, unknown>; content?: PMNode; position?: number }) {
-  const page = await createPage(ctx, { key: input.key, title: input.title, parentId: d.pageId, section: "databases", type: "page", databaseId: d.id, content: input.content });
+export async function addRow(ctx: ImportCtx, d: { id: string; pageId: string; titlePropId?: string | null }, input: { key?: string; title: string; values: Record<string, unknown>; content?: PMNode; position?: number; createdAt?: Date; updatedAt?: Date }) {
+  const page = await createPage(ctx, { key: input.key, title: input.title, parentId: d.pageId, section: "databases", type: "page", databaseId: d.id, content: input.content, createdAt: input.createdAt, updatedAt: input.updatedAt });
   const values = d.titlePropId ? { ...input.values, [d.titlePropId]: page.title } : input.values;
   let [row] = await db.select().from(schema.databaseRows).where(and(eq(schema.databaseRows.databaseId, d.id), eq(schema.databaseRows.pageId, page.id)));
   if (!row) [row] = await db.insert(schema.databaseRows).values({ databaseId: d.id, pageId: page.id, values, position: input.position ?? ctx.stats.rows + 1 }).returning();

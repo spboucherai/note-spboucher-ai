@@ -1,6 +1,10 @@
 /**
- * Markdown → page. Front-matter → title/icon/tags/properties; `[[Wiki links]]` → mentions when the title (or archive path) is
- * known, otherwise plain text; `![img](relative)` and `[file](relative)` → attachments through `resolveFile`.
+ * file: src/lib/import/markdown.ts
+ * description: Markdown → page. Front-matter → title/icon/tags/properties (keys may hold accents, parentheses and the usual signs);
+ *   `[[Wiki links]]` → mentions when the title (or archive path) is known, otherwise plain text; `![img](relative)` and
+ *   `[file](relative)` → attachments through `resolveFile`. Destinations are accepted bare, `<…>`-wrapped, percent-encoded, and with
+ *   spaces or one level of parentheses (the ZIP export writes attachment names as they are: `attachments/1a2b3c4d-my file (1).png`).
+ * author: Simon-Pierre Boucher — contact@spboucher.ai
  */
 import { markdownToDoc } from "@/lib/editor/markdown-client";
 import type { PMNode } from "@/lib/editor/text";
@@ -19,6 +23,8 @@ const yamlValue = (raw: string): unknown => {
   if (/^'.*'$/.test(s)) return s.slice(1, -1).replace(/''/g, "'");
   return s;
 };
+/** A front-matter key: starts with a letter, a digit or `_`; then letters (any script, accents included), digits, spaces and `_ . ( ) / & ' % $ # + ° -`. */
+const FM_KEY = /^([\p{L}\p{N}_][\p{L}\p{N}\p{M}_ .()/&'’%$#+°-]*?):\s*(.*)$/u; const FM_SUBKEY = /^\s+([\p{L}\p{N}_][\p{L}\p{N}\p{M}_ .()/&'’%$#+°-]*?):\s*(.*)$/u;
 /** Minimal YAML subset: `key: scalar`, `key: [a, b]`, block lists (`- x`) and one level of nested maps. */
 export function parseFrontMatter(src: string): FrontMatter {
   const m = src.replace(/^﻿/, "").match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
@@ -27,7 +33,7 @@ export function parseFrontMatter(src: string): FrontMatter {
   let i = 0;
   while (i < lines.length) {
     const line = lines[i]; i++;
-    const kv = line.match(/^([A-Za-z0-9_ .-]+?):\s*(.*)$/); if (!kv || /^\s/.test(line)) continue;
+    const kv = line.match(FM_KEY); if (!kv || /^\s/.test(line)) continue;
     const key = kv[1].trim(); const rest = kv[2];
     if (rest !== "") { data[key] = yamlValue(rest); continue; }
     // block: list or nested map
@@ -35,7 +41,7 @@ export function parseFrontMatter(src: string): FrontMatter {
     while (i < lines.length && (/^\s+\S/.test(lines[i]) || lines[i].trim() === "")) {
       const l = lines[i]; i++; if (!l.trim()) continue;
       const li = l.match(/^\s+-\s*(.*)$/); if (li) { isList = true; list.push(yamlValue(li[1])); continue; }
-      const mk = l.match(/^\s+([A-Za-z0-9_ .-]+?):\s*(.*)$/); if (mk) { isMap = true; map[mk[1].trim()] = yamlValue(mk[2]); }
+      const mk = l.match(FM_SUBKEY); if (mk) { isMap = true; map[mk[1].trim()] = yamlValue(mk[2]); }
     }
     data[key] = isList ? list : isMap ? map : null;
   }
@@ -54,7 +60,14 @@ export function parseNotionHeader(body: string): { title: string | null; props: 
 
 export type FileResolver = (ref: string) => Promise<{ id: string; filename: string; mime: string; size: number } | null>;
 export interface MdOptions { resolveFile?: FileResolver; resolvePath?: (ref: string) => string | null }
-const IMG_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+/** A link destination: `<…>`-wrapped, or bare — then it may hold spaces and one level of parentheses (file names). An optional "title" follows. */
+const DEST = String.raw`(?:<([^<>\n]+)>|((?:[^()\s<>]|\([^()\n]*\))(?:[^()\n<>"]|\([^()\n]*\))*?))`;
+const IMG_RE = new RegExp(String.raw`!\[([^\]]*)\]\(` + DEST + String.raw`(?:\s+"[^"]*")?\)`, "g");
+/** `[text](dest)` that is not an image, same destinations. */
+const LINK_RE = new RegExp(String.raw`(?<!!)\[([^\]\n]*)\]\(` + DEST + String.raw`(?:\s+"[^"]*")?\)`, "g");
+/** A bare destination with a space that names a file (`folder/my file.pdf`): CommonMark does not read it as a link, so it is wrapped in `<…>` before parsing. */
+const SPACED_FILE = /^[^\s"<>][^"<>\n]*\s[^"<>\n]*\.[A-Za-z0-9]{1,8}$/;
+const wrapSpacedLinks = (seg: string) => seg.replace(LINK_RE, (m0: string, text: string, wrapped: string | undefined, bare: string | undefined) => (!wrapped && bare && SPACED_FILE.test(bare) && !/^[a-z][a-z0-9+.-]*:/i.test(bare) ? `[${text}](<${bare}>)` : m0));
 const WIKI_RE = /\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g;
 const TOKEN_RE = /⦃(img|ref):(\d+)⦄/g;
 const tok = (k: string, n: number) => `⦃${k}:${n}⦄`;
@@ -64,7 +77,7 @@ export async function mdToDoc(ctx: ImportCtx, md: string, opts: MdOptions = {}):
   const imgs: { alt: string; src: string }[] = []; const refs: { target: string; alias: string | null }[] = [];
   // only transform outside fenced code blocks
   const parts = md.replace(/\r\n/g, "\n").split(/(^```[\s\S]*?^```$)/m);
-  const pre = parts.map((seg, i) => (i % 2 ? seg : seg.replace(IMG_RE, (_m, alt, src) => { imgs.push({ alt, src }); return tok("img", imgs.length - 1); }).replace(WIKI_RE, (_m, t, a) => { refs.push({ target: t.trim(), alias: a?.trim() ?? null }); return tok("ref", refs.length - 1); }))).join("");
+  const pre = parts.map((seg, i) => (i % 2 ? seg : wrapSpacedLinks(seg.replace(IMG_RE, (_m, alt, wrapped, bare) => { imgs.push({ alt, src: (wrapped ?? bare ?? "").trim() }); return tok("img", imgs.length - 1); })).replace(WIKI_RE, (_m, t, a) => { refs.push({ target: t.trim(), alias: a?.trim() ?? null }); return tok("ref", refs.length - 1); }))).join("");
   const nodes = markdownToDoc(pre);
   const files = new Map<number, { src: string; alt: string } | null>(); const links = new Map<string, string>();
   const resolveSrc = async (src: string): Promise<string | null> => {
@@ -124,8 +137,8 @@ const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch 
 export function relativeRefs(md: string): { images: string[]; links: string[] } {
   const images: string[] = []; const links: string[] = []; const rel = (s: string) => !/^([a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(s);
   const body = md.replace(/\r\n/g, "\n").split(/(^```[\s\S]*?^```$)/m).filter((_s, i) => i % 2 === 0).join("\n");
-  for (const m of body.matchAll(IMG_RE)) if (rel(m[2])) images.push(safeDecode(m[2]));
-  for (const m of body.replace(IMG_RE, " ").matchAll(/\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) if (rel(m[1])) links.push(safeDecode(m[1].replace(/#.*$/, "")));
+  for (const m of body.matchAll(IMG_RE)) { const d = (m[2] ?? m[3] ?? "").trim(); if (rel(d)) images.push(safeDecode(d)); }
+  for (const m of body.replace(IMG_RE, " ").matchAll(LINK_RE)) { const d = (m[2] ?? m[3] ?? "").trim(); if (/\s/.test(d) && !m[2] && !SPACED_FILE.test(d)) continue; if (rel(d)) links.push(safeDecode(d.replace(/#.*$/, ""))); }
   return { images, links };
 }
 /** Plain text the imported page would hold — computed without touching the database or storing files (duplicate detection, preview). */

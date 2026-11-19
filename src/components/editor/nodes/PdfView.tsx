@@ -7,13 +7,20 @@
  *   note whose rects are stored relative to the page (0..1, origin top-left); `ink` annotations of other clients are drawn read-only
  *   and, like every key this client does not know, written back untouched. `page` is the reading position (debounced). A failed load
  *   never alters the node. The worker and the optional pdf.js assets are served from /vendor/pdfjs (same origin, CSP worker-src 'self').
+ *   Research link: when the file is the PDF attached to a reference, highlights and notes are also saved as that reference's extracts
+ *   (`useExtractLink`, ids derived in src/lib/research/pdf-extracts.ts so nothing is ever duplicated); the annotations stay in the page.
  * author: Simon-Pierre Boucher — contact@spboucher.ai
  */
 import * as React from "react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask, TextLayer } from "pdfjs-dist";
-import { ChevronLeft, ChevronRight, ExternalLink, FileText, FileUp, Highlighter, Maximize2, MessageSquarePlus, RotateCw, Trash2, X, ZoomIn, ZoomOut } from "lucide-react";
+import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookMarked, ChevronLeft, ChevronRight, ExternalLink, FileText, FileUp, Highlighter, Maximize2, MessageSquarePlus, RotateCw, TextQuote, Trash2, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { PdfAnnotation, PdfAttrs } from "@/lib/editor/next-node-defs";
 import { annotationAt, annotationLine, clampPage, cleanSelectionText, DEFAULT_HIGHLIGHT_COLOR, HIGHLIGHT_COLORS, inkPointsOf, listAnnotations, newAnnotation, normaliseRects, patchAnnotation, rectsOf, removeAnnotation, safeColor, sortAnnotations, type BoxLike, type NormRect } from "@/lib/editor/pdf-annotations";
+import { extractsOf, type Extract } from "@/lib/research/cite";
+import { extractOfAnnotation, linkedAnnotationIds, planExtractSync, removedExtractIds, type ExtractPlan } from "@/lib/research/pdf-extracts";
+import { api } from "@/lib/client/api";
 import { fileUrl, uploadFile } from "@/lib/client/upload";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -101,6 +108,60 @@ function PdfPicker({ update, pageId }: LeafViewProps<PdfAttrs>) {
         : <NodeButton label="Choose a PDF" tone="accent" text onClick={() => input.current?.click()}><FileUp /></NodeButton>}
     </NodeState>
   );
+}
+
+interface LinkedRef { id: string; citeKey: string; title: string; label?: string; fields?: unknown }
+/**
+ * Research link of a PDF block. Finds the reference whose attached PDF is this file (`GET /api/research/references?attachmentId=`) and,
+ * while the page is editable, mirrors what the user does to the annotations into that reference's extracts: a new or edited highlight /
+ * note is created or patched (extract id derived from the annotation, so a repeat addresses the same extract), a removed one is deleted.
+ * Only changes made in this session are pushed on their own; annotations that existed before (or failed while offline) are offered
+ * through `syncAll`. Calls are serialised; a failure never touches the annotations, which live in the page.
+ */
+function useExtractLink(attachmentId: string, annotations: PdfAnnotation[], editable: boolean) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["reference-of-attachment", attachmentId], staleTime: 60_000, retry: false, queryFn: () => api<LinkedRef[]>(`/api/research/references?attachmentId=${attachmentId}`).catch(() => [] as LinkedRef[]) });
+  const ref = q.data?.[0] ?? null; const refId = ref?.id ?? null;
+  const [extracts, setExtracts] = React.useState<Extract[]>([]); const [busy, setBusy] = React.useState(false); const [failed, setFailed] = React.useState(false);
+  React.useEffect(() => { setExtracts(ref ? extractsOf(ref.fields) : []); }, [ref]);
+  const extractsRef = React.useRef(extracts); extractsRef.current = extracts; const latest = React.useRef(annotations); latest.current = annotations;
+  const synced = React.useRef<PdfAnnotation[] | null>(null); const chain = React.useRef<Promise<void>>(Promise.resolve());
+  React.useEffect(() => { synced.current = null; }, [refId]);
+  const run = React.useCallback((plan: ExtractPlan, removed: string[]) => {
+    if (!refId || (!plan.create.length && !plan.update.length && !removed.length)) return chain.current;
+    const url = `/api/research/references/${refId}/extracts`; setBusy(true);
+    chain.current = chain.current.then(async () => {
+      let ok = true; const apply = (r: { extracts?: Extract[] }) => { if (Array.isArray(r?.extracts)) { extractsRef.current = r.extracts; setExtracts(r.extracts); } };
+      try {
+        for (const c of plan.create) { const r = await api<{ extract: Extract; extracts: Extract[] }>(url, { method: "POST", json: { id: c.id, ...c.body }, idempotencyKey: false }); apply(r);
+          // the id already existed (same annotation saved earlier) with other content: bring it up to date instead of adding
+          if (r.extract && (r.extract.quote !== c.body.quote || (r.extract.page ?? null) !== c.body.page || (r.extract.note ?? null) !== c.body.note)) apply(await api(url, { method: "PATCH", json: { id: c.id, ...c.body } })); }
+        for (const u of plan.update) apply(await api(url, { method: "PATCH", json: { id: u.id, ...u.body } }));
+        for (const id of removed) apply(await api(`${url}?extractId=${id}`, { method: "DELETE" }));
+      } catch { ok = false; }
+      setFailed(!ok); setBusy(false);
+      qc.invalidateQueries({ queryKey: ["research-ref", refId] }); qc.invalidateQueries({ queryKey: ["reference-of-attachment", attachmentId] });
+      if (!ok) toast("Extracts not updated", { description: "Your annotations are saved in the page. Use “Save as extracts” on the PDF to try again.", tone: "danger" });
+    });
+    return chain.current;
+  }, [refId, attachmentId, qc]);
+  // user changes → extracts, a moment after the last change (typing a note is one update)
+  React.useEffect(() => {
+    if (!refId || !editable) { synced.current = null; return; }
+    if (synced.current === null) { synced.current = annotations; return; }
+    if (synced.current === annotations) return;
+    const t = setTimeout(() => {
+      const before = synced.current ?? [], now = latest.current; synced.current = now; const old = new Map(before.map((a) => [a.id, a]));
+      const touched = now.filter((a) => { const b = old.get(a.id); return !b || JSON.stringify(extractOfAnnotation(b)) !== JSON.stringify(extractOfAnnotation(a)); });
+      void run(planExtractSync(attachmentId, touched, extractsRef.current), removedExtractIds(attachmentId, before, now));
+    }, 900);
+    return () => clearTimeout(t);
+  }, [annotations, refId, editable, attachmentId, run]);
+  const linked = React.useMemo(() => linkedAnnotationIds(attachmentId, annotations, extracts), [attachmentId, annotations, extracts]);
+  const eligible = React.useMemo(() => annotations.filter((a) => extractOfAnnotation(a)), [annotations]);
+  const unlinked = eligible.filter((a) => !linked.has(a.id)).length;
+  const syncAll = React.useCallback(() => { synced.current = latest.current; return run(planExtractSync(attachmentId, latest.current, extractsRef.current), []); }, [attachmentId, run]);
+  return { ref, linked, unlinked, busy, failed, syncAll };
 }
 
 interface PendingSelection { page: number; rects: NormRect[]; text: string; /** anchor of the toolbar, page-relative */ x: number; y: number }
@@ -199,6 +260,7 @@ function PdfReader({ attrs, update, editable, attachmentId }: LeafViewProps<PdfA
   const current = selectedId ? annotations.find((a) => a.id === selectedId) ?? null : null;
   const [color, setColor] = React.useState(DEFAULT_HIGHLIGHT_COLOR);
   const [pending, setPending] = React.useState<PendingSelection | null>(null);
+  const research = useExtractLink(attachmentId, annotations, editable);
 
   const readSelection = React.useCallback(() => {
     if (!editable) return;
@@ -302,6 +364,13 @@ function PdfReader({ attrs, update, editable, attachmentId }: LeafViewProps<PdfA
             </div>
           </div>
           {renderError && <NodeState tone="danger" title="This page could not be drawn" hint={renderError} />}
+          {research.ref && (
+            <div className="pdfv-ref" data-testid="pdf-reference-link">
+              <BookMarked aria-hidden /><span className="min-w-0 flex-1">PDF of <Link href={`/research?ref=${research.ref.id}`} className="pdfv-ref-name" title={research.ref.title}>{research.ref.label ?? research.ref.citeKey}</Link>{editable ? " — highlights and notes are saved as extracts of this reference." : "."}</span>
+              {research.busy && <span className="nb-meta" role="status">Saving extracts…</span>}
+              {editable && !research.busy && research.unlinked > 0 && <NodeButton label={`Save ${research.unlinked} annotation${research.unlinked === 1 ? "" : "s"} as extract${research.unlinked === 1 ? "" : "s"}`} text onClick={() => void research.syncAll()}><TextQuote /></NodeButton>}
+            </div>
+          )}
           {current && <AnnotationPanel key={current.id} annotation={current} editable={editable && current.kind !== "ink"} onPatch={(p) => patch(current.id, p)} onDelete={() => remove(current.id)} onClose={() => setSelectedId(null)} />}
           {sorted.length > 0 && (
             <ul className="pdfv-list" data-testid="pdf-annotation-list" aria-label="Annotations">
@@ -311,6 +380,7 @@ function PdfReader({ attrs, update, editable, attachmentId }: LeafViewProps<PdfA
                     onClick={() => { if (a.page !== page) go(a.page); setSelectedId(a.id); }}>
                     <span className="pdfv-dot" style={{ "--pdfv-c": safeColor(a.color) } as React.CSSProperties} data-kind={a.kind} aria-hidden />
                     <span className="pdfv-rowtext">{annotationLine(a)}</span>
+                    {research.linked.has(a.id) && <span className="pdfv-extract" data-testid="pdf-annotation-extract" title={`Saved as an extract of ${research.ref?.label ?? "the reference"}`}><TextQuote aria-hidden /><span className="sr-only">Saved as an extract</span></span>}
                   </button>
                 </li>
               ))}

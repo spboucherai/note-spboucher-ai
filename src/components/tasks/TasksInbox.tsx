@@ -1,3 +1,10 @@
+/**
+ * file: src/components/tasks/TasksInbox.tsx
+ * description: Tasks screen: natural-language quick-add, grouped list (overdue / today / week / later / no date / done), inline edit,
+ *   project and priority filters. A load failure shows an error state with Retry (never "Inbox zero"); delete is reachable on touch
+ *   (44 px target, always visible without a hover-capable pointer) and can be undone from the toast.
+ * author: Simon-Pierre Boucher — contact@spboucher.ai
+ */
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge, Empty, Kbd, Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, Popover, PopoverTrigger, PopoverContent, Spinner, Switch } from "@/components/ui/primitives";
 import { toast } from "@/components/ui/toast";
+import { ErrorState } from "@/components/ui/error-state";
 import { parseTaskInput } from "./parse";
 import type { TreeNode } from "@/components/shell/types";
 
@@ -45,7 +53,7 @@ function PagePicker({ value, label, onChange, tree }: { value: string | null; la
   );
 }
 
-function TaskRow({ t, tree, projects, onPatch, onDelete, editing, setEditing }: { t: Task; tree: TreeNode[]; projects: string[]; onPatch: (id: string, patch: Record<string, unknown>) => Promise<void>; onDelete: (id: string) => void; editing: boolean; setEditing: (v: boolean) => void }) {
+function TaskRow({ t, tree, projects, onPatch, onDelete, editing, setEditing }: { t: Task; tree: TreeNode[]; projects: string[]; onPatch: (id: string, patch: Record<string, unknown>) => Promise<void>; onDelete: (t: Task) => void; editing: boolean; setEditing: (v: boolean) => void }) {
   const [draft, setDraft] = useState({ title: t.title, dueAt: toLocalInput(t.dueAt), priority: (t.priority ?? "medium") as "low" | "medium" | "high", project: t.project ?? "", pageId: t.pageId, pageTitle: t.pageTitle });
   const [busy, setBusy] = useState(false); const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (editing) { setDraft({ title: t.title, dueAt: toLocalInput(t.dueAt), priority: (t.priority ?? "medium") as any, project: t.project ?? "", pageId: t.pageId, pageTitle: t.pageTitle }); setTimeout(() => titleRef.current?.focus(), 0); } /* eslint-disable-next-line */ }, [editing]);
@@ -64,15 +72,16 @@ function TaskRow({ t, tree, projects, onPatch, onDelete, editing, setEditing }: 
     </div>
   );
   return (
-    <div className={cn("group flex min-h-11 items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-bg-sunk", t.status === "done" && "opacity-60")}>
+    <div data-testid="task-row" className={cn("group flex min-h-11 items-center gap-2 rounded-lg py-1.5 pl-2 pr-0 hover:bg-bg-sunk [@media(hover:hover)_and_(pointer:fine)]:pr-2", t.status === "done" && "opacity-60")}>
       <button onClick={() => onPatch(t.id, { status: t.status === "done" ? "todo" : "done" })} className={cn("grid size-5 shrink-0 place-items-center rounded border transition-colors", t.status === "done" ? "border-accent bg-accent text-accent-fg" : "border-line-strong hover:border-accent hover:bg-accent-soft")} aria-label={t.status === "done" ? "Mark as not done" : "Complete"}><Check className={cn("size-3", t.status !== "done" && "opacity-0 group-hover:opacity-40")} /></button>
       <button onClick={() => setEditing(true)} className="min-w-0 flex-1 text-left">
         <div className={cn("truncate text-[13.5px]", t.status === "done" && "line-through")}>{t.title}</div>
         {(t.project || t.pageId) && <div className="flex items-center gap-2 truncate text-[11px] text-fg-faint">{t.project && <span className="flex items-center gap-0.5"><Hash className="size-3" />{t.project}</span>}{t.pageId && <Link href={`/p/${t.pageId}`} onClick={(e) => e.stopPropagation()} className="flex min-w-0 items-center gap-0.5 hover:text-accent"><Link2 className="size-3 shrink-0" /><span className="truncate">{t.pageIcon ?? ""} {t.pageTitle ?? "page"}</span></Link>}</div>}
       </button>
       {t.priority && t.priority !== "medium" && <Badge tone={prioTone(t.priority)}>{t.priority}</Badge>}
-      {due && <span className={cn("hidden shrink-0 text-[11px] tabular-nums sm:inline", overdue ? "font-medium text-danger" : "text-fg-faint")}>{fmtDate(due, { month: "short", day: "numeric", hour: due.getHours() !== 17 || due.getMinutes() !== 0 ? "numeric" : undefined, minute: due.getHours() !== 17 || due.getMinutes() !== 0 ? "2-digit" : undefined })}</span>}
-      <button onClick={() => onDelete(t.id)} className="grid size-8 shrink-0 place-items-center rounded-md text-fg-faint opacity-0 hover:bg-danger/10 hover:text-danger focus:opacity-100 group-hover:opacity-100 md:size-7" aria-label="Delete task"><Trash2 className="size-3.5" /></button>
+      {due && <span data-testid="task-due" className={cn("shrink-0 text-[11px] tabular-nums", overdue ? "font-medium text-danger" : "text-fg-faint")}>{fmtDate(due, { month: "short", day: "numeric", hour: due.getHours() !== 17 || due.getMinutes() !== 0 ? "numeric" : undefined, minute: due.getHours() !== 17 || due.getMinutes() !== 0 ? "2-digit" : undefined })}</span>}
+      {/* Touch and hover-less pointers: always visible, 44 px target. Fine pointers: compact, revealed on row hover or keyboard focus. */}
+      <button type="button" onClick={() => onDelete(t)} className="grid size-11 shrink-0 place-items-center rounded-md text-fg-faint hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:size-7 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:focus-visible:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-focus-within:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100" aria-label={`Delete task: ${t.title}`}><Trash2 className="size-4 [@media(hover:hover)_and_(pointer:fine)]:size-3.5" /></button>
     </div>
   );
 }
@@ -80,7 +89,8 @@ function TaskRow({ t, tree, projects, onPatch, onDelete, editing, setEditing }: 
 export function TasksInbox() {
   const qc = useQueryClient();
   const [showDone, setShowDone] = useState(false); const [project, setProject] = useState<string | null>(null); const [prio, setPrio] = useState<string | null>(null);
-  const { data: tasks = [], isLoading } = useQuery({ queryKey: ["tasks", showDone], queryFn: () => api<Task[]>(`/api/tasks${showDone ? "?done=1" : ""}`), staleTime: 5_000 });
+  const { data, isLoading, error, refetch, isFetching } = useQuery({ queryKey: ["tasks", showDone], queryFn: () => api<Task[]>(`/api/tasks${showDone ? "?done=1" : ""}`), staleTime: 5_000 });
+  const tasks = useMemo(() => data ?? [], [data]); const loadFailed = Boolean(error) && !data; // a failed refresh keeps the list already on screen
   const { data: tree = [] } = useQuery({ queryKey: ["tree"], queryFn: () => api<TreeNode[]>("/api/tree"), staleTime: 10_000 });
   const [input, setInput] = useState(""); const [adding, setAdding] = useState(false); const [editingId, setEditingId] = useState<string | null>(null); const inputRef = useRef<HTMLInputElement>(null);
   const preview = useMemo(() => (input.trim() ? parseTaskInput(input) : null), [input]);
@@ -103,12 +113,19 @@ export function TasksInbox() {
     qc.setQueryData<Task[]>(["tasks", showDone], (old) => old?.map((t) => (t.id === id ? { ...t, ...body, completedAt: body.status === "done" ? new Date().toISOString() : body.status === "todo" ? null : t.completedAt } as Task : t)));
     try { await api("/api/tasks", { method: "PATCH", json: { id, ...body } }); } catch (e: any) { toast("Update failed", { description: e.message, tone: "danger" }); } finally { invalidate(); }
   }
-  async function remove(id: string) { qc.setQueryData<Task[]>(["tasks", showDone], (old) => old?.filter((t) => t.id !== id)); try { await api(`/api/tasks?id=${id}`, { method: "DELETE" }); toast("Task deleted"); } catch (e: any) { toast("Delete failed", { description: e.message, tone: "danger" }); } finally { invalidate(); } }
+  /** Undo of a delete: the task is soft-deleted on the server, so it comes back as it was (same id, anchors and dates). */
+  async function restore(t: Task) { try { await api(`/api/tasks/${t.id}?action=restore`, { method: "POST" }); toast("Task restored", { description: t.title, tone: "success" }); } catch (e: any) { toast("Could not restore the task", { description: e.message, tone: "danger" }); } finally { invalidate(); } }
+  async function remove(t: Task) {
+    if (editingId === t.id) setEditingId(null);
+    qc.setQueryData<Task[]>(["tasks", showDone], (old) => old?.filter((x) => x.id !== t.id));
+    try { await api(`/api/tasks?id=${t.id}`, { method: "DELETE" }); toast("Task deleted", { description: t.title, action: { label: "Undo", run: () => restore(t) } }); }
+    catch (e: any) { toast("Delete failed", { description: e.message, tone: "danger" }); } finally { invalidate(); }
+  }
   const open = tasks.filter((t) => t.status !== "done").length;
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1"><h1 className="text-2xl font-semibold tracking-tight">Tasks</h1><p className="mt-0.5 text-[13px] text-fg-muted">{open} open{grouped.overdue.length ? <span className="text-danger"> · {grouped.overdue.length} overdue</span> : null}</p></div>
+        <div className="min-w-0 flex-1"><h1 className="text-2xl font-semibold tracking-tight">Tasks</h1><p className="mt-0.5 text-[13px] text-fg-muted">{loadFailed ? "Not loaded" : `${open} open`}{grouped.overdue.length ? <span className="text-danger"> · {grouped.overdue.length} overdue</span> : null}</p></div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Menu><MenuTrigger asChild><Button size="sm" variant={project ? "secondary" : "ghost"}><Hash /> {project ?? "Project"} <ChevronDown className="size-3" /></Button></MenuTrigger><MenuContent><MenuItem onSelect={() => setProject(null)}>All projects {!project && "✓"}</MenuItem><MenuSeparator />{projects.length ? projects.map((p) => <MenuItem key={p} onSelect={() => setProject(p)}>{p} {project === p && "✓"}</MenuItem>) : <div className="px-2 py-1.5 text-xs text-fg-muted">No project yet — add #name when creating a task</div>}</MenuContent></Menu>
           <Menu><MenuTrigger asChild><Button size="sm" variant={prio ? "secondary" : "ghost"}><Flag /> {prio ?? "Priority"} <ChevronDown className="size-3" /></Button></MenuTrigger><MenuContent><MenuItem onSelect={() => setPrio(null)}>Any priority {!prio && "✓"}</MenuItem><MenuSeparator />{PRIORITIES.map((p) => <MenuItem key={p} onSelect={() => setPrio(p)} className="capitalize">{p} {prio === p && "✓"}</MenuItem>)}</MenuContent></Menu>
@@ -116,12 +133,12 @@ export function TasksInbox() {
         </div>
       </div>
       <div className="mb-6 rounded-xl border border-line bg-bg-elev p-2 shadow-card focus-within:border-accent/50">
-        <div className="flex items-center gap-2"><Plus className="ml-1 size-4 shrink-0 text-fg-faint" /><input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); add(); } else if (e.key === "Escape") { setInput(""); (e.target as HTMLInputElement).blur(); } }} placeholder='Add a task… e.g. "Send abstract to JIMF nov 15 !high #thesis"' className="h-9 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-fg-faint" /><Button size="sm" onClick={add} disabled={!preview || adding}>{adding ? <Spinner className="size-3.5 border-white/40 border-t-white" /> : "Add"}</Button></div>
+        <div className="flex items-center gap-2"><Plus className="ml-1 size-4 shrink-0 text-fg-faint" /><input ref={inputRef} aria-label="Add a task" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); add(); } else if (e.key === "Escape") { setInput(""); (e.target as HTMLInputElement).blur(); } }} placeholder='Add a task… e.g. "Send abstract to JIMF nov 15 !high #thesis"' className="h-9 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-fg-faint" /><Button size="sm" onClick={add} disabled={!preview || adding}>{adding ? <Spinner className="size-3.5 border-white/40 border-t-white" /> : "Add"}</Button></div>
         <div className="flex min-h-6 flex-wrap items-center gap-1.5 px-1 pt-1 text-[11px] text-fg-faint">
           {preview ? <><span className="truncate text-fg-muted">{preview.title}</span>{preview.dueAt && <Badge tone="accent"><CalendarDays className="mr-1 size-3" />{fmtDate(preview.dueAt, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</Badge>}{preview.priority && <Badge tone={prioTone(preview.priority)}>{preview.priority}</Badge>}{(preview.project ?? project) && <Badge>#{preview.project ?? project}</Badge>}</> : <span>Understands <i>tomorrow</i>, <i>next monday</i>, <i>in 3 days</i>, <i>nov 15</i>, <i>at 9am</i>, <i>!high</i>, <i>#project</i>. Press <Kbd>n</Kbd> to focus.</span>}
         </div>
       </div>
-      {isLoading ? <div className="flex justify-center py-16"><Spinner /></div> : !filtered.length ? <Empty icon={<InboxIcon />} title={tasks.length ? "No task matches the filters" : "Inbox zero"} hint={tasks.length ? "Clear the project or priority filter." : "Add your first task above. Tasks with a due date also show on the home dashboard."} action={tasks.length ? <Button size="sm" variant="outline" onClick={() => { setProject(null); setPrio(null); }}><Filter /> Clear filters</Button> : undefined} /> : (
+      {isLoading ? <div className="flex justify-center py-16"><Spinner /></div> : loadFailed ? <ErrorState testId="tasks-error" title="Could not load your tasks" error={error} onRetry={() => refetch()} retrying={isFetching} /> : !filtered.length ? <Empty icon={<InboxIcon />} title={tasks.length ? "No task matches the filters" : "Inbox zero"} hint={tasks.length ? "Clear the project or priority filter." : "Add your first task above. Tasks with a due date also show on the home dashboard."} action={tasks.length ? <Button size="sm" variant="outline" onClick={() => { setProject(null); setPrio(null); }}><Filter /> Clear filters</Button> : undefined} /> : (
         <div className="space-y-6">
           {GROUPS.filter((g) => grouped[g.id].length).map((g) => (
             <section key={g.id}>

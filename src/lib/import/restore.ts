@@ -41,8 +41,23 @@ async function upsert(ctx: ImportCtx, table: any, rows: Row[], wsId: string, ove
   return { total: rows.length, written };
 }
 export const RESTORE_TABLES = ["pages", "pageVersions", "databases", "databaseProperties", "databaseRows", "databaseViews", "relations", "attachments", "tags", "pageTags", "tasks", "links", "knowledgeEdges", "references", "experiments"] as const;
+/**
+ * The `workspace.json` manifest of a ZIP export carries the same `format` string as a JSON backup but another shape: no backup tables,
+ * pages without content or workspace, plus `kind` / `complete` / `rootId` and a `path` per page. It cannot be restored (the rows would
+ * fail in the database), so it is recognised by its shape and refused with an explanation.
+ */
+export function isZipManifest(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  const tables = ["pageVersions", "databaseProperties", "databaseRows", "databaseViews", "pageTags", "links", "knowledgeEdges"].some((k) => Array.isArray(data[k]));
+  if (tables) return false;
+  const first = Array.isArray(data.pages) ? data.pages.find((p: any) => p && typeof p === "object") : undefined;
+  const manifestPage = Boolean(first) && typeof first.path === "string" && !("content" in first) && !("workspaceId" in first);
+  const manifestHead = (data.kind === "subtree" || data.kind === "workspace") && "complete" in data && "rootId" in data;
+  return manifestPage || manifestHead;
+}
 export function checkBackupFormat(data: any): void {
   if (!data || typeof data !== "object" || typeof data.format !== "string" || !data.format.startsWith("note-spboucher-ai/")) throw new ImportError("Not a Note SPBoucher AI JSON backup (expected a top-level \"format\": \"note-spboucher-ai/1\").", 400, "bad_backup");
+  if (isZipManifest(data)) throw new ImportError("This is the workspace.json manifest of a ZIP export, not a JSON backup: it lists the pages but does not hold their content. Import the whole ZIP archive instead, or export a JSON backup (Export → JSON) and import that file.", 400, "zip_manifest");
 }
 /**
  * Merge by id. ctx.duplicates = "skip" (default): rows whose id already exists are kept as they are, only missing rows are added;

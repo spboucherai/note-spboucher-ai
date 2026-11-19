@@ -27,5 +27,7 @@ export default defineConfig({
     { name: "next-p-offline-phone-360", testMatch: /next-p-offline-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
     { name: "next-p-offline-phone-375", testMatch: /next-p-offline-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "next-p-offline-phone-430", testMatch: /next-p-offline-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
+    // slice next-p-ra — research workspace, contextual AI, living blocks, import/export + UI defect fixes
+    { name: "next-p-ra", testMatch: /next-p-ra(-ui)?\.spec\.ts/, use: { viewport: { width: 1280, height: 800 }, permissions: ["clipboard-read", "clipboard-write"] }, dependencies: ["auth"] },
   ],
 });
