@@ -22,5 +22,11 @@ export default defineConfig({
     { name: "next-phone-360", testMatch: /next-web-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
     { name: "next-phone-375", testMatch: /next-web-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "next-phone-430", testMatch: /next-web-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
+    // NEXT-K ▼ knowledge screens (graph 2.0, constellation, timeline, time machine, health, brief, zoom, ask)
+    { name: "next-k-desktop", testMatch: /next-k\.spec\.ts/, use: { viewport: { width: 1280, height: 800 } }, dependencies: ["auth"] },
+    { name: "next-k-phone-360", testMatch: /next-k-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
+    { name: "next-k-phone-375", testMatch: /next-k-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
+    { name: "next-k-phone-430", testMatch: /next-k-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
+    // NEXT-K ▲
   ],
 });
