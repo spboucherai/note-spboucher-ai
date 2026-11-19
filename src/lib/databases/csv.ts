@@ -4,17 +4,34 @@ import { db, schema } from "@/db";
 import type { Property, RowOut } from "./types";
 import { displayValue, parseValue, sortedProps, titleProp } from "./values";
 import { createProperty, createRow, ensureDatabase } from "./service";
+import { HttpError } from "@/lib/errors";
 import { loadProps, loadRaw } from "./query";
 
+const csvCols = (props: Property[], hidden: string[]) => sortedProps(props).filter((p) => p.type === "title" || !hidden.includes(p.id));
+const csvLine = (cols: Property[], r: RowOut) => cols.map((p) => (p.type === "title" ? r.title : p.type === "file" ? (Array.isArray(r.values[p.id]) ? (r.values[p.id] as any[]).map((f) => f.url).join(", ") : "") : p.type === "date" || p.type === "created_time" || p.type === "last_edited_time" ? String(r.values[p.id] ?? "") : p.type === "number" ? String(r.values[p.id] ?? "") : displayValue(p, r.values[p.id])));
+const csvHead = (cols: Property[]) => "\uFEFF" + Papa.unparse([cols.map((p) => p.name)]);
+const csvBody = (cols: Property[], rows: RowOut[]) => Papa.unparse(rows.map((r) => csvLine(cols, r)), { header: false });
 export function exportCsv(props: Property[], rows: RowOut[], hidden: string[] = []): string {
-  const cols = sortedProps(props).filter((p) => p.type === "title" || !hidden.includes(p.id));
-  return "﻿" + Papa.unparse({ fields: cols.map((p) => p.name), data: rows.map((r) => cols.map((p) => (p.type === "title" ? r.title : p.type === "file" ? (Array.isArray(r.values[p.id]) ? (r.values[p.id] as any[]).map((f) => f.url).join(", ") : "") : p.type === "date" || p.type === "created_time" || p.type === "last_edited_time" ? String(r.values[p.id] ?? "") : p.type === "number" ? String(r.values[p.id] ?? "") : displayValue(p, r.values[p.id])))) });
+  const cols = csvCols(props, hidden);
+  return csvHead(cols) + (rows.length ? "\r\n" + csvBody(cols, rows) : "");
+}
+/** 3.0 (audit D11): the whole result, streamed page by page (the 2.x export stopped silently at 1 000 rows). Same bytes as `exportCsv` for the same rows. */
+export function exportCsvStream(props: Property[], pages: AsyncGenerator<RowOut[]>, hidden: string[] = []): ReadableStream<Uint8Array> {
+  const cols = csvCols(props, hidden); const enc = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    start(c) { c.enqueue(enc.encode(csvHead(cols))); },
+    async pull(c) {
+      try { const n = await pages.next(); if (n.done) { c.close(); return; } if (n.value.length) c.enqueue(enc.encode("\r\n" + csvBody(cols, n.value))); }
+      catch (e) { c.error(e); }
+    },
+    async cancel() { await pages.return(undefined); },
+  });
 }
 /** Import rows from CSV text; unknown columns become text properties. */
 export async function importCsv(wsId: string, dbId: string, text: string) {
   const d = await ensureDatabase(wsId, dbId);
   const parsed = Papa.parse<Record<string, string>>(text.replace(/^﻿/, ""), { header: true, skipEmptyLines: "greedy", transformHeader: (h) => h.trim() });
-  if (!parsed.meta.fields?.length) throw new Error("CSV has no header row");
+  if (!parsed.meta.fields?.filter((f) => f).length) throw new HttpError(400, "The CSV file has no header row", "bad_csv"); // 3.0 (audit D4): was a plain Error → 500
   let props = await loadProps(d.id); const tp = titleProp(props)!; const created: string[] = [];
   const byName = (n: string) => props.find((p) => p.name.toLowerCase() === n.toLowerCase());
   const titleCol = parsed.meta.fields.find((f) => f.toLowerCase() === tp.name.toLowerCase()) ?? parsed.meta.fields.find((f) => /^(name|title|titre|nom)$/i.test(f)) ?? parsed.meta.fields[0];

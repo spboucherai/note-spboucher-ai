@@ -130,9 +130,10 @@ function ViewSettings({ db, view, onClose, onDeleted }: { db: Database; view: Vi
     <div className="space-y-2 max-md:space-y-3">
       <div className="text-[12px] font-medium text-fg-muted max-md:hidden">View settings</div>
       <Field label="Name">
-        <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name !== view.name && m.patchView.mutate({ id: view.id, name })} className={inputCls} onKeyDown={(e) => { if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); onClose(); } }} />
+        <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name.trim() !== view.name && m.patchView.mutate({ id: view.id, name: name.trim() })} className={inputCls} onKeyDown={(e) => { if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); onClose(); } }} />
       </Field>
-      <Field label="Layout"><Sel value={view.type} onChange={(e) => m.patchView.mutate({ id: view.id, type: e.target.value, config: defaultConfig(db, e.target.value as ViewType) })} className="w-full">{VIEW_TYPES.map((t) => <option key={t} value={t}>{VIEW_META[t].label}</option>)}</Sel></Field>
+      {/* 3.0 (U7): changing the layout keeps what the view already has (group, dates, cover…) and only fills what the new layout needs */}
+      <Field label="Layout"><Sel value={view.type} onChange={(e) => { const d = defaultConfig(db, e.target.value as ViewType) as Record<string, unknown>; const add: Record<string, unknown> = {}; for (const [k, v] of Object.entries(d)) if (c[k] == null && v != null) add[k] = v; m.patchView.mutate({ id: view.id, type: e.target.value, ...(Object.keys(add).length ? { config: add } : {}) }); }} className="w-full">{VIEW_TYPES.map((t) => <option key={t} value={t}>{VIEW_META[t].label}</option>)}</Sel></Field>
       {view.type === "board" && <Field label="Group by" hint={groups.length ? undefined : "Add a select, status or checkbox property first."}><Sel value={c.groupBy ?? ""} onChange={(e) => patch({ groupBy: e.target.value || null })} className="w-full">{opt(groups, "Choose…")}</Sel></Field>}
       {view.type === "calendar" && <Field label="Date property" hint={dates.length ? undefined : "Add a date property first."}><Sel value={c.dateProperty ?? ""} onChange={(e) => patch({ dateProperty: e.target.value || null })} className="w-full">{opt(dates, "Choose…")}</Sel></Field>}
       {view.type === "timeline" && (
@@ -141,7 +142,19 @@ function ViewSettings({ db, view, onClose, onDeleted }: { db: Database; view: Vi
           <Field label="End"><Sel value={c.endProperty ?? ""} onChange={(e) => patch({ endProperty: e.target.value || null })} className="w-full">{opt(dates, "Same as start")}</Sel></Field>
         </>
       )}
-      {view.type === "gallery" && <Field label="Cover"><Sel value={c.coverProperty ?? ""} onChange={(e) => patch({ coverProperty: e.target.value || null })} className="w-full">{opt(files, "Page icon")}</Sel></Field>}
+      {view.type === "gallery" && (
+        <>
+          <Field label="Cover"><Sel aria-label="Cover" value={c.cover === "page" ? "@page" : c.cover === "none" ? "@none" : c.coverProperty ?? ""} onChange={(e) => { const v = e.target.value; patch(v === "@page" ? { cover: "page" } : v === "@none" ? { cover: "none" } : { cover: "property", coverProperty: v || null }); }} className="w-full"><option value="">First image of a file property</option>{files.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}<option value="@page">Page cover</option><option value="@none">No cover</option></Sel></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Card size"><Sel aria-label="Card size" value={c.cardSize ?? "medium"} onChange={(e) => patch({ cardSize: e.target.value })} className="w-full"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></Sel></Field>
+            <Field label="Image"><Sel aria-label="Image fit" value={c.coverFit ?? "cover"} onChange={(e) => patch({ coverFit: e.target.value })} className="w-full"><option value="cover">Fill</option><option value="contain">Fit</option></Sel></Field>
+          </div>
+          <fieldset className="space-y-0.5"><legend className="mb-1 text-[12px] font-medium text-fg-muted">Shown on cards</legend>
+            <div className="max-h-40 overflow-y-auto">{db.properties.filter((p) => p.type !== "title").map((p) => { const cur = Array.isArray(c.cardProps) ? c.cardProps : null; const on = cur ? cur.includes(p.id) : false; return <label key={p.id} className="flex h-8 items-center gap-2 rounded-md px-1 text-[13px] hover:bg-bg-sunk max-md:h-11 max-md:text-[15px]"><input type="checkbox" checked={on} onChange={() => { const base = cur ?? []; const next = on ? base.filter((x) => x !== p.id) : [...base, p.id]; patch({ cardProps: db.properties.map((x) => x.id).filter((x) => next.includes(x)) }); }} className="size-3.5 accent-[var(--accent)] max-md:size-5" /><span className="truncate">{p.name}</span></label>; })}</div>
+            {Array.isArray(c.cardProps) ? <button type="button" onClick={() => patch({ cardProps: null })} className="h-7 rounded-md px-1 text-[12px] text-accent hover:underline max-md:h-11 max-md:text-[14px]">Reset to the visible properties</button> : <span className="block text-[11px] text-fg-muted">Nothing ticked: the first visible properties are shown.</span>}
+          </fieldset>
+        </>
+      )}
       <div className="flex flex-wrap items-center gap-1 pt-1">
         {view.isDefault
           ? <span className="flex items-center gap-1 text-[12px] text-fg-muted max-md:text-[13px]"><Star className="size-3.5" /> Default view</span>

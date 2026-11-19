@@ -9,7 +9,11 @@ import { api } from "@/lib/client/api";
 import { useIsPhone, useOnline } from "@/lib/client/hooks";
 import type { RowOut, SelectOption, View } from "@/lib/databases/types";
 import { sortedProps, newId, pickColor } from "@/lib/databases/values";
-import { DbContext, useDatabase, useDb, useRows, useRowMutations, useViewMutations, usePropertyMutations, priorityPropsOf, mobileLayoutOf, type DbCtx } from "./hooks";
+import { DbContext, useDatabase, useDb, useRowMutations, useViewMutations, usePropertyMutations, priorityPropsOf, mobileLayoutOf, useRowTemplates, orderedProps, type DbCtx } from "./hooks";
+import { useWindow, findCachedRow } from "./window";
+import { useUndoStack } from "./undo";
+import { viewGroups } from "./group";
+import { GROUPABLE } from "@/lib/databases/group";
 import { describeFilter } from "./FilterBuilder";
 import { ViewTabs } from "./ViewTabs";
 import { Toolbar } from "./Toolbar";
@@ -23,6 +27,7 @@ import { GalleryView } from "./views/GalleryView";
 import { TimelineView } from "./views/TimelineView";
 import { ListView } from "./views/ListView";
 
+export const SKIP_REASONS: Record<string, string> = { user_edited: "The value was typed by hand.", bad_config: "The AI property is not configured (prompt or choices missing).", already_queued: "A run is already in progress for this cell.", over_budget: "The daily AI budget is reached.", queue_unavailable: "The job queue is unavailable. Try again in a moment." };
 const VIEWS = { table: TableView, board: BoardView, calendar: CalendarView, gallery: GalleryView, timeline: TimelineView, list: ListView } as const;
 
 export function DatabaseView({ pageId }: { pageId: string }) {
@@ -36,6 +41,7 @@ export function DatabaseView({ pageId }: { pageId: string }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [skipTemplates, setSkipTemplates] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [created, setFocusRow] = useState<string | null>(null);
   const isMobile = useIsPhone();
   const online = useOnline();
 
@@ -47,48 +53,104 @@ export function DatabaseView({ pageId }: { pageId: string }) {
   }, [db, viewId]);
   const select = (id: string) => { setViewId(id); if (db) localStorage.setItem(`db-view-${db.id}`, id); };
 
-  const rowsQ = useRows(db?.id, view?.id, search);
+  // 3.0: rows are loaded window by window. Table, board, list and gallery read this window (grouped views ask the server for the
+  // group-first order and the whole-database counts); calendar and timeline run their own date-bounded queries.
+  const groupProp = useMemo(() => (view && ["table", "board", "list"].includes(view.type) ? db?.properties.find((p) => p.id === view.config.groupBy && GROUPABLE.has(p.type)) : undefined), [db, view]);
+  const windowed = !!view && view.type !== "calendar" && view.type !== "timeline";
+  const win = useWindow(db?.id, view?.id, search, { groupBy: groupProp?.id ?? null, keep: view?.type === "table" && !(isMobile && view.config.mobileLayout !== "grid") ? 12 : 250, enabled: true });
+  const rowsQ = { data: win.total || win.loaded.length || !win.loading ? { rows: win.loaded, total: win.total } : undefined, isLoading: win.loading, isError: !!win.error, error: win.error, isFetching: win.fetching, refetch: win.refetch };
+  const undo = useUndoStack(!!db);
+  const tplQ = useRowTemplates(db?.id);
   const rm = useRowMutations(db);
   const vm = useViewMutations(db, pageId);
   const pm = usePropertyMutations(db, pageId);
   const props = useMemo(() => (db ? sortedProps(db.properties) : []), [db]);
+  const collapsedKey = (view?.config.collapsed ?? []).join("|");
+  const collapsed = useMemo(() => new Set(view?.config.collapsed ?? []), [collapsedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const groups = useMemo(() => viewGroups(groupProp, win.groups, win.total), [groupProp, win.groups, win.total]);
+  const findRow = useCallback((rowId: string) => (db ? findCachedRow(qc, db.id, rowId) : undefined), [qc, db]);
+  const updateMut = rm.update.mutateAsync;
+  const bulk: DbCtx["bulk"] = useCallback(async (sel, action, label) => {
+    if (!db || !view) return false;
+    try {
+      const r = await api<{ affected: number; opId: string | null }>(`/api/databases/${db.id}/rows/bulk`, { method: "POST", json: { action: action.type, ...(action.type === "update" ? { values: action.values } : {}), ...("ids" in sel ? { ids: sel.ids } : { all: { viewId: view.id, search: search || undefined, except: sel.all.except } }) } });
+      const refresh = () => { qc.invalidateQueries({ queryKey: ["db-rows", db.id] }); if (action.type !== "update") qc.invalidateQueries({ queryKey: ["tree"] }); };
+      refresh();
+      if (r.opId) { const op = (redo: boolean) => api(`/api/databases/${db.id}/rows/undo`, { method: "POST", json: { opId: r.opId, redo } }).then(refresh); undo.push({ label: `${label} (${r.affected} row${r.affected === 1 ? "" : "s"})`, undo: () => op(false), redo: () => op(true) }); }
+      toast(`${label}: ${r.affected} row${r.affected === 1 ? "" : "s"}`, r.opId ? { action: { label: "Undo", run: () => { void undo.undo(); } } } : {});
+      return true;
+    } catch (e: any) { toast(`${label} failed`, { description: e?.message, tone: "danger" }); return false; }
+  }, [db, view, search, qc, undo]);
 
   // mutateAsync functions are stable across renders (the mutation result objects are not): keeps the context memo effective.
   const removeMut = rm.remove.mutateAsync; const restoreMut = rm.restore.mutateAsync;
   const removeRows = useCallback(async (ids: string[]) => {
-    if (!ids.length) return;
+    if (!ids.length || !db) return;
     try { await removeMut(ids); } catch { return; } // rolled back + toast by the mutation
+    const again = () => api(`/api/databases/${db.id}/rows?ids=${ids.join(",")}`, { method: "DELETE" }).then(() => { qc.invalidateQueries({ queryKey: ["db-rows", db.id] }); qc.invalidateQueries({ queryKey: ["tree"] }); });
+    undo.push({ label: ids.length === 1 ? "delete row" : `delete ${ids.length} rows`, undo: () => restoreMut(ids), redo: again });
     toast(ids.length === 1 ? "Row moved to the trash" : `${ids.length} rows moved to the trash`, {
-      action: { label: "Undo", run: async () => { try { await restoreMut(ids); } catch { /* toast shown by the mutation */ } } },
+      action: { label: "Undo", run: () => { void undo.undo(); } },
     });
-  }, [removeMut, restoreMut]);
+  }, [removeMut, restoreMut, db, qc, undo]);
+  const duplicateRow: DbCtx["duplicateRow"] = useCallback(async (rowId) => {
+    if (!db) return null;
+    try {
+      const row = await api<RowOut>(`/api/databases/${db.id}/rows/duplicate`, { method: "POST", json: { id: rowId } });
+      const refresh = () => { qc.invalidateQueries({ queryKey: ["db-rows", db.id] }); qc.invalidateQueries({ queryKey: ["tree"] }); }; refresh();
+      undo.push({ label: "duplicate row", undo: () => api(`/api/databases/${db.id}/rows?ids=${row.id}`, { method: "DELETE" }).then(refresh), redo: () => restoreMut([row.id]) });
+      toast("Row duplicated", { action: { label: "Undo", run: () => { void undo.undo(); } } }); return row;
+    } catch (e: any) { toast("Could not duplicate the row", { description: e?.message, tone: "danger" }); return null; }
+  }, [db, qc, undo, restoreMut]);
 
+  const defaultTemplate = tplQ.data?.find((t) => t.isDefault)?.id ?? null;
   const ctx: DbCtx | null = useMemo(() => db && view ? {
     db, props, view, isMobile, search,
-    visibleProps: props.filter((p) => p.type === "title" || !(view.config.hidden ?? []).includes(p.id)),
+    visibleProps: orderedProps(props, view).filter((p) => p.type === "title" || !(view.config.hidden ?? []).includes(p.id)),
+    win, groupProp, groups, collapsed, findRow, undo, bulk, duplicateRow, templates: tplQ.data ?? [], created,
+    toggleGroup: (key) => { const next = new Set(collapsed); if (next.has(key)) next.delete(key); else next.add(key); vm.patchView.mutate({ id: view.id, config: { collapsed: [...next] } }); },
     priorityProps: priorityPropsOf(props, view),
     mobileLayout: mobileLayoutOf(view),
     rows: rowsQ.data?.rows ?? [], total: rowsQ.data?.total ?? 0, loading: rowsQ.isLoading,
     error: rowsQ.isError ? (rowsQ.error as Error) : null, fetching: rowsQ.isFetching, retry: () => { void rowsQ.refetch(); },
-    setCell: (rowId, values) => rm.update.mutate({ rowId, values }),
+    // every cell edit is undoable: the previous values of the edited keys are re-sent on ⌘Z
+    setCell: (rowId, values) => {
+      const prev = findRow(rowId); const before: Record<string, unknown> = {}; for (const k of Object.keys(values)) before[k] = prev?.values[k] ?? null;
+      rm.update.mutate({ rowId, values });
+      if (prev) { const names = Object.keys(values).map((k) => props.find((p) => p.id === k)?.name ?? "value").join(", "); undo.push({ label: `edit ${names}`, undo: () => updateMut({ rowId, values: before }), redo: () => updateMut({ rowId, values }) }); }
+    },
     addRow: async (values, title, opts) => {
-      const r = await rm.create.mutateAsync({ values, title });
+      const r = await rm.create.mutateAsync({ values, title, ...(defaultTemplate ? { templateId: defaultTemplate } : {}) });
       if (opts?.open ?? view.type !== "table") setOpenRow(r.id);
       return r;
     },
-    newRow: (preset) => {
-      if (isMobile) setNewRow({ preset: preset ?? {} });
-      else rm.create.mutateAsync({ values: preset }).then((r) => { if (view.type !== "table") setOpenRow(r.id); }).catch(() => { /* toast shown by the mutation */ });
+    // `templateId`: a row template (undefined = the default template of the database when there is one, null = none)
+    newRow: (preset, templateId) => {
+      const tpl = templateId === undefined ? defaultTemplate : templateId;
+      if (isMobile && !tpl) setNewRow({ preset: preset ?? {} });
+      else rm.create.mutateAsync({ values: preset, ...(tpl ? { templateId: tpl } : {}) }).then((r) => {
+        undo.push({ label: "new row", undo: () => removeMut([r.id]), redo: () => restoreMut([r.id]) });
+        if (view.type !== "table" || tpl) setOpenRow(r.id); else setFocusRow(r.id);
+      }).catch(() => { /* toast shown by the mutation */ });
     },
     removeRows,
     open: setOpenRow,
     openViewSettings: () => setSettingsOpen(true),
     patchView: (config) => vm.patchView.mutate({ id: view.id, config }),
     refresh: () => { qc.invalidateQueries({ queryKey: ["db", pageId] }); qc.invalidateQueries({ queryKey: ["db-rows", db.id] }); },
+    // An AI cell is computed only on this explicit action. A value typed by hand is protected exactly as the API does: the run is
+    // skipped (`user_edited`) and the user is asked before `force` is sent.
     regenerate: async (rowId, propertyId) => {
+      const run = async (force: boolean) => {
+        const r = await api<{ queued: number; skipped: { rowId: string; reason: string }[] }>(`/api/databases/${db.id}/ai`, { method: "POST", json: { rowId, propertyId, ...(force ? { force: true } : {}) } });
+        if (r.queued) qc.setQueriesData<{ rows: RowOut[] }>({ queryKey: ["db-rows", db.id] }, (old: any) => old?.rows ? { ...old, rows: old.rows.map((x: RowOut) => (x.id === rowId ? { ...x, values: { ...x.values, [propertyId]: { pending: true, at: new Date().toISOString() } } } : x)) } : old);
+        return r;
+      };
       try {
-        await api(`/api/databases/${db.id}/ai`, { method: "POST", json: { rowId, propertyId } });
-        qc.setQueriesData<{ rows: RowOut[] }>({ queryKey: ["db-rows", db.id] }, (old: any) => old ? { ...old, rows: old.rows.map((r: RowOut) => (r.id === rowId ? { ...r, values: { ...r.values, [propertyId]: { pending: true, at: new Date().toISOString() } } } : r)) } : old);
+        const r = await run(false); const why = r.skipped[0]?.reason;
+        if (why === "user_edited") toast("This value was typed by hand", { description: "The AI did not replace it.", action: { label: "Replace with AI", run: () => { run(true).catch((e: any) => toast("Could not queue AI job", { description: e?.message, tone: "danger" })); } } });
+        else if (why) toast("AI run skipped", { description: SKIP_REASONS[why] ?? why, tone: why === "already_queued" ? undefined : "danger" });
+        qc.invalidateQueries({ queryKey: ["db-ai-runs", db.id] });
       } catch (e: any) { toast("Could not queue AI job", { description: e?.message, tone: "danger" }); }
     },
     addOption: async (propId, name) => {
@@ -97,7 +159,7 @@ export function DatabaseView({ pageId }: { pageId: string }) {
       await pm.update.mutateAsync({ id: propId, config: { ...p.config, options: [...(p.config.options ?? []), o] } });
       return o;
     },
-  } : null, [db, props, view, rowsQ.data, rowsQ.isLoading, rowsQ.isError, rowsQ.isFetching, isMobile, search, removeRows]); // eslint-disable-line react-hooks/exhaustive-deps
+  } : null, [db, props, view, win, groups, collapsed, isMobile, search, removeRows, bulk, duplicateRow, tplQ.data, undo.canUndo, undo.canRedo, created]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (dbQ.isLoading) return <DatabaseSkeleton />;
   if (dbQ.isError || !db || !view || !ctx) {
@@ -113,7 +175,8 @@ export function DatabaseView({ pageId }: { pageId: string }) {
     );
   }
 
-  const fresh = db.properties.length <= 1 && (rowsQ.data ? rowsQ.data.total === 0 : false);
+  void windowed;
+  const fresh = db.properties.length <= 1 && (rowsQ.data ? rowsQ.data.total === 0 : false) && !search;
   const choosingTemplate = showTemplates || (fresh && !skipTemplates);
   const V = VIEWS[view.type] ?? TableView;
   return (

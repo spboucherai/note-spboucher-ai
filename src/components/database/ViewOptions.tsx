@@ -73,6 +73,7 @@ export function ViewOptions({ onDone }: { onDone: () => void }) {
             {groupable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Sel>
           {!groupable.length && <p className="mt-1.5 text-[12px] leading-5 text-fg-muted">Add a select, status or checkbox property to group rows.</p>}
+          {ctx.groupProp && <div className="mt-2 flex gap-2"><button type="button" onClick={() => ctx.patchView({ collapsed: ctx.groups.map((g) => g.key) })} className="h-11 flex-1 rounded-lg border border-line text-[14px] text-fg-muted active:bg-bg-sunk">Collapse all</button><button type="button" onClick={() => ctx.patchView({ collapsed: [] })} className="h-11 flex-1 rounded-lg border border-line text-[14px] text-fg-muted active:bg-bg-sunk">Expand all</button></div>}
         </SheetSection>
       )}
 

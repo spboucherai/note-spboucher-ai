@@ -6,7 +6,10 @@ import { Empty } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import type { RowOut } from "@/lib/databases/types";
 import { dateOf } from "@/lib/databases/values";
-import { useDb } from "../hooks";
+import { useDb, useRowsQuery } from "../hooks";
+import { onDay } from "../dates";
+import { ResponsivePanel } from "../Responsive";
+import { toast } from "@/components/ui/toast";
 import { CellDisplay } from "../cells/Cell";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -18,12 +21,20 @@ export function CalendarView() {
   const dp = ctx.props.find((p) => p.id === ctx.view.config.dateProperty);
   const [cur, setCur] = useState(() => firstOfMonth());
 
+  // 3.0: the calendar asks the server for the rows of the weeks on screen (whole database, not a 500-row slice) and, apart, for the rows without a date
+  const gridStart = useMemo(() => { const s = new Date(cur); s.setDate(1 - ((cur.getDay() + 6) % 7)); return s; }, [cur]);
+  const gridEnd = useMemo(() => { const e = new Date(gridStart); e.setDate(gridStart.getDate() + 41); return e; }, [gridStart]);
+  const monthQ = useRowsQuery(ctx.db.id, ctx.view.id, ctx.search, { tag: "calendar", enabled: !!dp, limit: 1000, extraFilter: dp ? { and: [{ property: dp.id, op: "gte", value: iso(gridStart) }, { property: dp.id, op: "lte", value: iso(gridEnd) }] } : null });
+  const undatedQ = useRowsQuery(ctx.db.id, ctx.view.id, ctx.search, { tag: "undated", enabled: !!dp && dp.type === "date", limit: 50, extraFilter: dp ? { and: [{ property: dp.id, op: "empty" }] } : null });
+  const monthRows = monthQ.data?.rows;
   const byDay = useMemo(() => {
     const map = new Map<string, RowOut[]>();
     if (!dp) return map;
-    for (const r of ctx.rows) { const d = dateOf(r.values[dp.id]); if (!d) continue; const k = iso(d); map.set(k, [...(map.get(k) ?? []), r]); }
+    for (const r of monthRows ?? []) { const d = dateOf(r.values[dp.id]); if (!d) continue; const k = iso(d); map.set(k, [...(map.get(k) ?? []), r]); }
     return map;
-  }, [ctx.rows, dp]);
+  }, [monthRows, dp]);
+  const [more, setMore] = useState<string | null>(null); const [showUndated, setShowUndated] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null); const [overDay, setOverDay] = useState<string | null>(null);
 
   if (!dp) {
     return (
@@ -41,7 +52,15 @@ export function CalendarView() {
   const nav = (n: number) => setCur((c) => { const d = new Date(c); d.setMonth(d.getMonth() + n); return d; });
   const canAdd = dp.type === "date";
   const add = (d: Date) => ctx.newRow(canAdd ? { [dp.id]: iso(d) } : {});
-  const undated = ctx.rows.filter((r) => !dateOf(r.values[dp.id]));
+  const undated = undatedQ.data?.rows ?? []; const undatedTotal = undatedQ.data?.total ?? 0;
+  const canDrag = dp.type === "date" && !ctx.isMobile;
+  /** Drag a row onto another day (the time of day, if any, is kept). Undo: toast, or ⌘Z. */
+  const reschedule = (rowId: string, day: string) => {
+    const row = (monthRows ?? []).find((r) => r.id === rowId) ?? undated.find((r) => r.id === rowId) ?? ctx.findRow(rowId); if (!row) return;
+    const next = onDay(row.values[dp.id], day); if (next === row.values[dp.id]) return;
+    ctx.setCell(row.id, { [dp.id]: next });
+    toast(`Moved to ${new Date(`${day}T00:00:00`).toLocaleDateString("en-CA", { weekday: "short", day: "numeric", month: "long" })}`, { action: { label: "Undo", run: () => { void ctx.undo.undo(); } } });
+  };
 
   const navBtn = "grid size-8 place-items-center rounded-md hover:bg-bg-sunk max-md:size-11 max-md:rounded-lg";
   const header = (
@@ -54,19 +73,24 @@ export function CalendarView() {
       </div>
     </div>
   );
-  const undatedNote = undated.length > 0 && (
-    <div className="mt-3 text-[12px] leading-5 text-fg-muted max-md:text-[13px]">
-      {undated.length} row{undated.length > 1 ? "s" : ""} without a date:{" "}
-      {undated.slice(0, 5).map((r) => <button key={r.id} type="button" onClick={() => ctx.open(r.id)} className="mr-2 underline decoration-line underline-offset-2 hover:text-fg max-md:inline-flex max-md:min-h-11 max-md:items-center">{r.title || "Untitled"}</button>)}
-      {undated.length > 5 && "…"}
+  const undatedNote = undatedTotal > 0 && (
+    <div className="mt-3 text-[12px] leading-5 text-fg-muted max-md:text-[13px]" data-testid="undated">
+      {undatedTotal.toLocaleString("en-CA")} row{undatedTotal > 1 ? "s" : ""} without a date{canDrag ? " (drag one onto a day)" : ""}:{" "}
+      {undated.slice(0, 5).map((r) => <button key={r.id} type="button" draggable={canDrag} onDragStart={(e) => { setDragId(r.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", r.id); }} onDragEnd={() => { setDragId(null); setOverDay(null); }} onClick={() => ctx.open(r.id)} className="mr-2 underline decoration-line underline-offset-2 hover:text-fg max-md:inline-flex max-md:min-h-11 max-md:items-center">{r.title || "Untitled"}</button>)}
+      {undatedTotal > 5 && (
+        <ResponsivePanel open={showUndated} onOpenChange={setShowUndated} title="Rows without a date" description={undatedTotal > undated.length ? `The first ${undated.length} of ${undatedTotal.toLocaleString("en-CA")}.` : undefined} className="w-72 p-1.5"
+          trigger={<button type="button" className="rounded-md font-medium text-accent hover:underline max-md:inline-flex max-md:min-h-11 max-md:items-center">Show {undatedTotal > undated.length ? `the first ${undated.length}` : `all ${undatedTotal}`}</button>}>
+          {undatedTotal > undated.length && <p className="px-2 pb-1 text-[11px] text-fg-muted max-md:hidden">The first {undated.length} of {undatedTotal.toLocaleString("en-CA")}. Filter the view to narrow.</p>}
+          <ul className="max-h-72 space-y-0.5 overflow-y-auto">{undated.map((r) => <li key={r.id}><button type="button" onClick={() => { setShowUndated(false); ctx.open(r.id); }} className="flex min-h-8 w-full items-center rounded-md px-2 text-left text-[13px] hover:bg-bg-sunk max-md:min-h-11 max-md:text-[15px]"><span className="truncate">{r.icon ? `${r.icon} ` : ""}{r.title || "Untitled"}</span></button></li>)}</ul>
+        </ResponsivePanel>
+      )}
     </div>
   );
 
   if (ctx.isMobile) return <div>{header}<Agenda cur={cur} byDay={byDay} today={today} canAdd={canAdd} onAdd={add} />{undatedNote}</div>;
 
   // ---------- desktop: month grid
-  const start = new Date(cur);
-  start.setDate(1 - ((cur.getDay() + 6) % 7));
+  const start = gridStart;
   const days: Date[] = [];
   for (let i = 0; i < 42; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(d); }
   return (
@@ -77,12 +101,20 @@ export function CalendarView() {
         {days.map((d) => {
           const k = iso(d); const evs = byDay.get(k) ?? [];
           return (
-            <div key={k} onDoubleClick={() => canAdd && add(d)} className={cn("group/day relative min-h-[6rem] border-b border-r border-line p-1", d.getMonth() !== month && "bg-bg-sunk/40 text-fg-faint")}>
+            <div key={k} data-day={k} onDoubleClick={() => canAdd && add(d)} onDragOver={(e) => { if (dragId) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overDay !== k) setOverDay(k); } }} onDrop={(e) => { e.preventDefault(); const id = dragId ?? e.dataTransfer.getData("text/plain"); setDragId(null); setOverDay(null); if (id) reschedule(id, k); }} className={cn("group/day relative min-h-[6rem] border-b border-r border-line p-1", d.getMonth() !== month && "bg-bg-sunk/40 text-fg-faint", overDay === k && "bg-accent-soft ring-1 ring-inset ring-accent/50")}>
               <div className="flex items-center">
                 <span className={cn("grid size-5 place-items-center rounded-full text-[11px]", k === today && "bg-accent font-medium text-accent-fg")}>{d.getDate()}</span>
                 {canAdd && <button type="button" aria-label={`New row on ${d.toLocaleDateString("en-CA", { day: "numeric", month: "long" })}`} onClick={() => add(d)} className="ml-auto grid size-5 place-items-center rounded text-fg-faint opacity-0 hover:bg-bg-sunk hover:text-fg focus-visible:opacity-100 group-hover/day:opacity-100 [@media(hover:none)]:opacity-100"><Plus className="size-3" /></button>}
               </div>
-              <div className="mt-0.5 space-y-0.5">{evs.slice(0, 4).map((r) => <Chip key={r.id} row={r} />)}{evs.length > 4 && <div className="px-1 text-[10px] text-fg-faint">+{evs.length - 4} more</div>}</div>
+              <div className="mt-0.5 space-y-0.5">{evs.slice(0, 4).map((r) => <Chip key={r.id} row={r} drag={canDrag ? { start: () => setDragId(r.id), end: () => { setDragId(null); setOverDay(null); } } : undefined} />)}
+                {/* 3.0 (U6): the overflow of a day opens the full list of that day */}
+                {evs.length > 4 && (
+                  <ResponsivePanel open={more === k} onOpenChange={(o) => setMore(o ? k : null)} title={d.toLocaleDateString("en-CA", { weekday: "long", day: "numeric", month: "long" })} className="w-64 p-1.5"
+                    trigger={<button type="button" aria-label={`${evs.length - 4} more rows on ${d.toLocaleDateString("en-CA", { day: "numeric", month: "long" })}`} className="block w-full rounded px-1 text-left text-[10px] font-medium text-fg-muted hover:bg-bg-sunk hover:text-fg">+{evs.length - 4} more</button>}>
+                    <div className="mb-1 px-1 text-[12px] font-medium text-fg-muted max-md:hidden">{d.toLocaleDateString("en-CA", { weekday: "long", day: "numeric", month: "long" })} · {evs.length} rows</div>
+                    <div className="max-h-72 space-y-1 overflow-y-auto">{evs.map((r) => <Chip key={r.id} row={r} big onOpen={() => setMore(null)} />)}</div>
+                  </ResponsivePanel>
+                )}</div>
             </div>
           );
         })}
@@ -172,11 +204,11 @@ function Agenda({ cur, byDay, today, canAdd, onAdd }: { cur: Date; byDay: Map<st
   );
 }
 
-function Chip({ row, big }: { row: RowOut; big?: boolean }) {
+function Chip({ row, big, drag, onOpen }: { row: RowOut; big?: boolean; drag?: { start: () => void; end: () => void }; onOpen?: () => void }) {
   const ctx = useDb();
   const st = ctx.props.find((p) => p.type === "status" || p.type === "select");
   return (
-    <button type="button" onClick={() => ctx.open(row.id)} className={cn("flex w-full items-center gap-2 rounded border border-line bg-bg-elev text-left hover:bg-bg-sunk", big ? "min-h-12 rounded-xl px-3 py-2 text-[15px] shadow-card" : "h-5 gap-1 truncate px-1 text-[11px]")}>
+    <button type="button" data-chip={row.id} draggable={!!drag} onDragStart={drag ? (e) => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", row.id); drag.start(); } : undefined} onDragEnd={drag?.end} onClick={() => { onOpen?.(); ctx.open(row.id); }} className={cn("flex w-full items-center gap-2 rounded border border-line bg-bg-elev text-left hover:bg-bg-sunk", big ? "min-h-12 rounded-xl px-3 py-2 text-[15px] shadow-card" : "h-5 gap-1 truncate px-1 text-[11px]")}>
       <span className={cn("min-w-0 flex-1", big ? "[overflow-wrap:anywhere]" : "truncate")}>{row.icon ? `${row.icon} ` : ""}{row.title || "Untitled"}</span>
       {big && st && <span className="shrink-0"><CellDisplay p={st} value={row.values[st.id]} compact /></span>}
     </button>

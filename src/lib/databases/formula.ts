@@ -1,4 +1,5 @@
-/** Tiny safe formula language (no eval): arithmetic, comparisons, and/or/not, string concat with +, if(), prop("Name"), dates. Client-safe. */
+/** Tiny safe formula language (no eval): arithmetic, comparisons, and/or/not, string concat with +, if(), prop("Name"), dates. Client-safe.
+ * 3.0: dependency analysis (`formulaRefs`, `formulaCycle`), syntax check, and a guard on user regular expressions. */
 export type FVal = number | string | boolean | Date | null | FVal[];
 type Tok = { t: "num" | "str" | "id" | "op"; v: string };
 type Node = { k: "lit"; v: FVal } | { k: "id"; name: string } | { k: "un"; op: string; a: Node } | { k: "bin"; op: string; a: Node; b: Node } | { k: "call"; name: string; args: Node[] } | { k: "cond"; c: Node; a: Node; b: Node };
@@ -70,7 +71,7 @@ const FNS: Record<string, (args: FVal[], ctx: FormulaCtx) => FVal> = {
   length: (a) => Array.isArray(a[0]) ? a[0].length : str(a[0]).length, upper: (a) => str(a[0]).toUpperCase(), lower: (a) => str(a[0]).toLowerCase(), trim: (a) => str(a[0]).trim(),
   contains: (a) => Array.isArray(a[0]) ? a[0].some((x) => eqv(x, a[1])) : str(a[0]).includes(str(a[1])), replace: (a) => str(a[0]).replace(str(a[1]), str(a[2])), replaceAll: (a) => str(a[0]).split(str(a[1])).join(str(a[2])),
   slice: (a) => str(a[0]).slice(num(a[1]), a[2] == null ? undefined : num(a[2])), format: (a) => str(a[0]), toNumber: (a) => { const n = Number(str(a[0]).replace(/[^0-9.eE+-]/g, "")); return Number.isNaN(n) ? null : n; },
-  test: (a) => new RegExp(str(a[1])).test(str(a[0])),
+  test: (a) => safeRegex(str(a[1])).test(str(a[0]).slice(0, 20_000)),
   round: (a) => { const d = a[1] == null ? 0 : num(a[1]); const f = 10 ** d; return Math.round(num(a[0]) * f) / f; }, floor: (a) => Math.floor(num(a[0])), ceil: (a) => Math.ceil(num(a[0])), abs: (a) => Math.abs(num(a[0])), sqrt: (a) => Math.sqrt(num(a[0])), pow: (a) => num(a[0]) ** num(a[1]), mod: (a) => num(a[0]) % num(a[1]),
   min: (a) => Math.min(...a.flat().map(num)), max: (a) => Math.max(...a.flat().map(num)), sum: (a) => a.flat().reduce<number>((s, x) => s + num(x), 0), avg: (a) => { const xs = a.flat(); return xs.length ? xs.reduce<number>((s, x) => s + num(x), 0) / xs.length : null; },
   count: (a) => Array.isArray(a[0]) ? a[0].filter((x) => x != null && x !== "").length : a[0] == null || a[0] === "" ? 0 : 1,
@@ -103,6 +104,40 @@ export function evalNode(n: Node, ctx: FormulaCtx, depth = 0): FVal {
     }
   }
   throw new Error("Bad node");
+}
+/**
+ * 3.0 (audit D24): `test(s, regex)` runs for every row on every read. Patterns that can backtrack catastrophically — a quantified group
+ * that itself ends with a quantifier, e.g. `(a+)+` — and very long patterns are refused; the tested string is capped at 20 000 characters.
+ */
+const rx = new Map<string, RegExp>();
+export function safeRegex(src: string): RegExp {
+  const hit = rx.get(src); if (hit) return hit;
+  if (src.length > 300) throw new Error("Regular expression too long (300 characters at most)");
+  if (/([+*]|\{\d+,?\d*\})\s*\)\s*([+*]|\{\d+,?\d*\})/.test(src)) throw new Error("Regular expression refused: nested quantifiers can freeze the server");
+  let re: RegExp; try { re = new RegExp(src); } catch (e: any) { throw new Error(`Invalid regular expression: ${e?.message ?? e}`); }
+  if (rx.size > 200) rx.clear(); rx.set(src, re); return re;
+}
+/** Names of the properties an expression reads (`prop("Name")` with a literal name, and bare identifiers). Throws on a syntax error. */
+export function formulaRefs(expression: string): string[] {
+  const out = new Set<string>();
+  const walk = (n: Node) => { switch (n.k) { case "id": out.add(n.name); break; case "un": walk(n.a); break; case "bin": walk(n.a); walk(n.b); break; case "cond": walk(n.c); walk(n.a); walk(n.b); break; case "call": if (n.name === "prop" && n.args[0]?.k === "lit" && typeof n.args[0].v === "string") out.add(n.args[0].v); n.args.forEach(walk); break; } };
+  walk(parseFormula(expression)); return [...out];
+}
+/** Syntax error of an expression, or null. */
+export function formulaSyntaxError(expression: string): string | null { try { parseFormula(expression); return null; } catch (e: any) { return String(e?.message ?? e); } }
+/**
+ * Dependency cycle among formula properties: the path of names (`["A", "B", "A"]`) when the formula `name` (with `expression`, replacing
+ * the stored one) ends up reading itself, else null. `props` = every property of the database ({name, type, config.expression}).
+ */
+export function formulaCycle(props: { name: string; type: string; config: { expression?: unknown } }[], name: string, expression: string): string[] | null {
+  const exprOf = (n: string): string | null => { if (n === name) return expression; const p = props.find((x) => x.name === n); return p && p.type === "formula" ? String(p.config.expression ?? "") : null; };
+  const refs = (n: string): string[] => { const e = exprOf(n); if (!e) return []; try { return formulaRefs(e); } catch { return []; } };
+  const path: string[] = []; const done = new Set<string>();
+  const visit = (n: string): string[] | null => {
+    const at = path.indexOf(n); if (at >= 0) return [...path.slice(at), n]; if (done.has(n)) return null;
+    path.push(n); for (const r of refs(n)) { const c = visit(r); if (c) return c; } path.pop(); done.add(n); return null;
+  };
+  const c = visit(name); return c && c.includes(name) ? c : null;
 }
 const cache = new Map<string, Node | Error>();
 /** Evaluate an expression; returns a JSON-safe value or { error }. */
