@@ -51,7 +51,7 @@ export async function svgToPng(svg: string, scale = 2): Promise<{ blob: Blob; wi
   } catch { return null; }
 }
 
-export function MermaidView({ attrs, update, editable, selected, pageId }: LeafViewProps<MermaidAttrs>) {
+export function MermaidView({ attrs, update, editable, selected, pageId, editor }: LeafViewProps<MermaidAttrs>) {
   const [code, setCode] = React.useState(attrs.code); const [svg, setSvg] = React.useState<string | null>(null); const [error, setError] = React.useState<string | null>(null);
   const [showCode, setShowCode] = React.useState(editable && !attrs.code); const [busy, setBusy] = React.useState(false);
   const focused = React.useRef(false); const latest = React.useRef(attrs); latest.current = attrs; const host = React.useRef<HTMLDivElement>(null); const [seen, setSeen] = React.useState(false);
@@ -59,7 +59,9 @@ export function MermaidView({ attrs, update, editable, selected, pageId }: LeafV
   React.useEffect(() => { if (!focused.current) setCode(attrs.code); }, [attrs.code]);
   // lazy: nothing is loaded until the block is near the viewport
   React.useEffect(() => { const el = host.current; if (!el || seen) return; if (typeof IntersectionObserver === "undefined") { setSeen(true); return; } const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect(); } }, { rootMargin: "400px" }); io.observe(el); return () => io.disconnect(); }, [seen]);
-  const commit = useDebounced((c: string) => { if (c !== latest.current.code) update({ code: c }); }, RENDER_DELAY);
+  /** True once the user changed the source in this view: only then is the stored render refreshed on its own (see below). */
+  const touched = React.useRef(false);
+  const commit = useDebounced((c: string) => { if (c !== latest.current.code) { touched.current = true; update({ code: c }); } }, RENDER_DELAY);
   // on-screen render: after a pause, and again when the theme flips
   const [theme, setTheme] = React.useState(0);
   React.useEffect(() => { const mo = new MutationObserver(() => setTheme((t) => t + 1)); mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] }); return () => mo.disconnect(); }, []);
@@ -82,7 +84,21 @@ export function MermaidView({ attrs, update, editable, selected, pageId }: LeafV
     } catch { /* offline or refused: the hash stays stale, natives show the source with their notice; retried at the next change or with the refresh button */ }
     finally { if (mine === uploadSeq.current) setUploading(false); }
   }, [editable, pageId, update]);
-  React.useEffect(() => { if (!editable || !seen || !attrs.code.trim() || error) return; const t = setTimeout(storeRender, UPLOAD_DELAY); return () => clearTimeout(t); }, [attrs.code, editable, seen, error, storeRender]);
+  /*
+   * VIEWING a page never writes the stored render (3.0 integration: opening a note whose diagram had no render, or a stale one — written
+   * by a native client, imported — used to upload a PNG and save the page: a version, a new `rev`, a `page.edited` event, without any
+   * user edit). It is written (1) after the user changed the source here, (2) on "Save the render now", or (3) together with a real
+   * user edit elsewhere in the document (the page is being saved anyway). Until then the header says "Render not saved yet".
+   */
+  React.useEffect(() => { if (!editable || !seen || !attrs.code.trim() || error || !touched.current) return; const t = setTimeout(storeRender, UPLOAD_DELAY); return () => clearTimeout(t); }, [attrs.code, editable, seen, error, storeRender]);
+  const piggyback = React.useRef<ReturnType<typeof setTimeout> | null>(null); const ready = React.useRef(false); ready.current = editable && seen && !error;
+  React.useEffect(() => {
+    const onUpdate = ({ transaction }: { transaction: { docChanged: boolean; getMeta: (k: string) => unknown } }) => {
+      if (!transaction.docChanged || transaction.getMeta("addToHistory") === false || !ready.current) return;
+      if (piggyback.current) clearTimeout(piggyback.current); piggyback.current = setTimeout(() => { void storeRender(); }, UPLOAD_DELAY); // storeRender does nothing when the stored hash is current
+    };
+    editor.on("update", onUpdate); return () => { editor.off("update", onUpdate); if (piggyback.current) clearTimeout(piggyback.current); };
+  }, [editor, storeRender]);
   const [stale, setStale] = React.useState(false);
   React.useEffect(() => { let live = true; if (!attrs.code.trim()) { setStale(false); return; } sha256Hex(attrs.code).then((h) => { if (live) setStale(!attrs.preview || attrs.previewHash !== h); }); return () => { live = false; }; }, [attrs.code, attrs.preview, attrs.previewHash]);
 
@@ -93,7 +109,7 @@ export function MermaidView({ attrs, update, editable, selected, pageId }: LeafV
         {showCode && editable && <textarea className="nb-code" aria-label="Mermaid source" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={Math.min(16, Math.max(4, code.split("\n").length + 1))} value={code} placeholder={SAMPLE}
           onFocus={() => { focused.current = true; }} onBlur={() => { focused.current = false; commit.flush(); }} onChange={(e) => { setCode(e.target.value); commit(e.target.value); }}
           onKeyDown={(e) => { if (e.key === "Tab") { e.preventDefault(); const el = e.currentTarget; const { selectionStart: s, selectionEnd: en } = el; const v = el.value.slice(0, s) + "  " + el.value.slice(en); setCode(v); commit(v); requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = s + 2; }); } }} />}
-        {!code.trim() ? <NodeState icon={<Workflow />} title="Empty diagram" hint="Describe a flowchart, sequence, Gantt or class diagram in Mermaid syntax.">{editable && <NodeButton label="Insert an example" text tone="accent" onClick={() => { setCode(SAMPLE); update({ code: SAMPLE }); setShowCode(true); }} />}</NodeState>
+        {!code.trim() ? <NodeState icon={<Workflow />} title="Empty diagram" hint="Describe a flowchart, sequence, Gantt or class diagram in Mermaid syntax.">{editable && <NodeButton label="Insert an example" text tone="accent" onClick={() => { touched.current = true; setCode(SAMPLE); update({ code: SAMPLE }); setShowCode(true); }} />}</NodeState>
           : error ? <div className="mmd-error" role="status"><TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden /><div className="min-w-0"><div className="font-medium">This diagram has a syntax error</div><pre className="mmd-error-detail">{error}</pre>{svg && <div className="nb-meta mt-1">Showing the last valid render below.</div>}</div></div> : null}
         {svg && code.trim() ? <div className="mmd-render nb-scroll" data-testid="mermaid-render" role="img" aria-label="Diagram" dangerouslySetInnerHTML={{ __html: svg }} /> : code.trim() && !error ? <div className="mmd-render"><div className="skeleton h-32 w-full" /></div> : null}
       </div>

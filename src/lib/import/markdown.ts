@@ -47,11 +47,15 @@ export function parseFrontMatter(src: string): FrontMatter {
   }
   return { data, body: src.slice(m[0].length) };
 }
-/** Notion-style header: `# Title` then `Key: value` lines until the first blank line. */
-export function parseNotionHeader(body: string): { title: string | null; props: Record<string, string>; body: string } {
+/**
+ * Notion-style header: `# Title` then `Key: value` lines until the first blank line. With `withProps = false` only the title heading is
+ * read: a file that carries YAML front matter (SP Note's own export, Obsidian) keeps its properties there, and a first paragraph such as
+ * `Note: to be checked` is text — it used to be swallowed as a property when an exported note was imported again (3.0 integration).
+ */
+export function parseNotionHeader(body: string, withProps = true): { title: string | null; props: Record<string, string>; body: string } {
   let rest = body.replace(/^\s*\n/, ""); let title: string | null = null;
   const h = rest.match(/^#\s+(.+?)\s*\r?\n/); if (h) { title = h[1].trim(); rest = rest.slice(h[0].length); }
-  const props: Record<string, string> = {};
+  const props: Record<string, string> = {}; if (!withProps) return { title, props, body: rest.replace(/^\s*\n/, "") };
   const lines = rest.split(/\r?\n/); let j = 0;
   while (j < lines.length && /^[A-Za-z][A-Za-z0-9 _()/#&-]{0,60}:\s/.test(lines[j]) && !/^https?:/i.test(lines[j])) { const mm = lines[j].match(/^([^:]+):\s+(.*)$/); if (!mm) break; props[mm[1].trim()] = mm[2].trim(); j++; }
   if (j > 0 && (j >= lines.length || lines[j].trim() === "")) rest = lines.slice(j).join("\n"); else Object.keys(props).forEach((k) => delete props[k]);
@@ -69,6 +73,13 @@ const LINK_RE = new RegExp(String.raw`(?<!!)\[([^\]\n]*)\]\(` + DEST + String.ra
 const SPACED_FILE = /^[^\s"<>][^"<>\n]*\s[^"<>\n]*\.[A-Za-z0-9]{1,8}$/;
 const wrapSpacedLinks = (seg: string) => seg.replace(LINK_RE, (m0: string, text: string, wrapped: string | undefined, bare: string | undefined) => (!wrapped && bare && SPACED_FILE.test(bare) && !/^[a-z][a-z0-9+.-]*:/i.test(bare) ? `[${text}](<${bare}>)` : m0));
 const WIKI_RE = /\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g;
+/**
+ * Forms of the 3.0 nodes that the Markdown parser reads itself (docs/next/EDITOR-NODES.md): `[[<page uuid>#<block>]]` is a block
+ * reference, not a wiki link by title, and `![Dessin](/api/files/<uuid>)` is a drawing, not an image — the importer leaves them alone
+ * (3.0 integration: an exported note re-imported lost its block references and drawings).
+ */
+const UUID_ONLY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isDrawingForm = (alt: string, dest: string) => alt === "Dessin" && dest.startsWith("/api/files/") && UUID_ONLY.test(dest.slice("/api/files/".length));
 const TOKEN_RE = /⦃(img|ref):(\d+)⦄/g;
 const tok = (k: string, n: number) => `⦃${k}:${n}⦄`;
 
@@ -77,7 +88,7 @@ export async function mdToDoc(ctx: ImportCtx, md: string, opts: MdOptions = {}):
   const imgs: { alt: string; src: string }[] = []; const refs: { target: string; alias: string | null }[] = [];
   // only transform outside fenced code blocks
   const parts = md.replace(/\r\n/g, "\n").split(/(^```[\s\S]*?^```$)/m);
-  const pre = parts.map((seg, i) => (i % 2 ? seg : wrapSpacedLinks(seg.replace(IMG_RE, (_m, alt, wrapped, bare) => { imgs.push({ alt, src: (wrapped ?? bare ?? "").trim() }); return tok("img", imgs.length - 1); })).replace(WIKI_RE, (_m, t, a) => { refs.push({ target: t.trim(), alias: a?.trim() ?? null }); return tok("ref", refs.length - 1); }))).join("");
+  const pre = parts.map((seg, i) => (i % 2 ? seg : wrapSpacedLinks(seg.replace(IMG_RE, (_m, alt, wrapped, bare) => { if (isDrawingForm(alt, (wrapped ?? bare ?? "").trim())) return _m; imgs.push({ alt, src: (wrapped ?? bare ?? "").trim() }); return tok("img", imgs.length - 1); })).replace(WIKI_RE, (_m, t, a) => { if (UUID_ONLY.test(t.trim())) return _m; refs.push({ target: t.trim(), alias: a?.trim() ?? null }); return tok("ref", refs.length - 1); }))).join("");
   const nodes = markdownToDoc(pre);
   const files = new Map<number, { src: string; alt: string } | null>(); const links = new Map<string, string>();
   const resolveSrc = async (src: string): Promise<string | null> => {
@@ -144,13 +155,13 @@ export function relativeRefs(md: string): { images: string[]; links: string[] } 
 /** Plain text the imported page would hold — computed without touching the database or storing files (duplicate detection, preview). */
 export function previewText(md: string): string {
   const parts = md.replace(/\r\n/g, "\n").split(/(^```[\s\S]*?^```$)/m);
-  const pre = parts.map((seg, i) => (i % 2 ? seg : seg.replace(IMG_RE, " ").replace(WIKI_RE, (_m, t: string, a?: string) => a?.trim() ?? t.trim()))).join("");
+  const pre = parts.map((seg, i) => (i % 2 ? seg : seg.replace(IMG_RE, " ").replace(WIKI_RE, (_m: string, t: string, a?: string) => (UUID_ONLY.test(t.trim()) ? _m : a?.trim() ?? t.trim())))).join("");
   return docText({ type: "doc", content: markdownToDoc(pre) });
 }
 /** Title, properties and body of a Markdown file, exactly as importMarkdown reads them. */
 export function readMarkdown(src: string, filename?: string) {
   const { data, body } = parseFrontMatter(src);
-  const nh = parseNotionHeader(body);
+  const nh = parseNotionHeader(body, Object.keys(data).length === 0);
   const title = String(data.title ?? nh.title ?? (filename ?? "Untitled").replace(/^.*[\\/]/, "").replace(/\.(md|markdown|txt)$/i, "")).trim() || "Untitled";
   return { data, nh, title, body: nh.body };
 }

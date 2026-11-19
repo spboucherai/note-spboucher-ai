@@ -12,6 +12,8 @@ import { execFileSync } from "node:child_process";
 import { apiCall, docOf, para, PDF, sql, ORIGIN, expectNoHorizontalOverflow } from "./helpers";
 
 const made: string[] = [];
+/** A task id of this run: a fixed id left behind by an interrupted run made the next run fail (the id was taken). */
+const TASK_ID = crypto.randomUUID();
 const newPage = async (page: Page, title: string, content?: unknown) => { const r = await apiCall(page, "POST", "/api/pages", { title: `E2E-next ${title} ${Date.now().toString(36)}`, ...(content ? { content } : {}) }); expect(r.status).toBe(201); made.push(r.body.id); return r.body as { id: string; version: number; title: string }; };
 const server = async (page: Page, id: string) => (await apiCall(page, "GET", `/api/pages/${id}`)).body;
 const saved = (page: Page) => expect(page.getByRole("status").filter({ hasText: /^Saved/ }).first()).toBeVisible({ timeout: 15_000 });
@@ -22,7 +24,7 @@ const waitFor = async <T>(fn: () => Promise<T | null | undefined | false>, ms = 
 /** Put the caret in a fresh empty paragraph at the very end of the page. */
 const newLine = async (page: Page) => { await editor(page).locator("> p").last().click(); await page.keyboard.press("ControlOrMeta+End"); await page.keyboard.press(process.platform === "darwin" ? "Meta+ArrowDown" : "Control+End"); await page.keyboard.press("Enter"); };
 const slash = async (page: Page, query: string) => { await newLine(page); await page.keyboard.type(`/${query}`); await expect(page.locator("[id^='sg-']").first()).toBeVisible(); await page.keyboard.press("Enter"); };
-test.afterAll(async () => { if (made.length) await sql`delete from pages where id = any(${made}::uuid[]) or title like 'E2E-next %'`; });
+test.afterAll(async () => { await sql`delete from tasks where id = ${TASK_ID} or page_id = any(${made}::uuid[]) or page_id in (select id from pages where title like 'E2E-next %')`; if (made.length) await sql`delete from pages where id = any(${made}::uuid[]) or title like 'E2E-next %'`; });
 
 test("unknown content: a node type, a mark and an attr this client does not know survive an edit byte-identical", async ({ page }) => {
   await page.goto("/");
@@ -88,10 +90,14 @@ test("every new block: insert from the slash menu, save, reload — still there 
   await expect(page.locator(".nb[data-node='queryView']")).toContainText(/not available on this server yet|Nothing matches|Open|Updating|Live · updated/); // 3.0 backend: real rows + the live indicator (slice next-p-ra)
 });
 
-test("mermaid renders, and the stored render follows the code (PNG preview + sha256 previewHash, never while typing)", async ({ page }) => {
+test("mermaid renders; viewing stores nothing; the stored render follows the code once asked or edited (PNG preview + sha256 previewHash, never while typing)", async ({ page }) => {
   await page.goto("/"); const code = "flowchart LR\n  Idea --> Draft\n  Draft --> Published";
   const p = await newPage(page, "mermaid", docOf({ type: "mermaid", attrs: { code, preview: null, previewHash: null } }, para("tail"))); await open(page, p.id);
   await expect(page.getByTestId("mermaid-render").locator("svg")).toBeVisible({ timeout: 20_000 }); await expect(page.getByTestId("mermaid-render")).toContainText("Published");
+  // merely viewing the page uploads nothing and saves nothing (no version, no `page.edited` event): the header says the render is not saved yet
+  const v0 = (await server(page, p.id)).version; await page.waitForTimeout(5000); const viewed = await server(page, p.id); expect(viewed.version).toBe(v0); expect(find(viewed.content, "mermaid")[0].attrs.preview).toBeNull();
+  await expect(page.locator(".nb[data-node='mermaid']")).toContainText("Render not saved yet");
+  await page.locator(".nb[data-node='mermaid']").hover(); await page.getByRole("button", { name: "Save the render now" }).click();
   const first = await waitFor(async () => { const m = find((await server(page, p.id)).content, "mermaid")[0]; return m.attrs.preview ? m : null; }, 25_000);
   expect(first.attrs.previewHash).toBe(crypto.createHash("sha256").update(code, "utf8").digest("hex"));
   const img = await page.request.get(`/api/files/${first.attrs.preview}`); expect(img.status()).toBe(200); expect(img.headers()["content-type"]).toBe("image/png"); expect((await img.body()).subarray(1, 4).toString()).toBe("PNG");
@@ -241,7 +247,7 @@ test("block reference: pick a page then a block → live read-only embed, jump t
 
 test("rich tasks, callout kinds and AI sources: chips edit due / priority; the morphing bar follows the block type", async ({ page }) => {
   await page.goto("/");
-  const p = await newPage(page, "tasks", docOf({ type: "taskList", content: [{ type: "taskItem", attrs: { checked: false, due: null, priority: null, taskId: "11111111-2222-4333-8444-555555555555" }, content: [para("ship the editor")] }] }, { type: "callout", attrs: { kind: "note", icon: "💡" }, content: [para("a callout")] }, { type: "codeBlock", attrs: { language: "plaintext" }, content: [{ type: "text", text: "let x = 1" }] }, { type: "aiBlock", attrs: { model: "m", action: "synthesis", sources: [{ pageId: "11111111-2222-4333-8444-555555555555", blockId: "b1", title: "Field notes" }] }, content: [para("generated")] }, para("tail")));
+  const p = await newPage(page, "tasks", docOf({ type: "taskList", content: [{ type: "taskItem", attrs: { checked: false, due: null, priority: null, taskId: TASK_ID }, content: [para("ship the editor")] }] }, { type: "callout", attrs: { kind: "note", icon: "💡" }, content: [para("a callout")] }, { type: "codeBlock", attrs: { language: "plaintext" }, content: [{ type: "text", text: "let x = 1" }] }, { type: "aiBlock", attrs: { model: "m", action: "synthesis", sources: [{ pageId: "11111111-2222-4333-8444-555555555555", blockId: "b1", title: "Field notes" }] }, content: [para("generated")] }, para("tail")));
   await open(page, p.id);
   await expect(page.locator(".ai-sources .cite-chip")).toHaveAttribute("href", "/p/11111111-2222-4333-8444-555555555555#block-b1"); await expect(page.locator(".ai-sources")).toContainText("Field notes");
   await expect(page.locator(".task-chip.is-linked")).toHaveCount(1);
@@ -256,7 +262,7 @@ test("rich tasks, callout kinds and AI sources: chips edit due / priority; the m
   await page.getByText("tail", { exact: true }).click(); await expect(page.locator(".context-bar")).toHaveCount(0);
   await saved(page);
   const doc = (await waitFor(async () => { const s = await server(page, p.id); return find(s.content, "callout")[0].attrs.kind === "decision" && find(s.content, "codeBlock")[0].attrs.language === "typescript" ? s : null; })).content;
-  expect(find(doc, "taskItem")[0].attrs).toMatchObject({ checked: false, due: "2030-05-17", priority: "low", taskId: "11111111-2222-4333-8444-555555555555" }); expect(typeof find(doc, "taskItem")[0].attrs.id).toBe("string");
+  expect(find(doc, "taskItem")[0].attrs).toMatchObject({ checked: false, due: "2030-05-17", priority: "low", taskId: TASK_ID }); expect(typeof find(doc, "taskItem")[0].attrs.id).toBe("string");
   expect(find(doc, "callout")[0].attrs.icon).toBe("⚖️"); expect(find(doc, "aiBlock")[0].attrs.sources[0].title).toBe("Field notes"); expect(find(doc, "aiBlock")[0].attrs.action).toBe("synthesis");
 });
 
@@ -271,7 +277,8 @@ test("Markdown paste becomes blocks (including the new forms); plain prose stays
 
 test("Living Pages reveal and its reduced-motion fallback; motion classes degrade to a ≤ 120 ms cross-fade", async ({ page, browser }) => {
   await page.goto("/"); const many = docOf(...Array.from({ length: 40 }, (_, i) => para(`paragraph ${i + 1}`))); const p = await newPage(page, "motion", many);
-  const probe = async (pg: Page) => { await pg.goto(`/p/${p.id}`); await pg.locator("#main-scroll .note-editor .ProseMirror > p").first().waitFor(); return pg.evaluate(() => { const blocks = [...document.querySelectorAll("#main-scroll .note-editor .ProseMirror > *")]; const anims = blocks.map((b) => b.getAnimations().map((a) => ({ kf: (a.effect as KeyframeEffect).getKeyframes().map((k) => String(k.transform ?? "")), t: a.effect!.getTiming() }))); const root = document.querySelector("#main-scroll .note-editor .ProseMirror")!.getAnimations().map((a) => ({ d: a.effect!.getTiming().duration, kf: (a.effect as KeyframeEffect).getKeyframes().map((k) => String(k.transform ?? "none")) })); return { animated: anims.filter((a) => a.length).length, moving: anims.filter((a) => a.some((x) => x.kf.some((t) => t.includes("translateY(6px)")))).length, delays: anims.flatMap((a) => a.map((x) => Number(x.t.delay))).slice(0, 4), durations: anims.flatMap((a) => a.map((x) => Number(x.t.duration))).slice(0, 2), root }; }); };
+  // animations run 25× slower while probed (DevTools playback rate): under load the 240 ms reveal used to be over before the probe ran. Reported timings are unchanged.
+  const probe = async (pg: Page) => { const cdp = await pg.context().newCDPSession(pg); await cdp.send("Animation.enable"); await cdp.send("Animation.setPlaybackRate", { playbackRate: 0.04 }); await pg.goto(`/p/${p.id}`); await pg.locator("#main-scroll .note-editor .ProseMirror > p").first().waitFor(); return pg.evaluate(() => { const blocks = [...document.querySelectorAll("#main-scroll .note-editor .ProseMirror > *")]; const anims = blocks.map((b) => b.getAnimations().map((a) => ({ kf: (a.effect as KeyframeEffect).getKeyframes().map((k) => String(k.transform ?? "")), t: a.effect!.getTiming() }))); const root = document.querySelector("#main-scroll .note-editor .ProseMirror")!.getAnimations().map((a) => ({ d: a.effect!.getTiming().duration, kf: (a.effect as KeyframeEffect).getKeyframes().map((k) => String(k.transform ?? "none")) })); return { animated: anims.filter((a) => a.length).length, moving: anims.filter((a) => a.some((x) => x.kf.some((t) => t.includes("translateY(6px)")))).length, delays: anims.flatMap((a) => a.map((x) => Number(x.t.delay))).slice(0, 4), durations: anims.flatMap((a) => a.map((x) => Number(x.t.duration))).slice(0, 2), root }; }); };
   const normal = await probe(page);
   expect(normal.moving, "the first blocks rise 6 px").toBeGreaterThan(0); expect(normal.animated).toBeLessThanOrEqual(24); expect(normal.delays.slice(0, 3)).toEqual([0, 18, 36]); expect(normal.durations[0]).toBe(240);
   const ctx = await browser.newContext({ baseURL: ORIGIN, storageState: "test-results/.auth/state.json", viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" }); const rp = await ctx.newPage();

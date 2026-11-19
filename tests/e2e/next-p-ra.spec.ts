@@ -68,7 +68,7 @@ test("queryView: real rows from POST /api/query, live indicator, refresh on focu
   expect(await again.locator(".live-dot").evaluate((el) => getComputedStyle(el, "::after").animationName)).toBe("none");
 });
 
-test("chart with a database source: drawn from live rows, snapshot stored in the node, refreshed, and the snapshot is shown when offline", async ({ page }) => {
+test("chart with a database source: drawn from live rows, viewing writes nothing, snapshot stored with a user edit and on Refresh, and the snapshot is shown when offline", async ({ page }) => {
   test.setTimeout(90_000); await page.goto("/");
   const db = await newPage(page, "chart db", undefined, { type: "database", section: "databases" });
   const prop = await apiCall(page, "POST", `/api/databases/${db.id}/properties`, { name: "Score", type: "number" }); expect(prop.status).toBe(201);
@@ -78,11 +78,16 @@ test("chart with a database source: drawn from live rows, snapshot stored in the
   const block = page.locator(".nb[data-node='chart']");
   await expect(block.getByTestId("chart-svg").locator("rect.ch-mark")).toHaveCount(2, { timeout: 15_000 });
   await expect(block.getByTestId("chart-source")).toContainText("Database"); await expect(block.getByTestId("live-indicator")).toHaveAttribute("data-state", "live");
-  // the snapshot is written into the node (what natives and offline readers draw), source untouched
+  // merely VIEWING the page writes nothing: no save, no new version, no `page.edited` event (the live table is drawn, the stored snapshot waits)
+  const v0 = (await server(page, p.id)).version; await page.waitForTimeout(4000);
+  const viewed = await server(page, p.id); expect(viewed.version).toBe(v0); expect(find(viewed.content, "chart")[0].attrs.rows).toEqual([]);
+  expect((await apiCall(page, "GET", `/api/events?pageId=${p.id}&kinds=page.edited`)).body.events).toHaveLength(0);
+  // a real user edit carries the snapshot into the node (what natives and offline readers draw), source untouched;
+  // undo does not fight it: the snapshot write is outside the history
+  await editor(page).locator("> p").first().click(); await page.keyboard.press("End"); await page.keyboard.type(" x");
   const node = await waitFor(async () => { const n = find((await server(page, p.id)).content, "chart")[0]; return n.attrs.rows.length === 2 ? n : null; });
   expect(node.attrs.columns).toEqual(["Name", "Score"]); expect(node.attrs.rows).toEqual([["Alpha", 3], ["Beta", 7]]); expect(node.attrs.source).toEqual({ databaseId: db.id }); expect(node.attrs.y).toEqual(["Score"]);
-  // undo does not fight the refresh: the snapshot write is outside the history
-  await editor(page).locator("> p").first().click(); await page.keyboard.press("End"); await page.keyboard.type(" x"); await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("ControlOrMeta+z");
   await expect(block.getByTestId("chart-svg").locator("rect.ch-mark")).toHaveCount(2);
   // a row added in the database shows up on refresh, and the stored snapshot follows
   expect((await apiCall(page, "POST", `/api/databases/${db.id}/rows`, { title: "Gamma", values: { [prop.body.id]: 5 } })).status).toBeLessThan(300);

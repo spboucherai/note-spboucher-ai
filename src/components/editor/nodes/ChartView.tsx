@@ -53,13 +53,27 @@ export function ChartView({ attrs, update, editable, selected, editor, getPos }:
   /* ---- live data of a chart fed by a database ---- */
   const liveBody = React.useMemo(() => (attrs.source?.databaseId ? chartQueryBody(attrs.source) : null), [attrs.source?.databaseId, attrs.source?.viewId]); // eslint-disable-line react-hooks/exhaustive-deps
   const live = useLiveQuery(liveBody, "database"); const fresh = snapshot && live.result && !live.stale ? live.result.table : null;
-  // keep the stored snapshot equal to the live data — never in the undo history (an undo must not fight the refresh), never when read-only
-  React.useEffect(() => {
-    if (!fresh || !editor.isEditable || editor.isDestroyed || pending.current) return; if (sameTable(fresh, { columns: attrs.columns, rows: attrs.rows })) return;
+  /*
+   * The stored snapshot follows the live data, but VIEWING a page never writes it (3.0 integration: opening a note with a live chart
+   * used to create a save — a version, a new `rev`, a `page.edited` event — without any user edit). It is written only
+   *  (1) on an explicit click on "Refresh", or (2) together with a real user edit of the document (the page is being saved anyway).
+   * Never in the undo history (an undo must not fight the refresh), never when read-only. Meanwhile the live table is what is drawn.
+   */
+  const freshRef = React.useRef(fresh); freshRef.current = fresh; const explicitRefresh = React.useRef(false);
+  const storeSnapshot = React.useCallback(() => {
+    const table = freshRef.current; if (!table || !editor.isEditable || editor.isDestroyed || pending.current) return;
     const pos = getPos(); if (typeof pos !== "number") return; const node = editor.state.doc.nodeAt(pos); if (!node || node.type.name !== "chart") return;
-    const keep = (attrs.x == null || fresh.columns.includes(attrs.x)) && attrs.y.length > 0 && attrs.y.every((c) => fresh.columns.includes(c));
-    editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, columns: fresh.columns, rows: fresh.rows, ...(keep ? {} : defaultChartConfig(fresh.columns, fresh.rows)) }).setMeta("addToHistory", false));
-  }, [fresh]); // eslint-disable-line react-hooks/exhaustive-deps
+    const a = node.attrs as ChartAttrs; if (a.source == null || sameTable(table, { columns: a.columns, rows: a.rows })) return;
+    const keep = (a.x == null || table.columns.includes(a.x)) && a.y.length > 0 && a.y.every((c) => table.columns.includes(c));
+    editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, columns: table.columns, rows: table.rows, ...(keep ? {} : defaultChartConfig(table.columns, table.rows)) }).setMeta("addToHistory", false).setMeta("chartSnapshot", true));
+  }, [editor, getPos]);
+  // (1) explicit refresh: store what came back
+  React.useEffect(() => { if (explicitRefresh.current && fresh && !live.fetching) { explicitRefresh.current = false; storeSnapshot(); } }, [fresh, live.fetching, storeSnapshot]);
+  // (2) a user edit elsewhere in the document carries the snapshot along
+  React.useEffect(() => {
+    const onUpdate = ({ transaction }: { transaction: { docChanged: boolean; getMeta: (k: string) => unknown } }) => { if (!transaction.docChanged || transaction.getMeta("chartSnapshot") || transaction.getMeta("addToHistory") === false) return; storeSnapshot(); };
+    editor.on("update", onUpdate); return () => { editor.off("update", onUpdate); };
+  }, [editor, storeSnapshot]);
   // what is drawn: the live table when there is one (a read-only reader cannot store it), else the stored snapshot
   const drawn: Data = React.useMemo(() => { if (!fresh || sameTable(fresh, data)) return data; const ok = (data.x == null || fresh.columns.includes(data.x)) && data.y.length > 0 && data.y.every((c) => fresh.columns.includes(c)); return { ...data, columns: fresh.columns, rows: fresh.rows, ...(ok ? {} : defaultChartConfig(fresh.columns, fresh.rows)) }; }, [fresh, data]);
   const hasData = drawn.columns.length > 0;
@@ -109,7 +123,7 @@ export function ChartView({ attrs, update, editable, selected, editor, getPos }:
       )}
       {snapshot && <div className="ch-note" data-testid="chart-source"><Database aria-hidden /> <span className="min-w-0 truncate">{live.result?.name ? `Database · ${live.result.name}` : "Database"}</span>
         {live.unavailable ? <span>· live data is not available on this server yet — stored snapshot</span> : live.result ? <LiveBadge live={live} /> : live.loading ? <span>· reading…</span> : <span className="live-badge" data-state={live.reason === "offline" ? "offline" : "stale"} data-testid="live-indicator"><span className="live-dot" aria-hidden /><span className="live-text">{live.reason === "offline" ? "Offline · stored snapshot" : `Not refreshed · stored snapshot${live.error ? ` (${live.error.message})` : ""}`}</span></span>}
-        <span className="ml-auto inline-flex gap-1"><NodeButton label="Refresh" onClick={live.refresh} disabled={live.fetching}><RefreshCw /></NodeButton>{canEdit && <NodeButton label="Unlink from the database (keeps the data)" onClick={() => update({ source: null })}><Unlink /></NodeButton>}</span></div>}
+        <span className="ml-auto inline-flex gap-1"><NodeButton label="Refresh" onClick={() => { explicitRefresh.current = true; live.refresh(); }} disabled={live.fetching}><RefreshCw /></NodeButton>{canEdit && <NodeButton label="Unlink from the database (keeps the data)" onClick={() => update({ source: null })}><Unlink /></NodeButton>}</span></div>}
       {hasData ? <ChartFigure kind={kind} data={drawn} /> : (
         <NodeState icon={<ChartColumn />} title="Empty chart" hint={canEdit && !snapshot ? "Add a small table to plot: type it, or paste it from a spreadsheet." : "This chart has no data."}>
           {canEdit && !snapshot && <><NodeButton label="Start with sample data" text onClick={() => { apply(SAMPLE); setEditing(true); }}><Table2 /></NodeButton><NodeButton label="Paste a table" text onClick={() => setPasting(true)}><ClipboardPaste /></NodeButton><NodeButton label="Plot a database" text active={linking} onClick={() => setLinking((v) => !v)}><Database /></NodeButton></>}

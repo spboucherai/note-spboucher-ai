@@ -50,5 +50,7 @@ export default defineConfig({
     { name: "next-k-phone-375", testMatch: /next-k-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "next-k-phone-430", testMatch: /next-k-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
     // NEXT-K ▲
+    // integration hardening: one cross-feature scenario on the merged build (service worker for the offline leg)
+    { name: "next-integration", testMatch: /next-integration\.spec\.ts/, use: { viewport: { width: 1280, height: 800 }, serviceWorkers: "allow", permissions: ["clipboard-read", "clipboard-write"] }, dependencies: ["auth"] },
   ],
 });
