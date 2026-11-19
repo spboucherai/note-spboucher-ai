@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, RefreshCw, Copy as CopyIcon, SlidersHorizontal, X, FileText, Database, Paperclip, BookMarked, TriangleAlert, CircleCheck, Sparkles, Archive, CloudOff } from "lucide-react";
+import { Search, RefreshCw, Copy as CopyIcon, SlidersHorizontal, X, FileText, Database, Paperclip, BookMarked, TriangleAlert, CircleCheck, Sparkles, Archive, CloudOff, AudioLines } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useOnline } from "@/lib/client/hooks";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ function Snippet({ hit, terms }: { hit: Hit; terms: string[] }) {
   const re = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
   return <>{text.split(re).map((part, i) => (i % 2 ? <mark key={i} className="rounded-sm bg-warning/35 px-0.5 text-fg">{part}</mark> : part))}</>;
 }
+/** The indexed text of a voice note starts with "Audio" or "Audio: <title>" on its own line, followed by its transcript (src/lib/editor/next-nodes.ts). */
+const inVoiceNote = (h: Hit) => h.sourceType === "page" && /(^|\n)Audio(: [^\n]*)?(\n|$)/.test(h.content);
 const hrefOf = (h: Hit, hl = "") => h.kind === "reference" ? (h.pageId ? `/p/${h.pageId}` : "/research") : h.pageId ? `/p/${h.pageId}${h.blockId ? `${hl ? `?hl=${encodeURIComponent(hl)}` : ""}#block-${h.blockId}` : ""}` : h.attachmentId ? `/api/files/${h.attachmentId}` : "#";
 
 /**
@@ -96,7 +98,7 @@ export function SearchPage({ initialQuery }: { initialQuery: string }) {
               <div className="flex items-start gap-2.5"><span className="mt-px w-5 shrink-0 text-center text-[17px] leading-none">{h.icon ?? (h.kind === "file" ? "📎" : h.kind === "entry" ? "🗂" : "📄")}</span>
                 <div className="min-w-0 flex-1"><div className="break-words text-[15px] font-medium leading-snug [overflow-wrap:anywhere]">{h.title || "Untitled"}</div>{h.heading && <div className="truncate text-[12.5px] text-fg-faint">› {h.heading}</div>}</div></div>
               <p className="mt-1.5 line-clamp-3 break-words text-[13.5px] leading-5 text-fg-muted [overflow-wrap:anywhere]"><Snippet hit={h} terms={terms} /></p>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px] text-fg-faint"><Badge>{h.kind === "entry" ? "Entry" : h.kind === "file" ? "File" : h.kind === "reference" ? "Reference" : "Page"}</Badge>{h.section && h.kind !== "file" && <span className="capitalize">{h.section}</span>}{h.updatedAt && <span>· {timeAgo(h.updatedAt)}</span>}{h.archived && <Badge><Archive className="mr-1 size-3" />archived</Badge>}{h.semantic > 0 && h.keyword === 0 && <Badge tone="ai"><Sparkles className="mr-1 size-3" />by meaning</Badge>}{h.more ? <span>· +{h.more} more passage{h.more > 1 ? "s" : ""}</span> : null}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px] text-fg-faint"><Badge>{h.kind === "entry" ? "Entry" : h.kind === "file" ? "File" : h.kind === "reference" ? "Reference" : "Page"}</Badge>{h.section && h.kind !== "file" && <span className="capitalize">{h.section}</span>}{h.updatedAt && <span>· {timeAgo(h.updatedAt)}</span>}{h.archived && <Badge><Archive className="mr-1 size-3" />archived</Badge>}{inVoiceNote(h) && <Badge><AudioLines className="mr-1 size-3" />voice note transcript</Badge>}{h.semantic > 0 && h.keyword === 0 && <Badge tone="ai"><Sparkles className="mr-1 size-3" />by meaning</Badge>}{h.more ? <span>· +{h.more} more passage{h.more > 1 ? "s" : ""}</span> : null}</div>
             </Link></li>); })}</ul>}
       </div>}
       {tab === "index" && <div role="tabpanel" className="mt-3 space-y-4">

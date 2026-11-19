@@ -7,16 +7,22 @@
  *   waveform decoded lazily and only for small files, the transcript as seek buttons, the transcription request (feature-detected:
  *   an older server simply shows "not available") and the AI summary, always labelled as AI and never produced or changed here.
  *   Nothing touches the microphone, an AudioContext or the network before the user asks.
+ *   Voice flows (SPEC §4.13): recording with pause/resume; "Transcribe" (optionally with an AI summary) queues the server job, the
+ *   block then polls `GET /api/audio/<id>` while it is pending and writes the result into the node itself (the server never edits
+ *   the page); failures say why and offer a retry; the 25 MB limit and a missing configuration are explained; the summary offers
+ *   "Insert summary" / "Insert as tasks" (AI blocks with their source); search words (`?hl=`) are marked in the transcript; once
+ *   transcribed, the original audio can be kept or deleted (the transcript stays).
  * author: Simon-Pierre Boucher — contact@spboucher.ai
  */
 import * as React from "react";
-import { AudioLines, Captions, FileAudio, Mic, Pause, Play, RotateCw, Sparkles, Square, Trash2, Upload, X } from "lucide-react";
+import { AudioLines, Captions, FileAudio, ListTodo, ListPlus, Mic, Pause, Play, RotateCw, Sparkles, Square, Trash2, Upload, X } from "lucide-react";
 import type { AudioAttrs, AudioSummary } from "@/lib/editor/next-node-defs";
 import { activeLineIndex, computePeaks, extensionForMime, formatTime, pickRecordingMime, transcriptLines, transcriptStamp } from "@/lib/editor/audio";
 import { fileUrl, uploadFile } from "@/lib/client/upload";
 import { api, ApiError } from "@/lib/client/api";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { clockSeconds, matchingLines, patchFromServer, pauseClock, resumeClock, searchTerms, startClock, summaryBlock, tasksBlock, transcribeProblem, type RecClock, type TranscriptView, type VoiceSource } from "@/lib/editor/voice";
 import { NodeButton, NodeFrame, NodeState, useDebounced, type LeafViewProps } from "./frame";
 
 /** The waveform needs the whole file decoded in memory: only for attachments up to 25 MB, and (when the length is known) 45 minutes. */
@@ -42,19 +48,21 @@ export function AudioView(props: LeafViewProps<AudioAttrs>) {
   return (
     <NodeFrame kind="audio" label="Voice note" icon={<Mic />} title={attrs.attachmentId && editable ? undefined : title} selected={selected}>
       {attrs.attachmentId ? <Player key={attrs.attachmentId} {...props} attachmentId={attrs.attachmentId} />
+        : (Array.isArray(attrs.transcript) && attrs.transcript.length > 0) || attrs.summary ? <Player key="transcript-only" {...props} attachmentId={null} /> // the audio was deleted, the transcript kept
         : editable ? <Recorder {...props} />
         : <NodeState icon={<Mic />} title="No recording yet" />}
     </NodeFrame>
   );
 }
 
-interface Session { stream: MediaStream; recorder: MediaRecorder; chunks: Blob[]; startedAt: number; startedIso: string; mime: string; discard: boolean; context: AudioContext | null; raf: number; timer: ReturnType<typeof setInterval> | null }
+interface Session { stream: MediaStream; recorder: MediaRecorder; chunks: Blob[]; clock: RecClock; startedIso: string; mime: string; discard: boolean; context: AudioContext | null; raf: number; timer: ReturnType<typeof setInterval> | null }
 interface Take { blob: Blob; duration: number; recordedAt: string }
 
 function Recorder({ attrs, update, pageId }: LeafViewProps<AudioAttrs>) {
   const [phase, setPhase] = React.useState<"idle" | "asking" | "recording" | "uploading">("idle");
   const [problem, setProblem] = React.useState<string | null>(null);
   const [elapsed, setElapsed] = React.useState(0);
+  const [paused, setPaused] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   /** A recording whose upload failed: kept in memory so it is not lost. */
   const [kept, setKept] = React.useState<Take | null>(null);
@@ -98,7 +106,7 @@ function Recorder({ attrs, update, pageId }: LeafViewProps<AudioAttrs>) {
 
   const start = async () => {
     if (phase !== "idle") return;
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { setProblem("Recording is not available in this browser. You can still upload an audio file."); return; }
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") { setProblem(typeof window !== "undefined" && !window.isSecureContext ? "The microphone needs a secure (https) page. You can still upload an audio file." : "Recording is not available in this browser. You can still upload an audio file."); return; }
     setPhase("asking"); setProblem(null);
     let stream: MediaStream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
@@ -108,12 +116,12 @@ function Recorder({ attrs, update, pageId }: LeafViewProps<AudioAttrs>) {
     let recorder: MediaRecorder;
     try { recorder = format.mime ? new MediaRecorder(stream, { mimeType: format.mime }) : new MediaRecorder(stream); }
     catch { try { recorder = new MediaRecorder(stream); } catch { stopTracks(stream); setPhase("idle"); setProblem("This browser cannot record audio."); return; } }
-    const s: Session = { stream, recorder, chunks: [], startedAt: performance.now(), startedIso: new Date().toISOString(), mime: format.mime, discard: false, context: null, raf: 0, timer: null };
+    const s: Session = { stream, recorder, chunks: [], clock: startClock(performance.now()), startedIso: new Date().toISOString(), mime: format.mime, discard: false, context: null, raf: 0, timer: null };
     session.current = s;
     recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) s.chunks.push(e.data); };
     recorder.onerror = () => { s.discard = true; try { if (recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ } release(s); if (alive.current) { setPhase("idle"); setProblem("The recording was interrupted."); } };
     recorder.onstop = () => {
-      const duration = Math.max(0, Math.round((performance.now() - s.startedAt) / 100) / 10);
+      const duration = Math.round(clockSeconds(s.clock, performance.now()) * 10) / 10; // pauses are not part of the recording
       release(s);
       if (s.discard || !alive.current) { if (alive.current) setPhase("idle"); return; }
       const blob = new Blob(s.chunks, { type: recorder.mimeType || s.mime || "audio/webm" });
@@ -123,8 +131,8 @@ function Recorder({ attrs, update, pageId }: LeafViewProps<AudioAttrs>) {
     // The track can end on its own (device unplugged, permission revoked): finish with what was captured.
     stream.getAudioTracks().forEach((t) => t.addEventListener("ended", () => { try { if (recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ } }));
     try { recorder.start(1000); } catch { release(s); setPhase("idle"); setProblem("This browser cannot record audio."); return; }
-    s.startedAt = performance.now(); setElapsed(0);
-    s.timer = setInterval(() => { if (alive.current) setElapsed((performance.now() - s.startedAt) / 1000); }, 250);
+    s.clock = startClock(performance.now()); setElapsed(0); setPaused(false);
+    s.timer = setInterval(() => { if (alive.current) setElapsed(clockSeconds(s.clock, performance.now())); }, 250);
     if (!reducedMotion()) { // live level meter: written straight to the element, no React render per frame
       try {
         const Ctx: typeof AudioContext | undefined = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -145,21 +153,31 @@ function Recorder({ attrs, update, pageId }: LeafViewProps<AudioAttrs>) {
     setPhase("recording");
   };
   const stop = (discard: boolean) => { const s = session.current; if (!s) return; s.discard = discard; try { if (s.recorder.state !== "inactive") s.recorder.stop(); else { release(s); setPhase("idle"); } } catch { release(s); setPhase("idle"); } };
+  /** Pause keeps the microphone open and records nothing; resume continues the same recording (one file). */
+  const togglePause = () => {
+    const s = session.current; if (!s) return;
+    try {
+      if (s.recorder.state === "recording") { s.recorder.pause(); s.clock = pauseClock(s.clock, performance.now()); setPaused(true); }
+      else if (s.recorder.state === "paused") { s.recorder.resume(); s.clock = resumeClock(s.clock, performance.now()); setPaused(false); }
+    } catch { setProblem("This browser cannot pause a recording."); }
+  };
   const pick = (file: File | undefined) => {
     if (!file || phase !== "idle") return;
     if (!file.type.startsWith("audio/") && !/\.(m4a|mp3|wav|ogg|oga|opus|webm|aac|flac|aiff?|caf)$/i.test(file.name)) { setProblem("Choose an audio file."); return; }
     if (file.size > MAX_AUDIO_BYTES) { setProblem("File too large (200 MB max)."); return; }
+    if (file.size > MAX_WAVE_BYTES) toast("Large recording", { description: "It is kept and playable, but it is over the 25 MB a transcription accepts." });
     void send({ file });
   };
 
   if (phase === "recording") return (
-    <div className="au-rec" role="group" aria-label="Recording">
+    <div className="au-rec" role="group" aria-label="Recording" data-paused={paused ? "true" : undefined}>
       <span className="au-rec-dot" aria-hidden />
       <span className="au-rec-time" role="timer" aria-label="Elapsed time">{formatTime(elapsed)}</span>
-      <span className="au-meter" aria-hidden><span ref={meter} className="au-meter-fill" /></span>
-      <span className="sr-only" role="status">Recording in progress</span>
+      {paused ? <span className="nb-meta au-paused">Paused</span> : <span className="au-meter" aria-hidden><span ref={meter} className="au-meter-fill" /></span>}
+      <span className="sr-only" role="status">{paused ? "Recording paused" : "Recording in progress"}</span>
       <span className="au-rec-actions">
         <NodeButton label="Discard recording" tone="danger" onClick={() => stop(true)}><Trash2 /></NodeButton>
+        <NodeButton label={paused ? "Resume recording" : "Pause recording"} text onClick={togglePause}>{paused ? <Mic /> : <Pause />}</NodeButton>
         <NodeButton label="Stop recording" tone="accent" text onClick={() => stop(false)}><Square /></NodeButton>
       </span>
     </div>
@@ -188,7 +206,7 @@ function Recorder({ attrs, update, pageId }: LeafViewProps<AudioAttrs>) {
   );
 }
 
-function Player({ attrs, update, editable, attachmentId }: LeafViewProps<AudioAttrs> & { attachmentId: string }) {
+function Player({ attrs, update, editable, attachmentId, editor, getPos, pageId }: LeafViewProps<AudioAttrs> & { /** null = the original audio was deleted: transcript and summary only */ attachmentId: string | null }) {
   const audio = React.useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = React.useState(false);
   const [time, setTime] = React.useState(0);
@@ -217,6 +235,7 @@ function Player({ attrs, update, editable, attachmentId }: LeafViewProps<AudioAt
     if (total > MAX_WAVE_SECONDS) { setWave("unavailable"); return; }
     const controller = new AbortController(); waveAbort.current = controller; setWave("loading");
     try {
+      if (!attachmentId) { setWave("unavailable"); return; }
       const res = await fetch(fileUrl(attachmentId), { credentials: "same-origin", signal: controller.signal });
       const length = Number(res.headers.get("content-length") ?? NaN);
       if (!res.ok || !Number.isFinite(length) || length <= 0 || length > MAX_WAVE_BYTES) { controller.abort(); if (alive.current) setWave("unavailable"); return; }
@@ -277,37 +296,76 @@ function Player({ attrs, update, editable, attachmentId }: LeafViewProps<AudioAt
   const status = attrs.transcriptStatus === "pending" || attrs.transcriptStatus === "done" || attrs.transcriptStatus === "failed" ? attrs.transcriptStatus : "none";
   const [unavailable, setUnavailable] = React.useState(false);
   const [asking, setAsking] = React.useState(false);
-  const missingEndpoint = (e: unknown) => e instanceof ApiError && (e.status === 404 || e.status === 405 || e.status === 501);
-  const transcribe = async () => {
-    if (!editable || asking) return; setAsking(true);
-    try { await api(`/api/audio/${encodeURIComponent(attachmentId)}/transcribe`, { method: "POST" }); if (alive.current) update({ transcriptStatus: "pending" }); }
-    catch (e) {
+  /** Why the last request was refused or failed (limit, configuration, engine error): shown in the block until the next attempt. */
+  const [problem, setProblem] = React.useState<{ message: string; retry: boolean } | null>(null);
+  const attrsRef = React.useRef(attrs); attrsRef.current = attrs; const updateRef = React.useRef(update); updateRef.current = update;
+  /** Write the server's state into the node — only what differs, so a poll that changes nothing creates no transaction. */
+  const applyServer = React.useCallback((v: TranscriptView) => {
+    const patch = patchFromServer(attrsRef.current, v); if (patch) updateRef.current(patch);
+    if (v.status === "failed") setProblem({ message: v.error || "The transcription engine failed.", retry: true });
+    else if (v.status === "done") setProblem(v.error ? { message: v.error, retry: false } : null); // done + error = the summary could not be produced
+  }, []);
+  const transcribe = async (opts: { summarize?: boolean; force?: boolean } = {}) => {
+    if (!editable || asking || !attachmentId) return; setAsking(true); setProblem(null);
+    try {
+      const r = await api<TranscriptView>(`/api/audio/${encodeURIComponent(attachmentId)}/transcribe`, { method: "POST", json: opts });
       if (!alive.current) return;
-      if (missingEndpoint(e)) setUnavailable(true); // older server: nothing is changed in the node
-      else toast("Transcription could not be started", { description: (e as Error)?.message, tone: "danger" });
+      if (r && typeof r === "object" && typeof r.status === "string") applyServer(r); else update({ transcriptStatus: "pending" });
+    } catch (e) {
+      if (!alive.current) return;
+      const p = transcribeProblem(e as ApiError);
+      if (p.unavailable) setUnavailable(true); // older server: nothing is changed in the node
+      else setProblem({ message: p.message, retry: p.retry });
     } finally { if (alive.current) setAsking(false); }
   };
-  /** Asks the server where the job stands and says so. The transcript itself arrives through the normal page sync: nothing is written here. */
-  const refresh = async () => {
-    if (asking) return; setAsking(true);
+  /** Ask the server where the job stands; the result is written into the node (the server never edits the page, docs/next/API-NEXT-AI.md §6.2). */
+  const check = React.useCallback(async (announce: boolean) => {
+    if (!attachmentId) return;
     try {
-      const r = await api<{ status?: string; transcriptStatus?: string; engine?: string }>(`/api/audio/${encodeURIComponent(attachmentId)}`);
-      const s = r?.transcriptStatus ?? r?.status;
-      toast(s === "done" ? "Transcription finished" : s === "failed" ? "Transcription failed on the server" : "Transcription still in progress", { description: s === "done" ? "The transcript appears here as soon as the page syncs." : undefined, tone: s === "failed" ? "danger" : "neutral" });
-    } catch (e) { if (alive.current) { if (missingEndpoint(e)) setUnavailable(true); else toast("Could not check the transcription", { description: (e as Error)?.message, tone: "danger" }); } }
-    finally { if (alive.current) setAsking(false); }
+      const r = await api<TranscriptView>(`/api/audio/${encodeURIComponent(attachmentId)}`);
+      if (!alive.current) return; applyServer(r);
+      if (announce && r.status === "pending") toast("Transcription still in progress");
+    } catch (e) { if (alive.current && announce) { const p = transcribeProblem(e as ApiError); if (p.unavailable) setUnavailable(true); else toast("Could not check the transcription", { description: (e as Error)?.message, tone: "danger" }); } }
+  }, [attachmentId, applyServer]);
+  // While the node says "pending" the block polls (the request was the user's; reopening the page resumes the wait). Read-only pages never poll: they could not write the result.
+  React.useEffect(() => {
+    if (status !== "pending" || !editable || !attachmentId || unavailable) return;
+    void check(false); const t = setInterval(() => { if (document.visibilityState === "visible") void check(false); }, 2500);
+    return () => clearInterval(t);
+  }, [status, editable, attachmentId, unavailable, check]);
+  const refresh = async () => { if (asking) return; setAsking(true); try { await check(true); } finally { if (alive.current) setAsking(false); } };
+  // ---- search hits: words of the result that opened the page (`?hl=`) are marked in the transcript and the first one is brought into view
+  const terms = React.useMemo(() => (typeof window === "undefined" ? [] : searchTerms(new URLSearchParams(window.location.search).get("hl"))), []);
+  const hits = React.useMemo(() => matchingLines(lines, terms), [lines, terms]);
+  const listRef = React.useRef<HTMLOListElement>(null);
+  React.useEffect(() => { const list = listRef.current; if (!list || !hits.length) return; const el = list.children[hits[0]] as HTMLElement | undefined; if (el) list.scrollTop = Math.max(0, el.offsetTop - list.offsetTop - 8); }, [hits]);
+  // ---- AI summary → page content, only on request, always as an AI block that names its source
+  const source = (): VoiceSource => ({ pageId, blockId: (attrs.id as string | null | undefined) ?? null, title: storedTitle || "Voice note" });
+  const insertAfter = (block: ReturnType<typeof summaryBlock>, done: string) => {
+    if (!block || !editable) return; const pos = getPos(); if (typeof pos !== "number") return;
+    const node = editor.state.doc.nodeAt(pos); const at = pos + (node?.nodeSize ?? 1);
+    if (editor.chain().insertContentAt(at, block as never).run()) toast(done, { description: "Marked as AI, with this voice note as its source.", tone: "ai" });
+  };
+  // ---- original audio: kept by default; deleting it is an explicit, confirmed choice and leaves the transcript
+  const [confirmDelete, setConfirmDelete] = React.useState(false); const [deleting, setDeleting] = React.useState(false);
+  const deleteAudio = async () => {
+    if (!attachmentId || deleting) return; setDeleting(true);
+    try { audio.current?.pause(); await api(`/api/attachments?id=${encodeURIComponent(attachmentId)}`, { method: "DELETE" }); if (alive.current) { update({ attachmentId: null }); toast("Original audio deleted", { description: "The transcript stays in the page." }); } }
+    catch (e) { if (alive.current) toast("The audio could not be deleted", { description: (e as Error)?.message, tone: "danger" }); }
+    finally { if (alive.current) { setDeleting(false); setConfirmDelete(false); } }
   };
   const summary = attrs.summary && typeof attrs.summary === "object" ? attrs.summary : null;
 
   return (
     <div className="au">
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- the transcript below is the text alternative */}
-      <audio ref={audio} src={fileUrl(attachmentId)} preload={storedDuration > 0 ? "none" : "metadata"} hidden
+      {attachmentId && <audio ref={audio} src={fileUrl(attachmentId)} preload={storedDuration > 0 ? "none" : "metadata"} hidden
         onLoadedMetadata={onDuration} onDurationChange={onDuration} onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
-        onError={() => { setPlaying(false); setMediaError("The audio file could not be loaded — it may have been deleted or its format is not supported by this browser."); }} />
+        onError={() => { setPlaying(false); setMediaError("The audio file could not be loaded — it may have been deleted or its format is not supported by this browser."); }} />}
       {editable && <input className="nb-field au-title" aria-label="Title" placeholder="Title" value={title} maxLength={200} onChange={(e) => { setTitle(e.target.value); saveTitle(e.target.value); }} onBlur={() => saveTitle.flush()} />}
-      <div className="au-player" role="group" aria-label="Audio player">
+      {!attachmentId && <p className="au-note nb-meta" role="note"><FileAudio aria-hidden />The original audio was deleted — the transcript is kept.</p>}
+      {attachmentId && <div className="au-player" role="group" aria-label="Audio player">
         <NodeButton label={playing ? "Pause" : "Play"} tone="accent" className="au-play" onClick={toggle}>{playing ? <Pause /> : <Play />}</NodeButton>
         <span className="au-time nb-meta" aria-hidden>{formatTime(time)}</span>
         <input className="au-seek" type="range" aria-label="Seek" min={0} max={total > 0 ? total : 1} step={total > 60 ? 1 : 0.1} value={Math.min(time, total > 0 ? total : 1)} disabled={total <= 0}
@@ -316,40 +374,49 @@ function Player({ attrs, update, editable, attachmentId }: LeafViewProps<AudioAt
         <select className="nb-field au-rate" aria-label="Playback speed" value={rate} onChange={(e) => changeRate(Number(e.target.value))}>
           {RATES.map((r) => <option key={r} value={r}>{r}×</option>)}
         </select>
-      </div>
+      </div>}
       {mediaError && <NodeState tone="danger" icon={<FileAudio />} title="Playback problem" hint={mediaError} />}
       {wave === "ready" && <canvas ref={canvas} className="au-wave" aria-hidden onPointerDown={onWavePointer} />}
-      {wave === "idle" && !mediaError && total <= MAX_WAVE_SECONDS && <button type="button" className="au-wave-load nb-meta" onMouseDown={(e) => e.preventDefault()} onClick={() => void loadWave()}><AudioLines aria-hidden />Show waveform</button>}
+      {attachmentId && wave === "idle" && !mediaError && total <= MAX_WAVE_SECONDS && <button type="button" className="au-wave-load nb-meta" onMouseDown={(e) => e.preventDefault()} onClick={() => void loadWave()}><AudioLines aria-hidden />Show waveform</button>}
       {wave === "loading" && <div className="au-wave-load nb-meta" role="status"><AudioLines aria-hidden />Loading waveform…</div>}
 
+      {hits.length > 0 && <p className="au-note nb-meta" role="status" data-testid="au-hits"><Captions aria-hidden />{hits.length} transcript line{hits.length > 1 ? "s" : ""} match{hits.length > 1 ? "" : "es"} your search</p>}
       {lines.length > 0 && (
-        <ol className="au-transcript" aria-label="Transcript">
+        <ol ref={listRef} className="au-transcript" aria-label="Transcript">
           {lines.map((l, i) => (
             <li key={`${l.t}-${i}`}>
-              <button type="button" className={cn("au-line", i === activeLine && "is-active")} aria-current={i === activeLine ? "true" : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => { seek(l.t); play(); }}>
+              <button type="button" className={cn("au-line", i === activeLine && "is-active", hits.includes(i) && "is-hit")} aria-current={i === activeLine ? "true" : undefined} data-hit={hits.includes(i) ? "true" : undefined} disabled={!attachmentId} title={attachmentId ? `Play from ${formatTime(l.t)}` : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => { seek(l.t); play(); }}>
                 <span className="au-stamp">{transcriptStamp(l.t)}</span><span className="au-line-text">{l.text}</span>
               </button>
             </li>
           ))}
         </ol>
       )}
-      {(editable || status === "done" || status === "pending") && (
-        <div className="au-tr nb-meta">
+      {attachmentId && (editable || status === "done" || status === "pending" || status === "failed") && (
+        <div className="au-tr nb-meta" data-status={status}>
           <Captions aria-hidden />
           {unavailable ? <span role="status">Transcription is not available on this server yet</span>
-            : status === "none" ? (editable && <NodeButton label="Transcribe" text disabled={asking} onClick={() => void transcribe()} />)
-            : status === "pending" ? <><span role="status">Transcription in progress…</span><NodeButton label="Refresh" text disabled={asking} onClick={() => void refresh()}><RotateCw /></NodeButton></>
-            : status === "failed" ? <><span role="status" className="au-failed">Transcription failed</span>{editable && <NodeButton label="Retry transcription" text disabled={asking} onClick={() => void transcribe()}><RotateCw /></NodeButton>}</>
-            : <span>Transcribed{attrs.transcriptEngine ? ` with ${attrs.transcriptEngine}` : ""}{lines.length === 0 ? " — no speech detected" : ""}</span>}
+            : status === "none" ? (editable && <><NodeButton label="Transcribe" text disabled={asking} onClick={() => void transcribe()} /><NodeButton label="Transcript + AI summary" tone="ai" text disabled={asking} onClick={() => void transcribe({ summarize: true })}><Sparkles /></NodeButton><span className="au-hint">Sends the recording to the transcription engine (25 MB max).</span></>)
+            : status === "pending" ? <><span role="status" className="au-pending"><span className="au-spin" aria-hidden />Transcription in progress…</span>{editable && <NodeButton label="Refresh" text disabled={asking} onClick={() => void refresh()}><RotateCw /></NodeButton>}</>
+            : status === "failed" ? <><span role="status" className="au-failed">Transcription failed</span>{editable && <NodeButton label="Retry transcription" text disabled={asking} onClick={() => void transcribe({ force: true })}><RotateCw /></NodeButton>}</>
+            : <><span>Transcribed{attrs.transcriptEngine ? ` with ${attrs.transcriptEngine}` : ""}{lines.length === 0 ? " — no speech detected" : ""}</span>{editable && !summary && lines.length > 0 && <NodeButton label="Summarise" tone="ai" text disabled={asking} onClick={() => void transcribe({ summarize: true })}><Sparkles /></NodeButton>}</>}
         </div>
       )}
-      {summary && <SummaryBox summary={summary} />}
+      {problem && !unavailable && <p className="au-problem" role="alert">{problem.message}</p>}
+      {attachmentId && editable && status === "done" && (
+        <div className="au-keep nb-meta" role="group" aria-label="Original audio">
+          <FileAudio aria-hidden />
+          {confirmDelete ? <><span>Delete the audio file? The transcript and the summary stay.</span><NodeButton label="Delete audio" tone="danger" text disabled={deleting} onClick={() => void deleteAudio()}><Trash2 /></NodeButton><NodeButton label="Keep audio" text disabled={deleting} onClick={() => setConfirmDelete(false)} /></>
+            : <><span>The original audio is kept.</span><NodeButton label="Delete original audio…" text onClick={() => setConfirmDelete(true)}><Trash2 /></NodeButton></>}
+        </div>
+      )}
+      {summary && <SummaryBox summary={summary} onInsertSummary={editable ? () => insertAfter(summaryBlock(summary, source()), "Summary inserted below") : undefined} onInsertTasks={editable ? () => insertAfter(tasksBlock(summary, source()), "Tasks inserted below") : undefined} />}
     </div>
   );
 }
 
 /** AI-made summary: displayed as stored, always labelled, never generated or edited by this component (SPEC §0 rule 10). */
-function SummaryBox({ summary }: { summary: AudioSummary }) {
+function SummaryBox({ summary, onInsertSummary, onInsertTasks }: { summary: AudioSummary; /** undefined in read-only pages */ onInsertSummary?: () => void; onInsertTasks?: () => void }) {
   const list = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "") : []);
   const decisions = list(summary.decisions), tasks = list(summary.tasks);
   const at = typeof summary.at === "string" ? new Date(summary.at) : null; const when = at && !Number.isNaN(at.getTime()) ? at.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "";
@@ -359,6 +426,10 @@ function SummaryBox({ summary }: { summary: AudioSummary }) {
       {typeof summary.text === "string" && summary.text && <p className="au-summary-text">{summary.text}</p>}
       {decisions.length > 0 && <><h4 className="au-summary-h">Decisions</h4><ul className="au-summary-list">{decisions.map((d, i) => <li key={i}>{d}</li>)}</ul></>}
       {tasks.length > 0 && <><h4 className="au-summary-h">Tasks</h4><ul className="au-summary-list">{tasks.map((t, i) => <li key={i}>{t}</li>)}</ul></>}
+      {(onInsertSummary || onInsertTasks) && <div className="au-summary-actions">
+        {onInsertSummary && typeof summary.text === "string" && summary.text.trim() !== "" && <NodeButton label="Insert summary" tone="ai" text onClick={onInsertSummary}><ListPlus /></NodeButton>}
+        {onInsertTasks && tasks.length > 0 && <NodeButton label="Insert as tasks" tone="ai" text onClick={onInsertTasks}><ListTodo /></NodeButton>}
+      </div>}
     </section>
   );
 }
