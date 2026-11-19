@@ -14,7 +14,7 @@ export async function ensureQueues(b: PgBoss) {
 }
 export async function getBoss(): Promise<PgBoss> {
   if (boss) return boss;
-  if (!starting) starting = (async () => { const b = new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: 3 }); b.on("error", (e: Error) => console.error("pg-boss", e.message)); await b.start(); await ensureQueues(b); boss = b; return b; })().catch((e) => { starting = null; throw e; });
+  if (!starting) starting = (async () => { const b = new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: Math.max(1, Math.min(3, Number(process.env.DB_POOL_MAX ?? 3) || 3)) }); b.on("error", (e: Error) => console.error("pg-boss", e.message)); await b.start(); await ensureQueues(b); boss = b; return b; })().catch((e) => { starting = null; throw e; });
   return starting;
 }
 /**

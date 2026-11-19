@@ -12,7 +12,7 @@ import { wrap, withTimeout, safeSummary, JobTimeout } from "../../src/worker/run
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn: () => Promise<boolean>, ms: number) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(250); } return false; };
-const mk = () => new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: 3, superviseIntervalSeconds: 1, monitorIntervalSeconds: 1, maintenanceIntervalSeconds: 1 } as any);
+const mk = () => new PgBoss({ connectionString: process.env.DATABASE_URL!, schema: "pgboss", max: Math.max(1, Math.min(3, Number(process.env.DB_POOL_MAX ?? 3) || 3)), superviseIntervalSeconds: 1, monitorIntervalSeconds: 1, maintenanceIntervalSeconds: 1 } as any);
 let boss: PgBoss; const tag = `t-${Date.now().toString(36)}`; const queues: string[] = [];
 const q = async (name: string, opts: Record<string, unknown>) => { const n = `${tag}-${name}`; queues.push(n); await boss.createQueue(n, opts as any); return n; };
 before(async () => { boss = mk(); boss.on("error", () => {}); await boss.start(); await ensureQueues(boss); });
