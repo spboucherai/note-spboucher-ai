@@ -40,5 +40,5 @@ export function citingSentences(answer: string, n: number): string {
     for (const s of line.split(/(?<=[.!?…])\s+(?=[^\[\s])/)) if (s.includes(marker)) out.push(s);
   }
   // a marker placed at the start of the following sentence ("… text. [1] Next") still belongs to what precedes: fall back to its line
-  return out.join(" ").replace(/\[\d{1,3}\]/g, " ").replace(/\s+/g, " ").trim();
+  return out.join(" ").replace(/\[\d{1,3}\]/g, " ").replace(/\s+/g, " ").replace(/ ([.,;:!?])/g, "$1").trim();
 }

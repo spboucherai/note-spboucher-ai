@@ -6,7 +6,7 @@
  */
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { hybridSearch } from "@/lib/search";
+import { similarPages } from "./candidates";
 import { extractPageRefs, type PMNode } from "@/lib/editor/text";
 import { callAI } from "./providers";
 import { LINKS_SYSTEM } from "./prompts";
@@ -21,10 +21,8 @@ export const LINK_CANDIDATES = 8;
 export async function linkCandidates(workspaceId: string, text: string, pageId?: string | null): Promise<LinkCandidate[]> {
   const exclude = new Set<string>(); if (pageId) exclude.add(pageId);
   if (pageId) { const [p] = await db.select({ content: schema.pages.content }).from(schema.pages).where(and(eq(schema.pages.id, pageId), eq(schema.pages.workspaceId, workspaceId), isNull(schema.pages.deletedAt))); for (const id of extractPageRefs(p?.content as PMNode | undefined)) exclude.add(id); }
-  const query = text.replace(/\s+/g, " ").trim().slice(0, 1000); if (!query) return [];
-  const hits = await hybridSearch(workspaceId, query, { limit: 24, sourceTypes: ["page"] });
   const out = new Map<string, LinkCandidate>();
-  for (const h of hits) { if (!h.pageId || exclude.has(h.pageId) || out.has(h.pageId)) continue; out.set(h.pageId, { pageId: h.pageId, title: h.title, icon: h.icon, blockId: h.blockId, excerpt: h.content.replace(/\s+/g, " ").slice(0, 300), score: h.score }); if (out.size >= LINK_CANDIDATES) break; }
+  for (const h of await similarPages(workspaceId, text, { exclude, limit: LINK_CANDIDATES })) out.set(h.pageId!, { pageId: h.pageId!, title: h.title, icon: h.icon, blockId: h.blockId, excerpt: h.content.replace(/\s+/g, " ").slice(0, 300), score: h.score });
   return [...out.values()];
 }
 /** Validate the model's JSON against the candidate list and the text. Pure (tested without any provider). */
