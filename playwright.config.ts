@@ -22,5 +22,10 @@ export default defineConfig({
     { name: "next-phone-360", testMatch: /next-web-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
     { name: "next-phone-375", testMatch: /next-web-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
     { name: "next-phone-430", testMatch: /next-web-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
+    // SP Note Next Generation — databases (productivity workstream)
+    { name: "next-p-db", testMatch: /next-p-db\.spec\.ts/, use: { viewport: { width: 1280, height: 800 } }, dependencies: ["auth"] },
+    { name: "next-p-db-phone-360", testMatch: /next-p-db-phones\.spec\.ts/, use: phone(360, 740), dependencies: ["auth"] },
+    { name: "next-p-db-phone-375", testMatch: /next-p-db-phones\.spec\.ts/, use: phone(375, 667), dependencies: ["auth"] },
+    { name: "next-p-db-phone-430", testMatch: /next-p-db-phones\.spec\.ts/, use: phone(430, 932), dependencies: ["auth"] },
   ],
 });
