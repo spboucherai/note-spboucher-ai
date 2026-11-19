@@ -1,0 +1,255 @@
+{
+ "type": "doc",
+ "content": [
+  {
+   "type": "chart",
+   "attrs": {
+    "id": "e000000001",
+    "kind": "line",
+    "title": "  Mesures\n(brutes)  ",
+    "columns": [
+     "a|b",
+     "n",
+     "note"
+    ],
+    "rows": [
+     [
+      "x|y",
+      1,
+      "ligne 1\nligne 2"
+     ],
+     [
+      "z",
+      0.1,
+      null
+     ],
+     [
+      "w",
+      1e+21,
+      "ok"
+     ],
+     [
+      "v",
+      -3,
+      true
+     ],
+     [
+      "court"
+     ]
+    ],
+    "x": "a|b",
+    "y": [
+     "n"
+    ],
+    "source": {
+     "databaseId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+    }
+   }
+  },
+  {
+   "type": "chart",
+   "attrs": {
+    "id": "e000000002",
+    "kind": "pie",
+    "title": "Sans données",
+    "columns": [],
+    "rows": []
+   }
+  },
+  {
+   "type": "chart",
+   "attrs": {
+    "id": "e000000003",
+    "kind": "bar",
+    "title": "",
+    "columns": [
+     "k",
+     "v"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "type": "pdf",
+   "attrs": {
+    "id": "e000000004",
+    "attachmentId": "33333333-3333-4333-8333-333333333333",
+    "name": "",
+    "page": 1,
+    "annotations": [
+     {
+      "id": "a",
+      "page": 2,
+      "kind": "ink",
+      "color": "#000000",
+      "rects": [],
+      "text": "",
+      "note": "",
+      "ink": [
+       [
+        0.1,
+        0.1
+       ],
+       [
+        0.2,
+        0.2
+       ]
+      ]
+     },
+     {
+      "id": "b",
+      "page": 0,
+      "kind": "highlight",
+      "text": "Texte\nsur deux lignes",
+      "note": ""
+     }
+    ]
+   }
+  },
+  {
+   "type": "pdf",
+   "attrs": {
+    "id": "e000000005",
+    "attachmentId": "not-a-uuid",
+    "name": "orphelin.pdf",
+    "page": 1,
+    "annotations": []
+   }
+  },
+  {
+   "type": "audio",
+   "attrs": {
+    "id": "e000000006",
+    "attachmentId": "22222222-2222-4222-8222-222222222222",
+    "duration": 7600,
+    "title": "Cours 12",
+    "transcript": [
+     {
+      "t": 7503.9,
+      "text": "Fin du cours."
+     },
+     {
+      "t": -5,
+      "text": "Avant le début"
+     },
+     {
+      "t": 59.99,
+      "text": "  "
+     },
+     {
+      "t": 3599,
+      "text": "Presque une heure"
+     }
+    ],
+    "transcriptStatus": "done"
+   }
+  },
+  {
+   "type": "runCode",
+   "attrs": {
+    "id": "e000000007",
+    "language": "python",
+    "code": "print(1/0)",
+    "output": {
+     "text": "ZeroDivisionError: division by zero",
+     "error": true,
+     "ms": 1,
+     "at": "2026-11-19T15:10:00.000Z"
+    }
+   }
+  },
+  {
+   "type": "runCode",
+   "attrs": {
+    "id": "e000000008",
+    "language": "",
+    "code": "echo ok",
+    "output": {
+     "text": "",
+     "error": false,
+     "ms": 1,
+     "at": "2026-11-19T15:10:00.000Z"
+    }
+   }
+  },
+  {
+   "type": "blockRef",
+   "attrs": {
+    "id": "e000000009",
+    "pageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "blockId": null,
+    "mode": "link"
+   }
+  },
+  {
+   "type": "drawing",
+   "attrs": {
+    "id": "e000000010",
+    "ink": "22222222-2222-4222-8222-222222222222",
+    "preview": null
+   }
+  },
+  {
+   "type": "bibliography",
+   "attrs": {
+    "id": "e000000011",
+    "style": "ieee",
+    "title": ""
+   }
+  },
+  {
+   "type": "queryView",
+   "attrs": {
+    "id": "e000000012",
+    "source": "database",
+    "databaseId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "title": "  Lectures\nen cours "
+   }
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "citation",
+     "attrs": {
+      "refId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "locator": "",
+      "label": ""
+     }
+    },
+    {
+     "type": "text",
+     "text": " et "
+    },
+    {
+     "type": "citation",
+     "attrs": {
+      "refId": null,
+      "label": "Engle 1982"
+     }
+    }
+   ],
+   "attrs": {
+    "id": "e000000013"
+   }
+  },
+  {
+   "type": "futureNode",
+   "attrs": {
+    "id": "e000000014",
+    "anything": {
+     "nested": [
+      1,
+      2,
+      3
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -23,7 +23,7 @@ import { ensureBlockIds } from "../../src/lib/editor/text";
 test("block ids are added once, kept when present, and duplicates are repaired", () => {
   const doc = { type: "doc", content: [{ type: "paragraph", attrs: { id: "keepme0001" }, content: [{ type: "text", text: "a" }] }, { type: "paragraph", content: [{ type: "text", text: "b" }] }, { type: "paragraph", attrs: { id: "keepme0001" } }, { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph" }] }] }] };
   const r = ensureBlockIds(doc as any); assert.equal(r.changed, true); const c = (r.doc as any).content;
-  assert.equal(c[0].attrs.id, "keepme0001"); assert.match(c[1].attrs.id, /^[\w-]{10}$/); assert.notEqual(c[2].attrs.id, "keepme0001"); assert.ok(c[3].attrs.id); assert.ok(c[3].content[0].content[0].attrs.id); assert.equal(c[3].content[0].attrs?.id, undefined, "list items carry no id");
+  assert.equal(c[0].attrs.id, "keepme0001"); assert.match(c[1].attrs.id, /^[\w-]{10}$/); assert.notEqual(c[2].attrs.id, "keepme0001"); assert.ok(c[3].attrs.id); assert.ok(c[3].content[0].content[0].attrs.id); assert.match(c[3].content[0].attrs?.id, /^[\w-]{10}$/, "3.0: list items get an id too (citations into lists, tasks anchored to a taskItem)");
   assert.equal(doc.content[1].attrs, undefined, "the input is not mutated");
   const again = ensureBlockIds(r.doc); assert.equal(again.changed, false); assert.equal(again.doc, r.doc);
 });

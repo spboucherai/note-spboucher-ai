@@ -1,0 +1,24 @@
+graph TD
+  A[Idée] --> B{Décision}
+  B -->|oui| C[Action]
+Dessin
+Ventes par trimestre
+Trimestre Ventes Marge
+T1 120 0.25
+T2 135.5 0.3
+T3
+Vue: Tâches ouvertes
+Comme le montre Bollerslev 1986, la variance conditionnelle est persistante.
+Références
+PDF: article.pdf
+p.3 — Volatility clustering is pervasive. — À citer dans l'introduction
+p.7 — Vérifier l'équation 4
+
+const xs = [1, 2, 3];
+console.log(xs.reduce((a, b) => a + b, 0));
+6
+Audio: Réunion de laboratoire
+Bonjour à tous.
+On commence par les résultats du modèle.
+Prochaine étape : rédiger la section 3.
+Canvas

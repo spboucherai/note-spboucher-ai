@@ -1,6 +1,7 @@
 /** Page → Markdown with YAML front-matter. Mentions become relative links when the resolver knows the target. */
 import path from "node:path";
 import { toMarkdown, type PMNode } from "@/lib/editor/text";
+import { nodeAttachmentIds } from "@/lib/editor/next-nodes";
 import { tagsOf, rowValuesByName, type ExportSet, type PageRow, type Placed } from "./data";
 
 export interface Resolvers { mention?: (id: string, label: string) => string | null; file?: (src: string) => string | null }
@@ -13,6 +14,8 @@ export function rewriteDoc(doc: PMNode, r: Resolvers): PMNode {
     if (n.type === "mention" && n.attrs?.kind !== "user") { const label = String(n.attrs?.label ?? n.attrs?.id ?? ""); const href = r.mention?.(String(n.attrs?.id ?? ""), label); if (href) return { type: "text", text: label, marks: [{ type: "link", attrs: { href } }] }; return n; }
     const out: PMNode = { ...n };
     if ((n.type === "image" || n.type === "fileBlock") && r.file && typeof n.attrs?.src === "string") { const nv = r.file(n.attrs.src); if (nv) out.attrs = { ...n.attrs, src: nv }; }
+    // 3.0 nodes reference attachments by id in their attrs: the resolved links travel in attrs.__href (read by nextNodeMarkdown / HTML export, never stored)
+    if (r.file) { const hrefs: Record<string, string> = {}; for (const a of nodeAttachmentIds(n)) { const nv = r.file(`/api/files/${a}`); if (nv) hrefs[a] = nv; } if (Object.keys(hrefs).length) out.attrs = { ...(out.attrs ?? n.attrs), __href: hrefs }; }
     if (n.marks?.some((m) => m.type === "link")) out.marks = n.marks.map((m) => { if (m.type !== "link" || typeof m.attrs?.href !== "string") return m; const href = m.attrs.href; const pm = href.match(/^\/p\/([0-9a-f-]{36})/); if (pm && r.mention) { const h = r.mention(pm[1], n.text ?? ""); if (h) return { ...m, attrs: { ...m.attrs, href: h } }; } if (r.file) { const f = r.file(href); if (f) return { ...m, attrs: { ...m.attrs, href: f } }; } return m; });
     if (n.content) out.content = n.content.map(walk);
     return out;

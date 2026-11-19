@@ -1,0 +1,125 @@
+{
+ "type": "doc",
+ "content": [
+  {
+   "type": "mermaid",
+   "attrs": {
+    "id": "d000000001",
+    "code": "",
+    "preview": null,
+    "previewHash": null
+   }
+  },
+  {
+   "type": "drawing",
+   "attrs": {
+    "id": "d000000002",
+    "ink": null,
+    "preview": null,
+    "pk": null,
+    "width": 0,
+    "height": 0,
+    "background": "none"
+   }
+  },
+  {
+   "type": "chart",
+   "attrs": {
+    "id": "d000000003",
+    "kind": "bar",
+    "title": "",
+    "columns": [],
+    "rows": [],
+    "x": null,
+    "y": [],
+    "source": null
+   }
+  },
+  {
+   "type": "queryView",
+   "attrs": {
+    "id": "d000000004",
+    "source": "tasks",
+    "databaseId": null,
+    "viewId": null,
+    "filter": {},
+    "layout": "list",
+    "limit": 25,
+    "title": ""
+   }
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "citation",
+     "attrs": {
+      "refId": null,
+      "locator": "",
+      "label": ""
+     }
+    }
+   ],
+   "attrs": {
+    "id": "d000000005"
+   }
+  },
+  {
+   "type": "bibliography",
+   "attrs": {
+    "id": "d000000006",
+    "style": "apa",
+    "title": "Références"
+   }
+  },
+  {
+   "type": "pdf",
+   "attrs": {
+    "id": "d000000007",
+    "attachmentId": null,
+    "name": "",
+    "page": 1,
+    "annotations": []
+   }
+  },
+  {
+   "type": "blockRef",
+   "attrs": {
+    "id": "d000000008",
+    "pageId": null,
+    "blockId": null,
+    "mode": "embed"
+   }
+  },
+  {
+   "type": "runCode",
+   "attrs": {
+    "id": "d000000009",
+    "language": "javascript",
+    "code": "",
+    "output": null
+   }
+  },
+  {
+   "type": "audio",
+   "attrs": {
+    "id": "d000000010",
+    "attachmentId": null,
+    "duration": 0,
+    "title": "",
+    "recordedAt": null,
+    "transcript": [],
+    "transcriptStatus": "none",
+    "transcriptEngine": null,
+    "summary": null
+   }
+  },
+  {
+   "type": "canvasLink",
+   "attrs": {
+    "id": "d000000011",
+    "pageId": null
+   }
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+Journal de recherche
+Hypothèse de départ, voir Nelson 1991.
+On retient le modèle EGARCH.
+Relancer l'estimation
+Nettoyer les données
+Point A Nelson 1991
+Point B
+flowchart LR
+  données --> modèle --> résultats
+Résultats
+Log-vraisemblance
+Modèle LL
+GARCH -1234.5
+EGARCH -1201
+Synthèse proposée.
+Canvas
+
+Bibliographie

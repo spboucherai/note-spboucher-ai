@@ -1,0 +1,275 @@
+{
+ "type": "doc",
+ "content": [
+  {
+   "type": "heading",
+   "attrs": {
+    "id": "m000000001",
+    "level": 1
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Journal de recherche"
+    }
+   ]
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "text",
+     "text": "Hypothèse de départ, voir "
+    },
+    {
+     "type": "citation",
+     "attrs": {
+      "refId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "locator": "",
+      "label": "Nelson 1991"
+     }
+    },
+    {
+     "type": "text",
+     "text": "."
+    }
+   ],
+   "attrs": {
+    "id": "m000000002"
+   }
+  },
+  {
+   "type": "callout",
+   "attrs": {
+    "id": "m000000003",
+    "kind": "decision",
+    "icon": "✅"
+   },
+   "content": [
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "On retient le modèle EGARCH."
+      }
+     ],
+     "attrs": {
+      "id": "m000000004"
+     }
+    }
+   ]
+  },
+  {
+   "type": "taskList",
+   "attrs": {
+    "id": "m000000005"
+   },
+   "content": [
+    {
+     "type": "taskItem",
+     "attrs": {
+      "id": "m000000006",
+      "checked": false,
+      "due": "2026-11-25",
+      "priority": "high",
+      "taskId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+     },
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Relancer l'estimation"
+        }
+       ],
+       "attrs": {
+        "id": "m000000007"
+       }
+      }
+     ]
+    },
+    {
+     "type": "taskItem",
+     "attrs": {
+      "id": "m000000008",
+      "checked": true
+     },
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Nettoyer les données"
+        }
+       ],
+       "attrs": {
+        "id": "m000000009"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "bulletList",
+   "attrs": {
+    "id": "m000000010"
+   },
+   "content": [
+    {
+     "type": "listItem",
+     "attrs": {
+      "id": "m000000011"
+     },
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Point A "
+        },
+        {
+         "type": "citation",
+         "attrs": {
+          "refId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "label": "Nelson 1991"
+         }
+        }
+       ],
+       "attrs": {
+        "id": "m000000012"
+       }
+      }
+     ]
+    },
+    {
+     "type": "listItem",
+     "attrs": {
+      "id": "m000000013"
+     },
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Point B"
+        }
+       ],
+       "attrs": {
+        "id": "m000000014"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "mermaid",
+   "attrs": {
+    "id": "m000000015",
+    "code": "flowchart LR\n  données --> modèle --> résultats",
+    "preview": null,
+    "previewHash": null
+   }
+  },
+  {
+   "type": "heading",
+   "attrs": {
+    "id": "m000000016",
+    "level": 2
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Résultats"
+    }
+   ]
+  },
+  {
+   "type": "chart",
+   "attrs": {
+    "id": "m000000017",
+    "kind": "line",
+    "title": "Log-vraisemblance",
+    "columns": [
+     "Modèle",
+     "LL"
+    ],
+    "rows": [
+     [
+      "GARCH",
+      -1234.5
+     ],
+     [
+      "EGARCH",
+      -1201
+     ]
+    ],
+    "x": "Modèle",
+    "y": [
+     "LL"
+    ]
+   }
+  },
+  {
+   "type": "aiBlock",
+   "attrs": {
+    "id": "m000000018",
+    "model": "claude-x",
+    "prompt": "résume",
+    "at": "2026-11-19T15:00:00.000Z",
+    "action": "synthesis",
+    "sources": [
+     {
+      "pageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "blockId": "par0000009",
+      "title": "Source"
+     }
+    ]
+   },
+   "content": [
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "Synthèse proposée."
+      }
+     ],
+     "attrs": {
+      "id": "m000000019"
+     }
+    }
+   ]
+  },
+  {
+   "type": "canvasLink",
+   "attrs": {
+    "id": "m000000020",
+    "pageId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+   }
+  },
+  {
+   "type": "blockRef",
+   "attrs": {
+    "id": "m000000021",
+    "pageId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "blockId": "par0000009",
+    "mode": "embed"
+   }
+  },
+  {
+   "type": "bibliography",
+   "attrs": {
+    "id": "m000000022",
+    "style": "apa",
+    "title": "Bibliographie"
+   }
+  }
+ ]
+}
