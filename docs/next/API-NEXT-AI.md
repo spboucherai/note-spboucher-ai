@@ -255,6 +255,19 @@ Any edit or rename changes `contentHash` and invalidates the synopsis.
 
 ## 5. Smart Inbox (SPEC §4.12)
 
+### 5.0 `POST /api/capture` — kinds (3.0, branch `next-p-cv`)
+
+Body unchanged: `{kind, text?, url?, attachmentIds?}` → `201 {id, title, kind, inboxAt}` (`kind` = the stored `pages.capture_kind`).
+
+| kind | stored as | content |
+|---|---|---|
+| `note`, `tasks`, `link`, `photo`, `file` | same | unchanged from 2.x |
+| `audio` | `audio` | each audio attachment becomes an **`audio` node** (`attachmentId`, `title`, `transcriptStatus:"none"`) instead of a file card, so the capture is a voice note that can be transcribed (§6); non-audio attachments keep their card |
+| `screenshot` | `screenshot` | like `photo` (image nodes); default title `Screenshot · <date>` |
+| `document` | `document` | a PDF attachment becomes a **`pdf` node** (`attachmentId`, `name`, `page:1`, `annotations:[]`), other files a file card |
+| `selection` | `selection` | `text` (required) as a `blockquote`; `url` = its source, either `/p/<pageId>` / `/p/<pageId>#block-<blockId>` (kept relative: the capture then appears in that page's backlinks) or an http(s) address; any other value is ignored |
+| `idea` | **`note`** | request-only alias: a note created with the icon 💡 (the stored kinds stay the ones of SPEC §4.12) |
+
 ### 5.1 `GET /api/inbox/<id>/suggestions`
 
 AI suggestions for one capture: title, tags, destination, related pages, summary. **Suggestions only — this route changes nothing.**

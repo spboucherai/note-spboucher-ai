@@ -11,10 +11,16 @@ import { addByDoi, createReference, deleteReference } from "@/lib/research/refer
 import { docText, type PMNode } from "@/lib/editor/text";
 import { recordEvent, recordEvents } from "@/lib/events/service";
 
-export type CaptureKind = "note" | "tasks" | "link" | "photo" | "file" | "audio";
-export interface CaptureInput { kind: CaptureKind; text?: string; url?: string; attachmentIds?: string[] }
+/** Kinds stored in `pages.capture_kind` (SPEC §4.12: `screenshot`, `selection` and `document` join the 2.x kinds in 3.0). */
+export type CaptureKind = "note" | "tasks" | "link" | "photo" | "file" | "audio" | "screenshot" | "selection" | "document";
+/** `idea` is a request-only alias: stored as a `note` capture with the 💡 icon, so the stored kinds stay the ones of the contract. */
+export interface CaptureInput { kind: CaptureKind | "idea"; text?: string; url?: string; attachmentIds?: string[] }
 const para = (text: string): PMNode => (text ? { type: "paragraph", content: [{ type: "text", text }] } : { type: "paragraph" });
 const safeUrl = (u: string) => { try { const x = new URL(u.trim()); return x.protocol === "https:" || x.protocol === "http:" ? x.toString() : null; } catch { return null; } };
+/** Where a captured selection comes from: a page of this workspace (`/p/<uuid>` with an optional `#block-<id>`, kept relative so it counts as a backlink) or an http(s) address. Anything else is ignored. */
+export const selectionSource = (u: string | undefined): string | null => { const v = (u ?? "").trim(); if (!v) return null; const m = v.match(/^\/p\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(#block-[A-Za-z0-9_-]{1,64})?$/i); return m ? v : safeUrl(v); };
+const baseName = (f: string) => f.replace(/\.[^.]{1,8}$/, "") || f;
+const isAudioMime = (m: string) => m.startsWith("audio/") || m === "video/webm";
 
 export async function capture(wsId: string, input: CaptureInput) {
   const text = (input.text ?? "").replace(/\r\n/g, "\n").trim(); const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -32,16 +38,28 @@ export async function capture(wsId: string, input: CaptureInput) {
     if (!lines.length) throw new HttpError(400, "Nothing to capture");
     title = lines.length === 1 ? lines[0].slice(0, 120) : `To-do · ${stamp}`;
     content.push({ type: "taskList", content: lines.map((l) => ({ type: "taskItem", attrs: { checked: false }, content: [para(l.replace(/^[-*\[\]x ]+/i, "").trim() || l)] })) });
+  } else if (input.kind === "selection") {
+    // text selected in a page or elsewhere: kept as a quotation, followed by where it comes from when the client says so
+    if (!lines.length) throw new HttpError(400, "Nothing to capture");
+    title = lines[0].length > 100 ? `${lines[0].slice(0, 96).trim()}…` : lines[0];
+    content.push({ type: "blockquote", content: text.split("\n").filter((l) => l.trim()).map((l) => para(l.trim())) });
+    const src = selectionSource(input.url);
+    if (src) content.push({ type: "paragraph", content: [{ type: "text", text: "Source: " }, { type: "text", text: src.startsWith("/p/") ? "the page it was selected in" : src, marks: [{ type: "link", attrs: { href: src } }] }] });
   } else {
     if (!lines.length && !atts.length) throw new HttpError(400, "Nothing to capture");
     for (const l of (lines.length > 1 || text.length > 120 ? text : "").split("\n")) if (l || content.length) content.push(para(l));
     if (text.length > 120 && lines.length === 1) title = `${text.slice(0, 80).trim()}…`;
   }
-  for (const a of atts) content.push(a.mime.startsWith("image/") ? { type: "image", attrs: { src: `/api/files/${a.id}`, alt: a.filename, title: a.filename } } : { type: "fileBlock", attrs: { src: `/api/files/${a.id}`, name: a.filename, size: a.size, mime: a.mime, attachmentId: a.id } });
-  if (!title) title = atts.length ? `${input.kind === "photo" ? "Photo" : input.kind === "audio" ? "Voice memo" : atts[0].filename} · ${stamp}` : `Note · ${stamp}`;
-  const page = await createPage(wsId, { title, section: "notes", content: { type: "doc", content: content.length ? content : [{ type: "paragraph" }] }, inboxAt: new Date(), captureKind: input.kind });
+  // 3.0 kinds use the 3.0 blocks: a voice capture becomes a voice note (player, transcription), a captured PDF a PDF block. The 2.x kinds (photo, file) are unchanged.
+  for (const a of atts) content.push(a.mime.startsWith("image/") ? { type: "image", attrs: { src: `/api/files/${a.id}`, alt: a.filename, title: a.filename } }
+    : input.kind === "audio" && isAudioMime(a.mime) ? { type: "audio", attrs: { attachmentId: a.id, duration: 0, title: /^voice-(memo|note)-/.test(a.filename) ? `Voice memo · ${stamp}` : baseName(a.filename).slice(0, 200), recordedAt: null, transcript: [], transcriptStatus: "none", transcriptEngine: null, summary: null } }
+    : input.kind === "document" && (a.mime === "application/pdf" || /\.pdf$/i.test(a.filename)) ? { type: "pdf", attrs: { attachmentId: a.id, name: a.filename, page: 1, annotations: [] } }
+    : { type: "fileBlock", attrs: { src: `/api/files/${a.id}`, name: a.filename, size: a.size, mime: a.mime, attachmentId: a.id } });
+  if (!title) title = atts.length ? `${input.kind === "photo" ? "Photo" : input.kind === "screenshot" ? "Screenshot" : input.kind === "audio" ? "Voice memo" : atts[0].filename} · ${stamp}` : `Note · ${stamp}`;
+  const kind: CaptureKind = input.kind === "idea" ? "note" : input.kind;
+  const page = await createPage(wsId, { title, section: "notes", content: { type: "doc", content: content.length ? content : [{ type: "paragraph" }] }, inboxAt: new Date(), captureKind: kind, ...(input.kind === "idea" ? { icon: "💡" } : {}) });
   if (atts.length) await db.update(schema.attachments).set({ pageId: page.id }).where(inArray(schema.attachments.id, atts.map((a) => a.id)));
-  await recordEvent(db, { workspaceId: wsId, kind: "capture.created", pageId: page.id, summary: page.title, data: { kind: input.kind, attachments: atts.length } });
+  await recordEvent(db, { workspaceId: wsId, kind: "capture.created", pageId: page.id, summary: page.title, data: { kind, attachments: atts.length } });
   return page;
 }
 
