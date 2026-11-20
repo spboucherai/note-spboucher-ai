@@ -1,6 +1,7 @@
+import "@/lib/net-defaults"; // connection attempt timeout of the process: without it a provider call can fail in 3 s as "Request timed out."
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import type { AICallOptions, AIEvent, AIResult, AIUsage } from "./types";
+import type { AICallOptions, AIEvent, AIResult, AIUsage, Effort } from "./types";
 import { getModel, costUsd } from "./catalog";
 import { providerDef } from "./registry";
 import { streamOpenAICompatible, type CompatCapabilities } from "./openai-compatible";
@@ -10,6 +11,26 @@ const oa = () => (_oa ??= new OpenAI({ maxRetries: 2, timeout: 10 * 60_000 }));
 const an = () => (_an ??= new Anthropic({ maxRetries: 2, timeout: 10 * 60_000 }));
 const isReasoningOpenAI = (m: string) => /^(o\d|gpt-5|gpt-6)/.test(m) && !/chat-latest/.test(m);
 const now = () => performance.now();
+/**
+ * `maxTokens` of a call is the budget of the ANSWER. Both native APIs count the model's reasoning ("thinking") tokens inside the same
+ * output cap, so a reasoning model given exactly the answer budget can spend it thinking and return a cut — or empty — answer. Seen
+ * with the real providers on 2026-11-19: the daily-brief summary (answer budget 700, `claude-haiku-5-5`, effort low) hit the cap in 6
+ * of 7 calls and spent all 700 tokens reasoning in 2 of them (→ "The model returned an empty summary"); both research calls stopped
+ * at exactly 6 000. When reasoning is on, the cap sent to the provider is therefore the answer budget plus a reasoning allowance that
+ * grows with the effort, within the model's own output limit. A call without reasoning is sent its budget unchanged.
+ */
+export const REASONING_HEADROOM: Record<Effort, number> = { low: 2000, medium: 6000, high: 12_000 };
+export function outputCap(maxTokens: number | undefined, effort: Effort | null | undefined, reasons: boolean, modelMax?: number | null): number {
+  const answer = maxTokens ?? 8000; if (!reasons || !effort) return answer;
+  const cap = answer + (REASONING_HEADROOM[effort] ?? REASONING_HEADROOM.low);
+  return modelMax ? Math.max(answer, Math.min(cap, modelMax)) : cap; // never below what the caller asked for (the historical value)
+}
+/** Does this request make the model reason? (the same conditions as the request builders below) */
+export function reasons(kind: "openai" | "anthropic", model: string, effort: Effort | null | undefined): boolean {
+  if (!effort) return false;
+  if (kind === "openai") return isReasoningOpenAI(model);
+  return /4-5-\d{8}$/.test(model) ? effort !== "low" : true;
+}
 const reqOpts = (o: AICallOptions) => ({ ...(o.signal ? { signal: o.signal } : {}), ...(o.timeoutMs ? { timeout: o.timeoutMs } : {}) });
 const REFUSAL_RE = /^(I can['’]t|I cannot|I['’]m unable to) (provide|share|help with|give)[^.]{0,80}(access code|credential|password|secret)/i;
 
@@ -23,7 +44,7 @@ export async function* streamAI(o: AICallOptions): AsyncGenerator<AIEvent> {
   try {
     if (kind === "openai") {
       const input: any[] = o.messages.map((m) => ({ role: m.role, content: m.role === "user" ? [...(m.images ?? []).map((im) => ({ type: "input_image", image_url: `data:${im.mime};base64,${im.dataBase64}`, detail: "auto" })), { type: "input_text", text: m.content }] : m.content }));
-      const body: any = { model: o.model, input, max_output_tokens: o.maxTokens ?? 8000, stream: true };
+      const body: any = { model: o.model, input, max_output_tokens: outputCap(o.maxTokens, o.effort, reasons("openai", o.model, o.effort), row?.maxOutput), stream: true };
       if (o.system) body.instructions = o.system;
       if (o.jsonSchema) body.text = { format: { type: "json_schema", name: o.jsonSchema.name, schema: o.jsonSchema.schema, strict: true } };
       if (o.tools) body.tools = o.tools.map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.parameters, strict: false }));
@@ -42,7 +63,7 @@ export async function* streamAI(o: AICallOptions): AsyncGenerator<AIEvent> {
       yield { type: "done", usage, stop: final?.status ?? null, ttftMs: ttft, totalMs: now() - t0, refusal: REFUSAL_RE.test(text.trim()) ? "credential-style refusal text" : undefined };
     } else {
       const messages: any[] = o.messages.map((m) => ({ role: m.role, content: m.role === "user" && m.images?.length ? [...m.images.map((im) => ({ type: "image", source: { type: "base64", media_type: im.mime, data: im.dataBase64 } })), { type: "text", text: m.content }] : m.content }));
-      const body: any = { model: o.model, max_tokens: o.maxTokens ?? 8000, messages };
+      const body: any = { model: o.model, max_tokens: outputCap(o.maxTokens, o.effort, reasons("anthropic", o.model, o.effort), row?.maxOutput), messages };
       if (o.system) body.system = [{ type: "text", text: o.system, cache_control: { type: "ephemeral" } }];
       if (o.jsonSchema) body.output_config = { ...(body.output_config ?? {}), format: { type: "json_schema", schema: o.jsonSchema.schema } };
       if (o.tools) body.tools = o.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters }));

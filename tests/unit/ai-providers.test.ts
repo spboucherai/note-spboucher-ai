@@ -11,7 +11,7 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { db, schema, sql } from "../../src/db/index";
 import { startFakeLLM, registerFakeProvider, type FakeLLM } from "../helpers/fake-llm";
-import { streamAI, callAI } from "../../src/lib/ai/providers";
+import { streamAI, callAI, outputCap, reasons, REASONING_HEADROOM } from "../../src/lib/ai/providers";
 import { buildChatCompletionsBody, normaliseModelEntry, fetchModelList, streamOpenAICompatible } from "../../src/lib/ai/openai-compatible";
 import { loadProviders, providerConfigured, providerDef, configuredMap, BUILTIN_PROVIDERS, catalogId, remoteModelId } from "../../src/lib/ai/registry";
 import { listModels, refreshDiscovery, invalidateCatalog, getModel, costUsd } from "../../src/lib/ai/catalog";
@@ -19,6 +19,8 @@ import { route, DEFAULT_ROUTES, autoRoutable } from "../../src/lib/ai/router";
 import { creatorOf, creatorInfo, CREATORS, ROUTE_LOGOS, GENERIC_LOGO, logoOf, SIMPLE_ICONS_VERSION } from "../../src/lib/ai/creators";
 import { modelView, normaliseCapabilities, providerView, isKeylessCompat } from "../../src/lib/ai/models-view";
 import type { AIEvent } from "../../src/lib/ai/types";
+import net from "node:net";
+import { CONNECT_ATTEMPT_MS, applyNetDefaults } from "../../src/lib/net-defaults";
 
 const P = `fake_${Date.now().toString(36)}`; let fake: FakeLLM; let cleanup: () => Promise<void>;
 const collect = async (g: AsyncGenerator<AIEvent>) => { const out: AIEvent[] = []; for await (const e of g) out.push(e); return out; };
@@ -36,6 +38,35 @@ before(async () => {
 after(async () => { await cleanup(); await fake.close(); await sql.end(); });
 
 // ---------- registry
+test("outbound connections: loading the provider layer raises the per-address connection attempt timeout (a lost SYN is not a provider time-out)", async () => {
+  // Found with the real providers on 2026-11-19: with Node's default (500 ms) 6 of 10 calls on a new connection failed after ~0.51 s as
+  // "Request timed out." (first SYN retransmitted after 1 s, IPv6 unreachable); see src/lib/net-defaults.ts. `providers.ts` is imported above.
+  assert.ok(CONNECT_ATTEMPT_MS >= 3000, "covers the two first TCP retransmissions (1 s + 2 s)");
+  assert.ok(net.getDefaultAutoSelectFamilyAttemptTimeout() >= CONNECT_ATTEMPT_MS, `in force after import: ${net.getDefaultAutoSelectFamilyAttemptTimeout()} ms`);
+  // idempotent, and it never lowers a larger value chosen by the operator
+  net.setDefaultAutoSelectFamilyAttemptTimeout(CONNECT_ATTEMPT_MS + 4000); assert.equal(applyNetDefaults(), CONNECT_ATTEMPT_MS + 4000);
+  net.setDefaultAutoSelectFamilyAttemptTimeout(250); assert.equal(applyNetDefaults(), CONNECT_ATTEMPT_MS); assert.equal(applyNetDefaults(), CONNECT_ATTEMPT_MS);
+  // every module that opens a provider connection carries the import (a new client added elsewhere must add it too)
+  for (const f of ["src/lib/ai/providers.ts", "src/lib/search/embed.ts", "src/lib/ai/transcribe.ts", "src/lib/ai/catalog.ts", "src/worker/index.ts", "src/instrumentation.ts"]) assert.match(fs.readFileSync(path.join(process.cwd(), f), "utf8"), /net-defaults/, f);
+  const clients = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? clients(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) && /new (OpenAI|Anthropic)\(/.test(fs.readFileSync(path.join(dir, e.name), "utf8")) ? [path.join(dir, e.name)] : []));
+  for (const f of clients(path.join(process.cwd(), "src"))) assert.match(fs.readFileSync(f, "utf8"), /net-defaults/, `${f} creates a provider client without importing net-defaults`);
+});
+test("output cap: a reasoning call is sent its answer budget PLUS a reasoning allowance; a call without reasoning keeps its budget", () => {
+  // Recorded from the real provider (ai_usage, 2026-11-19, task brief-summary, claude-haiku-5-5, effort low, cap sent = 700):
+  // output / reasoning tokens of the 7 calls. Six stopped at the cap; two spent everything reasoning and returned no text at all.
+  const recorded = [[700, 700], [700, 480], [672, 420], [700, 556], [700, 530], [700, 553], [700, 700]];
+  assert.equal(recorded.filter(([out]) => out === 700).length, 6); assert.equal(recorded.filter(([out, r]) => out === r).length, 2);
+  const cap = outputCap(700, "low", reasons("anthropic", "claude-haiku-5-5", "low"), 128_000);
+  assert.equal(cap, 700 + REASONING_HEADROOM.low); for (const [, r] of recorded) assert.ok(cap - r >= 700, "the whole answer budget is left after the reasoning that was observed");
+  // reasoning is on exactly when the request builders turn it on
+  assert.equal(reasons("anthropic", "claude-haiku-5-5", undefined), false); assert.equal(reasons("anthropic", "claude-sonnet-4-5-20250929", "low"), false); assert.equal(reasons("anthropic", "claude-sonnet-4-5-20250929", "medium"), true);
+  assert.equal(reasons("openai", "gpt-6-sol", "medium"), true); assert.equal(reasons("openai", "gpt-4o", "medium"), false); assert.equal(reasons("openai", "gpt-5-chat-latest", "high"), false);
+  // no reasoning → the budget unchanged (and the historical default of 8 000)
+  assert.equal(outputCap(400, undefined, false), 400); assert.equal(outputCap(400, "high", false), 400); assert.equal(outputCap(undefined, null, false), 8000);
+  // the allowance grows with the effort and never exceeds the model's own output limit
+  assert.equal(outputCap(6000, "high", true, 128_000), 18_000); assert.equal(outputCap(6000, "medium", true), 12_000); assert.equal(outputCap(6000, "high", true, 8000), 8000); assert.equal(outputCap(6000, "high", true, 4000), 6000 /* never below the caller's own budget, which is what was sent before */);
+  assert.ok(REASONING_HEADROOM.medium > 2048 && REASONING_HEADROOM.high > 2048, "above the fixed 2 048-token thinking budget of the 4.5 models, which think from effort medium up");
+});
 test("registry: the four SPEC providers are seeded with kind, base URL and key variable NAME; availability = key present", async () => {
   const rows = await db.select().from(schema.aiProviders);
   const by = new Map(rows.map((r) => [r.id, r]));

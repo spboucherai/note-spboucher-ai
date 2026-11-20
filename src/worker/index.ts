@@ -5,6 +5,7 @@
  * A heartbeat row (`settings.worker.heartbeat`) lets the web app and /api/health tell whether the worker is alive.
  */
 import "dotenv/config";
+import "../lib/net-defaults"; // before any outbound connection (embeddings, providers, transcription)
 import { PgBoss } from "pg-boss";
 import { sql as dsql } from "drizzle-orm";
 import { QUEUES, QUEUE_POLICY } from "../lib/jobs/queues";

@@ -13,6 +13,7 @@
  * Cost: transcription prices are not in the catalogue (the benchmark never probed audio models), so `cost_usd` is computed only when the
  * owner has set `settings['ai.transcription_usd_per_minute']`; otherwise it is null and the audio duration is what is recorded.
  */
+import "@/lib/net-defaults";
 import fs from "node:fs/promises";
 import OpenAI, { toFile } from "openai";
 import { and, eq, isNull } from "drizzle-orm";

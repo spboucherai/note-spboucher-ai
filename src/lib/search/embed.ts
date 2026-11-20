@@ -1,3 +1,4 @@
+import "@/lib/net-defaults";
 import OpenAI from "openai";
 import { EMBEDDING_MODEL } from "@/lib/ai/router";
 import { recordUsage } from "@/lib/ai/usage";
