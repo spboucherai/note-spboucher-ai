@@ -112,9 +112,16 @@ test("graph 2.0: concepts management, insights panel (deterministic lists, AI fi
 test("thought constellation: stars placed from stored embeddings, semantic zoom tiers, keyboard navigation, preview; honest empty state", async ({ page }) => {
   test.setTimeout(120_000); await page.goto("/"); const s = stamp(); const pages: { id: string; title: string }[] = [];
   for (let i = 0; i < 6; i++) pages.push(await newPage(page, `Star ${i < 3 ? "red" : "blue"} ${i} ${s}`, docOf(H(2, `Heading of star ${i}`), para(`First sentence of star ${i}. Second sentence.`))));
-  const ws = await wsOf(pages[0].id); await sql`delete from chunks where page_id = any(${pages.map((p) => p.id)}::uuid[])`;
+  const ws = await wsOf(pages[0].id); const ids = pages.map((p) => p.id);
+  // The live worker indexes each new page (chunk 0 + embedding) some time after it is created — seconds on an idle queue, minutes when
+  // it is draining a backlog (e.g. the hundreds of jobs the unit suites queue while the worker is stopped). A job that ran between the
+  // `delete` and the `insert` below collided on chunks_unique. So: this test's own pending jobs are withdrawn, a job already running
+  // is awaited, and the chunks are swapped for the fixture in one transaction.
+  const pending = (states: string[]) => sql`select count(*)::int as n from pgboss.job where name = 'index-source' and data->>'sourceId' = any(${ids}::text[]) and state = any(${states}::pgboss.job_state[])`;
+  await sql`delete from pgboss.job where name = 'index-source' and data->>'sourceId' = any(${ids}::text[]) and state in ('created', 'retry')`;
+  await expect.poll(async () => (await pending(["created", "retry", "active"]))[0].n, { timeout: 30_000 }).toBe(0);
   // fixture embeddings (two groups of synthetic vectors): the projection, clusters and links are computed by the real route
-  for (const [i, p] of pages.entries()) { const [c] = await sql`insert into chunks (workspace_id, source_type, source_id, page_id, ordinal, content, content_hash) values (${ws}, 'page', ${p.id}, ${p.id}, 0, 'fixture', ${`e2e-${p.id}`}) returning id`; await sql`insert into embeddings (chunk_id, model, embedding) values (${c.id}, 'text-embedding-3-small', ${vec(i < 3 ? 0 : 1, i)}::vector)`; }
+  await sql.begin(async (tx) => { await tx`delete from chunks where source_type = 'page' and source_id = any(${ids}::uuid[])`; for (const [i, p] of pages.entries()) { const [c] = await tx`insert into chunks (workspace_id, source_type, source_id, page_id, ordinal, content, content_hash) values (${ws}, 'page', ${p.id}, ${p.id}, 0, 'fixture', ${`e2e-${p.id}`}) returning id`; await tx`insert into embeddings (chunk_id, model, embedding) values (${c.id}, 'text-embedding-3-small', ${vec(i < 3 ? 0 : 1, i)}::vector)`; } });
   expect((await apiCall(page, "POST", "/api/graph/relations", { fromId: pages[0].id, toId: pages[1].id, relType: "related" })).status).toBe(201);
   const api = (await apiCall(page, "GET", "/api/graph/constellation?refresh=1")).body; const pt = (id: string) => api.points.find((x: any) => x.id === id); for (const p of pages) expect(pt(p.id), "every embedded page is a star").toBeTruthy();
   const d = (i: number, j: number) => Math.hypot(pt(pages[i].id).x - pt(pages[j].id).x, pt(pages[i].id).y - pt(pages[j].id).y); expect(d(0, 1), "notes that mean the same sit closer than notes that do not").toBeLessThan(d(0, 4));
@@ -267,8 +274,16 @@ test("semantic zoom: four levels, level 1 reads the cache only, AI synopsis mark
   if (!LIVE) await page.route(`**/api/pages/${p.id}/zoom/ai`, (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(fake(route.request().method() === "POST" ? "Regenerated fake synopsis." : "First fake synopsis.")) }));
   await page.getByTestId("zoom-generate").click(); await expect(syn).toHaveAttribute("data-status", "ready", { timeout: 60_000 }); await expect(page.getByTestId("zoom-synopsis-text")).not.toBeEmpty(); await expect(syn.locator("[data-ai-mark]")).toContainText(LIVE ? /AI synopsis · \S+/ : "AI synopsis · fake-model");
   await expect(page.getByTestId("zoom-synopsis-meta")).toContainText(/20\d\d/); expect(ai.filter((x) => x === "GET /zoom/ai")).toHaveLength(1);
-  if (!LIVE) { await page.getByTestId("zoom-regenerate").click(); await expect(page.getByTestId("zoom-synopsis-text")).toHaveText("Regenerated fake synopsis."); expect(ai.filter((x) => x === "POST /zoom/ai")).toHaveLength(1); await page.unroute(`**/api/pages/${p.id}/zoom/ai`); }
-  else { expect((await sql`select count(*)::int as n from ai_synopses where page_id = ${p.id}`)[0].n).toBe(1); ai.length = 0; await page.getByTestId("zoom-3").click(); await page.getByTestId("zoom-1").click(); await expect(page.getByTestId("zoom-synopsis-meta")).toContainText("from the cache, nothing was sent"); expect(ai).toEqual(["GET /zoom/ai?cachedOnly=1"]); }
+  if (!LIVE) { await page.getByTestId("zoom-regenerate").click(); await expect(page.getByTestId("zoom-synopsis-text")).toHaveText("Regenerated fake synopsis."); expect(ai.filter((x) => x === "POST /zoom/ai")).toHaveLength(1);
+    // regression (found with a real model): a later view shows what the server answers NOW, not the result of the earlier click —
+    // first a cache hit (said so), then "missing" as after an edit of the page
+    let later: unknown = fake("Regenerated fake synopsis.", true); const cachedOnly = new RegExp(`/api/pages/${p.id}/zoom/ai\\?cachedOnly=1`); await page.route(cachedOnly, (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(later) }));
+    await page.getByTestId("zoom-3").click(); await expect(frame).toHaveAttribute("data-zoom-level", "3"); await page.getByTestId("zoom-1").click(); await expect(page.getByTestId("zoom-synopsis-meta")).toContainText("from the cache, nothing was sent");
+    later = { ...fake(""), ai: false, status: "missing", synopsis: null, model: null, provider: null, generatedAt: null }; await page.getByTestId("zoom-3").click(); await expect(frame).toHaveAttribute("data-zoom-level", "3"); await page.getByTestId("zoom-1").click(); await expect(syn).toHaveAttribute("data-status", "missing"); await expect(page.getByTestId("zoom-synopsis-text")).toHaveCount(0);
+    await page.unroute(cachedOnly); await page.unroute(`**/api/pages/${p.id}/zoom/ai`); }
+  else { // real model: one provider call for the click, none for the later view (ai_usage is the proof)
+    const calls = async () => (await sql`select count(*)::int as n from ai_usage where task = 'zoom' and ref_id = ${p.id}`)[0].n as number; expect(await calls()).toBe(1);
+    expect((await sql`select count(*)::int as n from ai_synopses where page_id = ${p.id}`)[0].n).toBe(1); ai.length = 0; await page.getByTestId("zoom-3").click(); await expect(frame).toHaveAttribute("data-zoom-level", "3"); await page.getByTestId("zoom-1").click(); await expect(page.getByTestId("zoom-synopsis-meta")).toContainText("from the cache, nothing was sent"); expect(ai).toEqual(["GET /zoom/ai?cachedOnly=1"]); expect(await calls(), "the later view called no provider").toBe(1); }
   // level 4: the full text plus the connections of the page
   await page.keyboard.press("Alt+Digit4"); await expect(frame).toHaveAttribute("data-zoom-level", "4"); const conn = page.getByTestId("zoom-connections"); await expect(conn).toContainText(`Zoom target ${s}`); await expect(conn).toContainText("supports"); await expect(conn).toContainText("zoom relation"); await expect(ed).toBeVisible();
   await page.keyboard.press("Alt+Digit3"); await expect(conn).toHaveCount(0);
