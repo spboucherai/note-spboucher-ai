@@ -39,6 +39,13 @@ start|stop|restart|build`. Every command below starts with `set -a && . ./.env &
 | e2e tests titled « REAL provider / REAL engine » (`next-p-cv`, `next-p-db`) | `E2E_REAL_AI=1 … playwright test --project=next-p-cv` |
 | brief summary, AI synopsis, insights and Ask against a real model (`next-k`) | `E2E_LIVE_AI=1 … playwright test --project=next-k-desktop` |
 | `node tests/e2e/live-ai.mjs` | by hand |
+| every 3.0 AI path once, with the real providers and the live worker (Ask in the four scopes, the five new actions, graph insights job, Smart Inbox + apply + undo, smart properties, voice note, synopsis, brief, prompt injection, one complete agent run) | `node_modules/.bin/tsx scripts/next-ai-seed.ts && node_modules/.bin/tsx scripts/next-ai-live.ts zoom brief ask actions insights inbox db voice research injection agent spend && node_modules/.bin/tsx scripts/next-ai-seed.ts --clean` — about 0.08 USD; asserts nothing, records the evidence in `$DATA_DIR/ai-live-evidence.json`. Last run and findings: `docs/next/AI-LIVE-VERIFICATION.md` |
+
+**The queue after a stopped worker.** While the worker is stopped (`pnpm test`, `ai-live.test.ts`) the unit suites queue several hundred
+`index-source` jobs; at the next `srv.sh start` the worker drains them at about 4 jobs/s (700 jobs ≈ 3 min, measured 2026-11-19). An
+e2e run started meanwhile sees its own pages indexed minutes late. Wait for
+`select count(*) from pgboss.job where name = 'index-source' and state in ('created','retry','active')` to reach 0 before `pnpm test:e2e`.
+A test that replaces the chunks of its pages by fixtures must first withdraw its own pending jobs (see the constellation test).
 
 **Leftovers.** Every suite removes what it creates (prefixed titles: `nx-…`, `E2E-…`, `Exemple ·`, `perf ·`) and only that: shared
 tables (`sync_tombstones`, `settings`, `sessions`, `knowledge_insights`) are cleaned by id or by the start time of the run, never
@@ -70,7 +77,7 @@ graph, health, brief, Ask, offline, canvas, Markdown export → import); it also
 ## Helper scripts (manual, same scratch instance)
 `node tests/e2e/model-picker.mjs` drives the model selector in Chromium at desktop and phone sizes (open, search, keyboard, select, show unavailable, Escape) with a `scripts/dev-session.ts` token saved in `~/dev/note-next-ai-data/.session`, and prints what it observed; `node tests/e2e/shots.mjs [width]` and `shots2.mjs` take screenshots of every screen and print any horizontal overflow; `overflow.mjs <path>` names the elements that stick out; `debug.mjs <path>` prints console errors; `live-ai.mjs` asks one grounded and one ungrounded question through the assistant with the real providers (a fraction of a cent) — last run 2026-11-17: grounded answer with a citation to the right paragraph ($0.001), ungrounded question refused with no provider call.
 
-Not exercised with a real model: a complete agent run (tool loop, caps, timeout). The review / approve / undo path is tested with a seeded proposal; run one agent by hand after deploying (Agents → Suggest tags on a page) and check its log.
+A complete agent run with a real model (`suggest_tags`, on a note containing a prompt injection) was made on 2026-11-19 through the live worker: `docs/next/AI-LIVE-VERIFICATION.md` §3. The caps and the time-out of a run, the three other agent tasks, and approve → apply → undo of a real proposal are still tested with injected models / a seeded proposal only.
 
 ## What automation does NOT prove (do these by hand on a real iPhone and Android phone after deploying)
 Chromium emulation reproduces viewport, touch and user agent — not iOS Safari. Check on the device:
