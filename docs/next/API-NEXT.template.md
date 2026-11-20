@@ -535,8 +535,8 @@ known (same pages / passages) is not stored twice; a dismissed one does not come
 {{ex:insight_patch}}
 
 <!-- AI-WORKSTREAM --> The AI job's provider call goes through `routedInsightModel` in `src/lib/graph/insights.ts` (existing router,
-task `reason`, strict JSON schema `INSIGHT_SCHEMA`). It has been tested with an injected model only; no real provider call was made
-by this workstream.
+task `reason`, strict JSON schema `INSIGHT_SCHEMA`). The automated suites test it with an injected model; one real run through the live worker (`claude-opus-5-5`, 18 s, 0.043 USD:
+the seeded contradiction found, every cited page and block existing) is recorded in `docs/next/AI-LIVE-VERIFICATION.md`.
 
 ### Constellation — `GET /api/graph/constellation` <!-- NEXT-K (knowledge screens workstream) -->
 

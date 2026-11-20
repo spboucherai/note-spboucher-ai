@@ -5,6 +5,7 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  await import("@/lib/net-defaults"); // before any outbound connection (AI providers, embeddings, Crossref)
   const { closeEnrollments } = await import("@/lib/auth/enrollment");
   const { configProblems, legacyEnvPresent } = await import("@/lib/auth/config");
   const { log } = await import("@/lib/log");

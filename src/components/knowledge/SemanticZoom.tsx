@@ -70,7 +70,9 @@ export function ZoomFrame({ pageId, children, className, readOnly, beforeZoom }:
   React.useEffect(() => { const onKey = (e: KeyboardEvent) => { const l = zoomShortcut(e); if (l) { e.preventDefault(); void goRef.current(l); } }; window.addEventListener("keydown", onKey, true); return () => window.removeEventListener("keydown", onKey, true); }, []);
   React.useEffect(() => registerCommands(ZOOM_LEVELS.map((z) => ({ id: `page.zoom.${z.id}`, group: "View", title: `Reading level: ${z.label}`, keywords: "semantic level synopsis connections" /* no “zoom” here: “outline zoom” must keep finding the editor's own fold command first */, shortcut: `⌥${z.key}`, icon: "list-tree", run: () => goRef.current(z.id) }))), []);
   const jump = async (blockId: string | null) => { await go(3); if (!blockId) return; requestAnimationFrame(() => document.getElementById(`block-${blockId}`)?.scrollIntoView({ block: "start" })); };
-  const s = generate.data ?? syn.data;
+  // one source of truth: the query cache. `generate` writes its answer into it (onSuccess); reading `generate.data` first kept showing the
+  // synopsis of an earlier click after the server had answered something newer (cache hit, or "missing" once the page was edited)
+  const s = syn.data;
   return (
     <div ref={frame} className={className} data-testid="zoom-frame" data-zoom-level={level}>
       <div className="mb-2 flex justify-end print:hidden"><Segmented label="Semantic zoom" size="sm" value={level} onChange={(l) => void go(l)} options={ZOOM_LEVELS.map((z) => ({ id: z.id, label: z.id === 1 ? <span className="inline-flex items-center gap-1"><Sparkles className="size-3 text-ai" />{z.label}</span> : z.label, title: `${z.label} (⌥${z.key})`, testId: `zoom-${z.id}` }))} /></div>

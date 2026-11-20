@@ -1,3 +1,4 @@
+import "@/lib/net-defaults";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import OpenAI from "openai";
