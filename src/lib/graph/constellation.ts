@@ -1,13 +1,59 @@
 /**
- * File: src/lib/graph/constellation.ts
- * Description: Thought Constellation (Labs) — notes placed by meaning. Each live page that has embeddings gets the mean of its
- *   chunk embeddings; the cloud is projected to the plane by a deterministic PCA (src/lib/graph/projection.ts). The projection is
- *   cached per workspace (settings row `graph.constellation:<workspace>`) and recomputed only when the set of embeddings changed
- *   (signature = model + number of embeddings + date of the latest one + number of embedded pages). Titles, projects, tags and
- *   links are read live at each call, so a rename never waits for a recomputation. No model is called here: the vectors are the
- *   ones the search index already stores. A workspace without embeddings gets `embedded: 0` and no point — never a made-up layout.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/graph/constellation.ts
+ * Description      : Thought Constellation (Labs) — notes placed by meaning.
+ *                    Each live page that has embeddings gets the mean of its
+ *                    chunk embeddings; the cloud is projected to the plane by a
+ *                    deterministic PCA (src/lib/graph/projection.ts). The
+ *                    projection is cached per workspace (settings row
+ *                    `graph.constellation:<workspace>`) and recomputed only
+ *                    when the set of embeddings changed (signature = model +
+ *                    number of embeddings + date of the latest one + number of
+ *                    embedded pages). Titles, projects, tags and links are read
+ *                    live at each call, so a rename never waits for a
+ *                    recomputation. No model is called here: the vectors are
+ *                    the ones the search index already stores. A workspace
+ *                    without embeddings gets `embedded: 0` and no point — never
+ *                    a made-up layout.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { eq, sql as dsql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { EMBEDDING_MODEL } from "@/lib/ai/router";

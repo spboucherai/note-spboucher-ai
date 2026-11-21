@@ -1,10 +1,52 @@
 /**
- * file: tests/e2e/next-web.spec.ts
- * description: SP Note Next Generation, web workstream — editor safety (unknown content, content-error read-only), every new block
- *   (insert → reload → still there and rendered), sandboxed code, drawing, PDF annotations, voice note, rich tasks, Markdown paste,
- *   motion + reduced motion, Universal Command Center, panels, design tokens. Desktop Chromium, scratch database only.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : tests/e2e/next-web.spec.ts
+ * Description      : SP Note Next Generation, web workstream — editor safety
+ *                    (unknown content, content-error read-only), every new
+ *                    block (insert → reload → still there and rendered),
+ *                    sandboxed code, drawing, PDF annotations, voice note, rich
+ *                    tasks, Markdown paste, motion + reduced motion, Universal
+ *                    Command Center, panels, design tokens. Desktop Chromium,
+ *                    scratch database only.
+ * Module           : tests
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import crypto from "node:crypto";

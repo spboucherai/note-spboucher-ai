@@ -1,11 +1,53 @@
 /**
- * file: src/lib/editor/chart.ts
- * description: pure logic of the `chart` block (SPEC §2) — cell coercion and pasted-table parsing (TSV / CSV, French decimals), nice
- *   axis ticks, linear and band scales, SVG path helpers and `chartModel`, which turns the stored attrs into a renderer-agnostic model
- *   in pixels (bars, lines, areas, arcs, points, ticks, legend, problems). Nothing throws on a bad configuration: the model lists
- *   what is wrong instead. No DOM, nothing happens at import time.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/editor/chart.ts
+ * Description      : pure logic of the `chart` block (SPEC §2) — cell coercion
+ *                    and pasted-table parsing (TSV / CSV, French decimals),
+ *                    nice axis ticks, linear and band scales, SVG path helpers
+ *                    and `chartModel`, which turns the stored attrs into a
+ *                    renderer-agnostic model in pixels (bars, lines, areas,
+ *                    arcs, points, ticks, legend, problems). Nothing throws on
+ *                    a bad configuration: the model lists what is wrong
+ *                    instead. No DOM, nothing happens at import time.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { ChartAttrs, ChartCell, ChartKind } from "./next-node-defs";
 
 export const CHART_KINDS: readonly ChartKind[] = ["bar", "line", "area", "pie", "scatter"];

@@ -1,10 +1,52 @@
 /**
- * file: src/lib/editor/pdf-annotations.ts
- * description: pure geometry and list helpers of the `pdf` block (SPEC §2). Annotation rects are stored relative to the page
- *   (0..1, origin top-left) so they survive zoom, resize and other clients' renderers. Every helper returns new arrays/objects:
- *   ProseMirror shares attrs, nothing is mutated in place; unknown keys of an annotation are always carried over.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/editor/pdf-annotations.ts
+ * Description      : pure geometry and list helpers of the `pdf` block (SPEC
+ *                    §2). Annotation rects are stored relative to the page
+ *                    (0..1, origin top-left) so they survive zoom, resize and
+ *                    other clients' renderers. Every helper returns new
+ *                    arrays/objects: ProseMirror shares attrs, nothing is
+ *                    mutated in place; unknown keys of an annotation are always
+ *                    carried over.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { PdfAnnotation } from "./next-node-defs";
 
 export interface BoxLike { left: number; top: number; width: number; height: number }

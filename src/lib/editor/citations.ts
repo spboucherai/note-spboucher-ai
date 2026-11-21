@@ -1,12 +1,57 @@
 /**
- * file: src/lib/editor/citations.ts
- * description: resolution of `citation` / `bibliography` nodes (SPEC §2, §4.14). Every citation of a page asks this resolver for its
- *   reference; the ids asked within one short window are sent as ONE `GET /api/research/references?ids=` (≤ 200 ids per request, the
- *   server's limit) and the answers are cached per id, so a page with fifty citations costs one request and a re-render costs none.
- *   An id the server does not return is remembered as missing (deleted reference). Nothing here filters a library client-side.
- *   The resolver is a plain object with an injected fetcher (unit-tested without a browser); `referenceResolver` is the app's instance.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/editor/citations.ts
+ * Description      : resolution of `citation` / `bibliography` nodes (SPEC §2,
+ *                    §4.14). Every citation of a page asks this resolver for
+ *                    its reference; the ids asked within one short window are
+ *                    sent as ONE `GET /api/research/references?ids=` (≤ 200 ids
+ *                    per request, the server's limit) and the answers are
+ *                    cached per id, so a page with fifty citations costs one
+ *                    request and a re-render costs none. An id the server does
+ *                    not return is remembered as missing (deleted reference).
+ *                    Nothing here filters a library client-side. The resolver
+ *                    is a plain object with an injected fetcher (unit-tested
+ *                    without a browser); `referenceResolver` is the app's
+ *                    instance.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { CiteRef } from "@/lib/research/cite";
 
 export interface ResolvedRef extends CiteRef { id: string; /** author–year, computed by the server ("Doe & Roe (2021)") */ label?: string; /** formatted entry, computed by the server */ citation?: string; attachmentId?: string | null; pageId?: string | null }

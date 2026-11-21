@@ -1,12 +1,54 @@
 /**
- * file: src/lib/canvas/merge.ts
- * description: three-way merge of canvases by node / edge id (SPEC §3.4, §7), used when `PUT /api/canvases/<id>` answers 409 and when
- *   a draft made offline meets a newer server copy. Same algorithm, same outputs as `CanvasDocument.merge` of SPNotesCore
- *   (Sources/SPNotesDocument/CanvasMerge.swift): the fixtures in tests/fixtures/canvas/merge-*.json are the shared proof.
- *   Edits of different elements combine; an element changed differently on both sides is a conflict that carries every version —
- *   nothing is lost. Pure.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/canvas/merge.ts
+ * Description      : three-way merge of canvases by node / edge id (SPEC §3.4,
+ *                    §7), used when `PUT /api/canvases/<id>` answers 409 and
+ *                    when a draft made offline meets a newer server copy. Same
+ *                    algorithm, same outputs as `CanvasDocument.merge` of
+ *                    SPNotesCore (Sources/SPNotesDocument/CanvasMerge.swift):
+ *                    the fixtures in tests/fixtures/canvas/merge-*.json are the
+ *                    shared proof. Edits of different elements combine; an
+ *                    element changed differently on both sides is a conflict
+ *                    that carries every version — nothing is lost. Pure.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { CANVAS_FORMAT, type CanvasData, type CanvasEdge, type CanvasNode } from "./format";
 import { compareCodePoints, jsonEqual, removeNodes } from "./core";
 

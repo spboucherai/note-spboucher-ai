@@ -1,9 +1,16 @@
-/*
- * file: src/components/editor/nodes/blocks-a.css
- * description: styles of the drawing block (`dr-*`: preview, ink editor sheet) and of the chart block (`ch-*`: SVG figure, legend, data
- *   grid). Chrome uses the design tokens of globals.css; the only literal colours are the chart's categorical series palette (eight
- *   hues in a fixed order, one step per theme, chosen to stay distinguishable for colour-blind readers on each surface).
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+/**
+ * =============================================================================
+ * SP BOUCHER | SOURCE FILE
+ * =============================================================================
+ * Project      : Note SPBoucher AI
+ * File         : src/components/editor/nodes/blocks-a.css
+ * Author       : Simon-Pierre Boucher | https://spboucher.ai
+ * Contact      : contact@spboucher.ai
+ * Copyright    : (c) 2026 Simon-Pierre Boucher
+ * License      : None specified (no license file in this repository)
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
 
 /* ---------- drawing ---------- */

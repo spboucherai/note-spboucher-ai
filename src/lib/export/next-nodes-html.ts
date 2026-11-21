@@ -1,10 +1,51 @@
 /**
- * File: src/lib/export/next-nodes-html.ts
- * Description: print-ready HTML of the 3.0 document nodes (SPEC §2) for `?format=pdf|html`. Static output only: a chart is its data
- *   table, a drawing / Mermaid diagram is its stored render, code is never executed. Same content as the Markdown form
- *   (src/lib/editor/next-nodes.ts), one element per node, class `nx nx-<type>`.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/export/next-nodes-html.ts
+ * Description      : print-ready HTML of the 3.0 document nodes (SPEC §2) for
+ *                    `?format=pdf|html`. Static output only: a chart is its
+ *                    data table, a drawing / Mermaid diagram is its stored
+ *                    render, code is never executed. Same content as the
+ *                    Markdown form (src/lib/editor/next-nodes.ts), one element
+ *                    per node, class `nx nx-<type>`.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { PMNode } from "@/lib/editor/text";
 import { cellText, timecode } from "@/lib/editor/next-nodes";
 import type { Resolvers } from "./markdown";

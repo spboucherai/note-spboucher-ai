@@ -1,9 +1,18 @@
-/*
- * file: src/app/globals.css
- * description: Note Visual System 2.0 « Graphite & Ultramarine · Lumen » — tokens (colour, type, spacing, radius, elevation, glass, motion),
- *   self-hosted fonts, chrome, editor and node styles. Reference: docs/next/DESIGN-SYSTEM-NEXT.md. Every 1.x/2.x token name still works.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+/**
+ * =============================================================================
+ * SP BOUCHER | SOURCE FILE
+ * =============================================================================
+ * Project      : Note SPBoucher AI
+ * File         : src/app/globals.css
+ * Author       : Simon-Pierre Boucher | https://spboucher.ai
+ * Contact      : contact@spboucher.ai
+ * Copyright    : (c) 2026 Simon-Pierre Boucher
+ * License      : None specified (no license file in this repository)
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 /* Self-hosted variable fonts (CSP: font-src 'self'). Subsets are split by unicode-range: only the scripts on screen are downloaded. */

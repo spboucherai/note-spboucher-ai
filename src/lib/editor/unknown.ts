@@ -1,14 +1,58 @@
 /**
- * file: src/lib/editor/unknown.ts
- * description: forward compatibility of the document format (SPEC §0.5: unknown content round-trips untouched). ProseMirror silently
- *   drops what its schema does not know, so everything unknown is boxed before the JSON reaches it and unboxed in everything the editor
- *   emits:
- *     - a node of an unknown type   → `unknownBlock` / `unknownInline` atom, attr `raw` = the node verbatim (neutral read-only card);
- *     - an unknown mark, or a known mark with unknown attrs → `unknownMark`, attr `raw` = the mark verbatim (text stays editable);
- *     - unknown attrs on a known node → moved to the reserved attr `xattrs` of that node (the node stays fully usable).
- *   Pure functions (no DOM, no schema object): tested in tests/unit/next-web-unknown.test.ts.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/editor/unknown.ts
+ * Description      : forward compatibility of the document format (SPEC §0.5:
+ *                    unknown content round-trips untouched). ProseMirror
+ *                    silently drops what its schema does not know, so
+ *                    everything unknown is boxed before the JSON reaches it and
+ *                    unboxed in everything the editor emits: - a node of an
+ *                    unknown type → `unknownBlock` / `unknownInline` atom, attr
+ *                    `raw` = the node verbatim (neutral read-only card); - an
+ *                    unknown mark, or a known mark with unknown attrs →
+ *                    `unknownMark`, attr `raw` = the mark verbatim (text stays
+ *                    editable); - unknown attrs on a known node → moved to the
+ *                    reserved attr `xattrs` of that node (the node stays fully
+ *                    usable). Pure functions (no DOM, no schema object): tested
+ *                    in tests/unit/next-web-unknown.test.ts.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { PMNode } from "./text";
 
 export const UNKNOWN_BLOCK = "unknownBlock"; export const UNKNOWN_INLINE = "unknownInline"; export const UNKNOWN_MARK = "unknownMark"; export const XATTRS = "xattrs";

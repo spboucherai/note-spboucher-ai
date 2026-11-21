@@ -1,13 +1,58 @@
 /**
- * file: scripts/next-k-perf-seed.ts
- * description: DEVELOPMENT ONLY — fills a scratch database with a synthetic workspace to measure the Knowledge Graph 2.0 against its
- *   budget (5 000 nodes / 20 000 edges) and the Thought Constellation. Deterministic (fixed seed): one root page "PERF", N-1 pages
- *   under it in 60 communities, E edges (65 % document links, 30 % typed relations, 5 % AI suggestions; 85 % inside a community)
- *   and, with --embeddings, one synthetic 1536-d vector per page (community centre + noise — fixtures, not model output).
- *   Refuses any database whose name does not end in _dev, _test or _scratch.
- *   usage: set -a && . ./.env && set +a && node_modules/.bin/tsx scripts/next-k-perf-seed.ts [--nodes 5000] [--edges 20000] [--embeddings] [--clean]
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : scripts/next-k-perf-seed.ts
+ * Description      : DEVELOPMENT ONLY — fills a scratch database with a
+ *                    synthetic workspace to measure the Knowledge Graph 2.0
+ *                    against its budget (5 000 nodes / 20 000 edges) and the
+ *                    Thought Constellation. Deterministic (fixed seed): one
+ *                    root page "PERF", N-1 pages under it in 60 communities, E
+ *                    edges (65 % document links, 30 % typed relations, 5 % AI
+ *                    suggestions; 85 % inside a community) and, with
+ *                    --embeddings, one synthetic 1536-d vector per page
+ *                    (community centre + noise — fixtures, not model output).
+ *                    Refuses any database whose name does not end in _dev,
+ *                    _test or _scratch. usage: set -a && . ./.env && set +a &&
+ *                    node_modules/.bin/tsx scripts/next-k-perf-seed.ts [--nodes
+ *                    5000] [--edges 20000] [--embeddings] [--clean]
+ * Module           : scripts
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import "../tests/helpers/testdb";
 import { like, eq } from "drizzle-orm";
 import { db, schema, sql } from "../src/db/index";

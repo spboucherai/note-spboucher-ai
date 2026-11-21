@@ -1,22 +1,73 @@
 /**
- * file: src/lib/import/csv.ts
- * description: CSV → database: one property per header (number / date / checkbox inferred, else text), one row page per line.
- *   Headers are made unique (`Name`, `Name 2`, …) and cut to 200 characters (the property name limit) so no column overwrites another.
- *   Numbers — the rule, decided per COLUMN (never per cell):
- *     1. every cell is first stripped of an optional leading `-`, an optional currency sign (`$`, `€`, `£`, before or after) and an
- *        optional trailing `%`;
- *     2. "dot" style: digits, optionally grouped by `,` or a space in groups of three, optional `.` decimals — `1234`, `1,234`,
- *        `1 234.5`, `.5`. "comma" style: digits, optionally grouped by a space or `.` in groups of three, optional `,` decimals —
- *        `1,5`, `1 234,5`, `1.234,56`;
- *     3. a column whose cells ALL read in the dot style is dot-style (so an ambiguous `1,234` alone stays 1234, as before); otherwise,
- *        if ALL its cells read in the comma style it is comma-style (`1,5` → 1.5, and then `1,234` → 1.234); otherwise the column is
- *        not a number column and stays text — nothing is guessed cell by cell;
- *     4. a column is never a number column when one of its cells would lose information as a number: more than 15 significant
- *        digits (ids, card or phone numbers) or a leading zero before another digit (`007`, postal codes). It stays text.
- *   Problems reported by the parser (unterminated quote, ragged line…) and renamed headers are returned as `warnings` and end up in the
- *   import report (`stats.skipped`) and in the preview. An empty CSV is refused with a 400 `empty_csv` (it is not a retryable failure).
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/import/csv.ts
+ * Description      : CSV → database: one property per header (number / date /
+ *                    checkbox inferred, else text), one row page per line.
+ *                    Headers are made unique (`Name`, `Name 2`, …) and cut to
+ *                    200 characters (the property name limit) so no column
+ *                    overwrites another. Numbers — the rule, decided per COLUMN
+ *                    (never per cell): 1. every cell is first stripped of an
+ *                    optional leading `-`, an optional currency sign (`$`, `€`,
+ *                    `£`, before or after) and an optional trailing `%`; 2.
+ *                    "dot" style: digits, optionally grouped by `,` or a space
+ *                    in groups of three, optional `.` decimals — `1234`,
+ *                    `1,234`, `1 234.5`, `.5`. "comma" style: digits,
+ *                    optionally grouped by a space or `.` in groups of three,
+ *                    optional `,` decimals — `1,5`, `1 234,5`, `1.234,56`; 3. a
+ *                    column whose cells ALL read in the dot style is dot-style
+ *                    (so an ambiguous `1,234` alone stays 1234, as before);
+ *                    otherwise, if ALL its cells read in the comma style it is
+ *                    comma-style (`1,5` → 1.5, and then `1,234` → 1.234);
+ *                    otherwise the column is not a number column and stays text
+ *                    — nothing is guessed cell by cell; 4. a column is never a
+ *                    number column when one of its cells would lose information
+ *                    as a number: more than 15 significant digits (ids, card or
+ *                    phone numbers) or a leading zero before another digit
+ *                    (`007`, postal codes). It stays text. Problems reported by
+ *                    the parser (unterminated quote, ragged line…) and renamed
+ *                    headers are returned as `warnings` and end up in the
+ *                    import report (`stats.skipped`) and in the preview. An
+ *                    empty CSV is refused with a 400 `empty_csv` (it is not a
+ *                    retryable failure).
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-01
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import Papa from "papaparse";
 import type { PMNode } from "@/lib/editor/text";
 import { createDatabase, addRow, tick, dbKey, getPageById, ImportError, type ImportCtx, type PropType } from "./pages";

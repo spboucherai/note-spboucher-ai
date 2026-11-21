@@ -1,12 +1,57 @@
 /**
- * File: scripts/e2e-ai-runner.ts
- * Description: test-only stand-in for the worker PROCESS on a scratch database whose connection limit cannot hold web + worker + tests:
- *   it takes the queued runs of smart database properties (`ai_property_runs.status = 'queued'`) and executes them with the real
- *   handler of the worker (`handleAiProperty`: routing, model call, cost, run log, cell write) over ONE connection. Only the pg-boss
- *   dispatch is bypassed. With `--fake-url <url>` it first registers the local fake model server as provider "e2epdb" (key read from
- *   FAKE_LLM_KEY_E2EPDB) and removes it on exit. Prints "ready" when it polls. Stop it with SIGTERM. Never for production.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : scripts/e2e-ai-runner.ts
+ * Description      : test-only stand-in for the worker PROCESS on a scratch
+ *                    database whose connection limit cannot hold web + worker +
+ *                    tests: it takes the queued runs of smart database
+ *                    properties (`ai_property_runs.status = 'queued'`) and
+ *                    executes them with the real handler of the worker
+ *                    (`handleAiProperty`: routing, model call, cost, run log,
+ *                    cell write) over ONE connection. Only the pg-boss dispatch
+ *                    is bypassed. With `--fake-url <url>` it first registers
+ *                    the local fake model server as provider "e2epdb" (key read
+ *                    from FAKE_LLM_KEY_E2EPDB) and removes it on exit. Prints
+ *                    "ready" when it polls. Stop it with SIGTERM. Never for
+ *                    production.
+ * Module           : scripts
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import "./db-one-connection";
 import "../tests/helpers/testdb";
 import { asc, eq } from "drizzle-orm";

@@ -1,12 +1,56 @@
 /**
- * file: src/lib/export/csv.ts
- * description: Database → CSV (title + one column per property, values keyed by property id in database_rows.values).
- *   Formula injection: a cell (or a header) that starts with `=`, `+`, `-`, `@`, a tab or a carriage return would be run as a formula by a
- *   spreadsheet; it is written with a leading apostrophe (`'=SUM(A1)`), which spreadsheets show as plain text. A plain number is left
- *   alone (`-5`, `+3.2`, `-1,234.5`, `-$5.00`, `-12 %`): digits and separators cannot call a function or reference a cell. The
- *   apostrophe is NOT removed when the file is imported again: such a cell comes back as `'=…` (text), by design.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/export/csv.ts
+ * Description      : Database → CSV (title + one column per property, values
+ *                    keyed by property id in database_rows.values). Formula
+ *                    injection: a cell (or a header) that starts with `=`, `+`,
+ *                    `-`, `@`, a tab or a carriage return would be run as a
+ *                    formula by a spreadsheet; it is written with a leading
+ *                    apostrophe (`'=SUM(A1)`), which spreadsheets show as plain
+ *                    text. A plain number is left alone (`-5`, `+3.2`,
+ *                    `-1,234.5`, `-$5.00`, `-12 %`): digits and separators
+ *                    cannot call a function or reference a cell. The apostrophe
+ *                    is NOT removed when the file is imported again: such a
+ *                    cell comes back as `'=…` (text), by design.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-01
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import Papa from "papaparse";
 import type { ExportSet } from "./data";
 import { displayValue } from "@/lib/databases/values";

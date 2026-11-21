@@ -1,13 +1,58 @@
 /**
- * file: tests/e2e/next-integration.spec.ts
- * description: SP Note Next Generation — cross-feature scenario on the merged build (integration hardening). One note holding every
- *   new block is followed through the features built by separate workstreams: editor (every block rendered, opening it writes
- *   nothing), journal / timeline, knowledge graph (blockRef, canvasLink and citation edges), knowledge health, daily brief, Ask with
- *   scope "This page" (answer faked at the HTTP level: no model is called) citing one of its blocks, offline edit → one sync, a canvas
- *   page offline (honest "needs a connection", never the text editor), its canvas, Markdown export → re-import.
- *   Desktop Chromium with the service worker, scratch database only; everything created carries the prefix `E2E-integ` and is removed.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : tests/e2e/next-integration.spec.ts
+ * Description      : SP Note Next Generation — cross-feature scenario on the
+ *                    merged build (integration hardening). One note holding
+ *                    every new block is followed through the features built by
+ *                    separate workstreams: editor (every block rendered,
+ *                    opening it writes nothing), journal / timeline, knowledge
+ *                    graph (blockRef, canvasLink and citation edges), knowledge
+ *                    health, daily brief, Ask with scope "This page" (answer
+ *                    faked at the HTTP level: no model is called) citing one of
+ *                    its blocks, offline edit → one sync, a canvas page offline
+ *                    (honest "needs a connection", never the text editor), its
+ *                    canvas, Markdown export → re-import. Desktop Chromium with
+ *                    the service worker, scratch database only; everything
+ *                    created carries the prefix `E2E-integ` and is removed.
+ * Module           : tests
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import { apiCall, docOf, para, PDF, sql, ORIGIN } from "./helpers";

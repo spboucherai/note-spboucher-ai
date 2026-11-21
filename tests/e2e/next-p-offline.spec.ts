@@ -1,12 +1,56 @@
 /**
- * file: tests/e2e/next-p-offline.spec.ts
- * description: SP Note Next Generation, productivity workstream — web offline-first (SPEC §10). A real production build with its service
- *   worker, a real browser taken offline with context.setOffline: open a synced note, edit it, create a note with a task, close and
- *   reopen the tab still offline, come back online → the server has everything exactly once and a second browser context sees it;
- *   an edit made offline while another session changed the note → the conflict screen, both versions kept; an image added offline is
- *   queued and uploaded later; integrity check; the HTTP cache holds nothing private; the lock wipes the device copy.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : tests/e2e/next-p-offline.spec.ts
+ * Description      : SP Note Next Generation, productivity workstream — web
+ *                    offline-first (SPEC §10). A real production build with its
+ *                    service worker, a real browser taken offline with
+ *                    context.setOffline: open a synced note, edit it, create a
+ *                    note with a task, close and reopen the tab still offline,
+ *                    come back online → the server has everything exactly once
+ *                    and a second browser context sees it; an edit made offline
+ *                    while another session changed the note → the conflict
+ *                    screen, both versions kept; an image added offline is
+ *                    queued and uploaded later; integrity check; the HTTP cache
+ *                    holds nothing private; the lock wipes the device copy.
+ * Module           : tests
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import fs from "node:fs";
 import { apiCall, docOf, para, sql, STATE, PNG, withSavedPasskey } from "./helpers";

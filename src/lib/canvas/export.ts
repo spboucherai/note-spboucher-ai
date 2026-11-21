@@ -1,10 +1,52 @@
 /**
- * file: src/lib/canvas/export.ts
- * description: what a canvas becomes outside the canvas — its plain text (search index of the canvas page), a Markdown outline
- *   (cards + connections) and a standalone SVG drawing (also the source of the PNG export, rasterised in the browser). Pure: images
- *   and ink are passed in already resolved, so the same code runs on the server, in the browser and in a unit test.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/canvas/export.ts
+ * Description      : what a canvas becomes outside the canvas — its plain text
+ *                    (search index of the canvas page), a Markdown outline
+ *                    (cards + connections) and a standalone SVG drawing (also
+ *                    the source of the PNG export, rasterised in the browser).
+ *                    Pure: images and ink are passed in already resolved, so
+ *                    the same code runs on the server, in the browser and in a
+ *                    unit test.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { CanvasData, CanvasNode } from "./format";
 import { backToFront, contentBounds, nodeLabel, parseTable, rectOf, type Rect } from "./core";
 import { arrowHead, hasArrow, routeEdge, routeStyleOf } from "./routing";

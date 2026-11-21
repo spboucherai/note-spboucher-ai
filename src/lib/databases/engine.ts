@@ -1,12 +1,57 @@
 /**
- * File: src/lib/databases/engine.ts
- * Description: Databases Next Generation — the SQL query engine. Filters, sorts, search, grouping, aggregates and pagination run in
- *   PostgreSQL for every stored value type (title, text, url, number, date, checkbox, select, status, multi_select, ai, file, created /
- *   last-edited time); only the requested window is hydrated (relations, rollups, formulas). A rule or a sort on a relation, a rollup or
- *   a formula cannot be expressed in SQL: the query then falls back to the JavaScript path of `query.ts` (after pushing down every
- *   top-level AND rule that can be), and the answer says so (`engine: "js"`, `fallback`). Semantics mirror `matchRule` / `sortKey`.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/databases/engine.ts
+ * Description      : Databases Next Generation — the SQL query engine. Filters,
+ *                    sorts, search, grouping, aggregates and pagination run in
+ *                    PostgreSQL for every stored value type (title, text, url,
+ *                    number, date, checkbox, select, status, multi_select, ai,
+ *                    file, created / last-edited time); only the requested
+ *                    window is hydrated (relations, rollups, formulas). A rule
+ *                    or a sort on a relation, a rollup or a formula cannot be
+ *                    expressed in SQL: the query then falls back to the
+ *                    JavaScript path of `query.ts` (after pushing down every
+ *                    top-level AND rule that can be), and the answer says so
+ *                    (`engine: "js"`, `fallback`). Semantics mirror `matchRule`
+ *                    / `sortKey`.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { and, eq, inArray, isNull, sql as dsql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { HttpError } from "@/lib/errors";

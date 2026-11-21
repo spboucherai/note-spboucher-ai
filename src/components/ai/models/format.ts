@@ -1,3 +1,45 @@
+/**
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/components/ai/models/format.ts
+ * Module           : components
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-01
+ * Last Modified    : 2026-11-01
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
+ */
+
 /** Shared formatting + types for the AI model dashboard. */
 export interface Bench { pass_rate?: number; mean_score?: number; judged_mean?: number | null; ttft_median_ms?: number; total_median_ms?: number; tps_median?: number; cost_mean?: number; runs?: number; errors?: number; by_category?: Record<string, { runs: number; errors: number; pass_rate: number; score: number; judged: number | null; ttft_ms: number; total_ms: number; tps: number; cost_mean: number; out_tokens?: number }> }
 export interface ModelRow { id: string; provider: "openai" | "anthropic" | string; displayName: string | null; category: string; available: boolean; enabled: boolean; contextWindow: number | null; maxOutput: number | null; inputPrice: number | null; cachedPrice: number | null; outputPrice: number | null; pricingSource: string | null; probes: Record<string, { status: string; detail?: string; ms?: number }>; benchmark: Bench | null; notes: string[]; discoveredAt: string | null; probedAt: string | null; benchmarkedAt: string | null }

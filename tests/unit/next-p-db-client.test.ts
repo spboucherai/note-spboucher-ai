@@ -1,10 +1,52 @@
 /**
- * File: tests/unit/next-p-db-client.test.ts
- * Description: Databases Next Generation — pure client logic (no browser, no database): the saveable part of a filter draft and the
- *   reason a rule is incomplete, the virtual layout of the grid (groups, collapsed groups, "New" lines), per-view column order, groups
- *   built from server counts, date moves of the calendar / timeline drags, and the grouping keys shared with the server.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : tests/unit/next-p-db-client.test.ts
+ * Description      : Databases Next Generation — pure client logic (no browser,
+ *                    no database): the saveable part of a filter draft and the
+ *                    reason a rule is incomplete, the virtual layout of the
+ *                    grid (groups, collapsed groups, "New" lines), per-view
+ *                    column order, groups built from server counts, date moves
+ *                    of the calendar / timeline drags, and the grouping keys
+ *                    shared with the server.
+ * Module           : tests
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ruleProblem, validFilter, describeFilter, OPS, kind } from "../../src/components/database/filter-logic";

@@ -1,11 +1,53 @@
 /**
- * file: src/lib/editor/ink.ts
- * description: the `spn-ink-1` vector ink format of the `drawing` block (SPEC §2) — types, strict parsing that keeps every key it does
- *   not understand (forward compatibility with the native editors), byte-stable serialisation, geometry (bounds, stroke eraser,
- *   Ramer–Douglas–Peucker simplification) and a renderer written against a minimal structural 2D context so it runs in a browser
- *   canvas and in a unit test alike. Pure: no DOM access, nothing happens at import time.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/editor/ink.ts
+ * Description      : the `spn-ink-1` vector ink format of the `drawing` block
+ *                    (SPEC §2) — types, strict parsing that keeps every key it
+ *                    does not understand (forward compatibility with the native
+ *                    editors), byte-stable serialisation, geometry (bounds,
+ *                    stroke eraser, Ramer–Douglas–Peucker simplification) and a
+ *                    renderer written against a minimal structural 2D context
+ *                    so it runs in a browser canvas and in a unit test alike.
+ *                    Pure: no DOM access, nothing happens at import time.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 export const INK_FORMAT = "spn-ink-1";
 export type InkTool = "pen" | "marker" | "highlighter";
 export const INK_TOOLS: readonly InkTool[] = ["pen", "marker", "highlighter"];

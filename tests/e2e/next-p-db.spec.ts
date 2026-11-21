@@ -1,12 +1,56 @@
 /**
- * file: tests/e2e/next-p-db.spec.ts
- * description: SP Note Next Generation, Databases Next Generation (desktop Chromium, scratch database only) — the 20 000-row
- *   database (virtualised grid, windowed loading, server-side counts; scroll frame times and HTTP query times are MEASURED and written
- *   to the metrics file), filters / sorts in SQL, grouping with collapsed groups and aggregates, keyboard navigation and inline
- *   editing, selection and bulk actions, undo / redo, per-view columns, the visual filter builder, calendar and timeline drags,
- *   gallery options, row templates, rollups and formulas in the property editor, CSV, smart (AI) properties with the fake model.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : tests/e2e/next-p-db.spec.ts
+ * Description      : SP Note Next Generation, Databases Next Generation
+ *                    (desktop Chromium, scratch database only) — the 20 000-row
+ *                    database (virtualised grid, windowed loading, server-side
+ *                    counts; scroll frame times and HTTP query times are
+ *                    MEASURED and written to the metrics file), filters / sorts
+ *                    in SQL, grouping with collapsed groups and aggregates,
+ *                    keyboard navigation and inline editing, selection and bulk
+ *                    actions, undo / redo, per-view columns, the visual filter
+ *                    builder, calendar and timeline drags, gallery options, row
+ *                    templates, rollups and formulas in the property editor,
+ *                    CSV, smart (AI) properties with the fake model.
+ * Module           : tests
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";

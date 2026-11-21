@@ -1,12 +1,56 @@
 /**
- * file: src/lib/editor/query.ts
- * description: client side of the living blocks (`queryView`, and `chart` fed by a database — SPEC §2 / §4.7). Builds the
- *   `POST /api/query` body from the node attrs and reads the answer of the final contract (docs/next/API-NEXT.md §4.7):
- *   `{source, columns:[{key,label,type}], rows:[{id,pageId,…}], total, limit, table:{columns,rows}, resolvedAt}`. An answer that does
- *   not have that shape is an error (`QueryShapeError`), never a silently empty view. Also here: the small local snapshot store that
- *   lets a view show its last answer, marked stale, when the server cannot be reached. Pure functions (the store takes its Storage).
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/editor/query.ts
+ * Description      : client side of the living blocks (`queryView`, and `chart`
+ *                    fed by a database — SPEC §2 / §4.7). Builds the `POST
+ *                    /api/query` body from the node attrs and reads the answer
+ *                    of the final contract (docs/next/API-NEXT.md §4.7):
+ *                    `{source, columns:[{key,label,type}],
+ *                    rows:[{id,pageId,…}], total, limit, table:{columns,rows},
+ *                    resolvedAt}`. An answer that does not have that shape is
+ *                    an error (`QueryShapeError`), never a silently empty view.
+ *                    Also here: the small local snapshot store that lets a view
+ *                    show its last answer, marked stale, when the server cannot
+ *                    be reached. Pure functions (the store takes its Storage).
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { QueryViewAttrs, QueryFilter, ChartAttrs, ChartCell } from "./next-node-defs";
 
 export type QueryColumnType = "text" | "number" | "date" | "checkbox" | "select" | "page" | "tags" | "url" | "json";

@@ -1,9 +1,49 @@
 /**
- * file: src/lib/client/capture-logic.ts
- * description: pure rules of quick capture (SPEC §4.12) — which capture kind a text, a set of files, a paste, a drop or a share
- *   becomes; what a shared `?title=&text=&url=` turns into; the size limits and their messages; the kind filters of the inbox.
- *   No DOM, no React, no network: unit-tested in tests/unit/next-p-cv-capture.test.ts.
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/client/capture-logic.ts
+ * Description      : pure rules of quick capture (SPEC §4.12) — which capture
+ *                    kind a text, a set of files, a paste, a drop or a share
+ *                    becomes; what a shared `?title=&text=&url=` turns into;
+ *                    the size limits and their messages; the kind filters of
+ *                    the inbox. No DOM, no React, no network: unit-tested in
+ *                    tests/unit/next-p-cv-capture.test.ts.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
 
 /** Kinds `POST /api/capture` accepts (`idea` is stored as a note with the 💡 icon). */

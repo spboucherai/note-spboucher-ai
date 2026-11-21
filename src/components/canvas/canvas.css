@@ -1,10 +1,18 @@
-/*
- * file: src/components/canvas/canvas.css
- * description: Infinite Canvas — surface, cards, connections, handles, chrome (toolbar, minimap, review panel) and the phone interface.
- *   Built on the tokens of the Note Visual System 2.0 (src/app/globals.css): no colour, radius or duration of its own. Sizes inside
- *   the world layer that must not scale with the zoom use `--cv-inv` (= 1 / zoom, set by the surface).
- * author: Simon-Pierre Boucher — contact@spboucher.ai
+/**
+ * =============================================================================
+ * SP BOUCHER | SOURCE FILE
+ * =============================================================================
+ * Project      : Note SPBoucher AI
+ * File         : src/components/canvas/canvas.css
+ * Author       : Simon-Pierre Boucher | https://spboucher.ai
+ * Contact      : contact@spboucher.ai
+ * Copyright    : (c) 2026 Simon-Pierre Boucher
+ * License      : None specified (no license file in this repository)
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 .cv-page { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; background: var(--bg); }
 .cv-head { display: flex; align-items: center; gap: .5rem; min-height: 2.75rem; padding: .25rem .75rem; border-bottom: 1px solid var(--line); flex-shrink: 0; min-width: 0; }
 .cv-head-icon { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--r-sm); background: var(--lumen-soft); color: var(--accent); flex-shrink: 0; }

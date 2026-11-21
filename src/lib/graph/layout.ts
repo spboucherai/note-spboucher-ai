@@ -1,12 +1,56 @@
 /**
- * File: src/lib/graph/layout.ts
- * Description: deterministic force layout for large graphs (the 5 000 nodes / 20 000 edges tier of the Knowledge Graph 2.0), written
- *   on typed arrays so one iteration costs a few milliseconds: spring attraction along the edges (weaker on hubs), repulsion between
- *   nearby nodes through a uniform grid (3 × 3 cells, so the cost is linear in the number of nodes), a light pull to the centre that
- *   keeps unconnected pages in view, and a cooling schedule. No randomness: the start positions are a golden-angle spiral, the same
- *   graph always gives the same picture. Pure — runs in the browser (time-sliced by the canvas) and in the unit tests.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/lib/graph/layout.ts
+ * Description      : deterministic force layout for large graphs (the 5 000
+ *                    nodes / 20 000 edges tier of the Knowledge Graph 2.0),
+ *                    written on typed arrays so one iteration costs a few
+ *                    milliseconds: spring attraction along the edges (weaker on
+ *                    hubs), repulsion between nearby nodes through a uniform
+ *                    grid (3 × 3 cells, so the cost is linear in the number of
+ *                    nodes), a light pull to the centre that keeps unconnected
+ *                    pages in view, and a cooling schedule. No randomness: the
+ *                    start positions are a golden-angle spiral, the same graph
+ *                    always gives the same picture. Pure — runs in the browser
+ *                    (time-sliced by the canvas) and in the unit tests.
+ * Module           : lib
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-19
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 export interface LayoutState { n: number; x: Float32Array; y: Float32Array; src: Uint32Array; dst: Uint32Array; strength: Float32Array; iter: number; total: number }
 const K = 28; // ideal distance between neighbours, in graph units
 const LINK = 34; const CELL = K * 2.2;

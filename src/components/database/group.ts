@@ -1,10 +1,50 @@
 /**
- * File: src/components/database/group.ts
- * Description: groups of a view. 3.0: the counts, offsets and aggregates come from the server (whole database, see `GroupOut`); the
- *   metadata (label, colour, value) comes from the property. `groupRows` (2.x: groups computed from the loaded rows) is kept for the
- *   places that group a small in-memory list.
- * Author: Simon-Pierre Boucher · contact@spboucher.ai
+ * =============================================================================
+ *                  SP BOUCHER | SOFTWARE & RESEARCH
+ *             ARTIFICIAL INTELLIGENCE • FINANCE • ENGINEERING
+ * =============================================================================
+ *
+ * Project          : Note SPBoucher AI
+ * File             : src/components/database/group.ts
+ * Description      : groups of a view. 3.0: the counts, offsets and aggregates
+ *                    come from the server (whole database, see `GroupOut`); the
+ *                    metadata (label, colour, value) comes from the property.
+ *                    `groupRows` (2.x: groups computed from the loaded rows) is
+ *                    kept for the places that group a small in-memory list.
+ * Module           : components
+ * Repository       : https://git.spboucher.ai/note-spboucher-ai
+ * Project Website  : https://note.spboucher.ai
+ * Created          : 2026-11-01
+ * Last Modified    : 2026-11-19
+ *
+ * Author           : Simon-Pierre Boucher
+ * Position         : Professor of Finance
+ * Institution      : Université du Québec en Outaouais (UQO)
+ * Organization     : SP Boucher
+ * Website          : https://spboucher.ai
+ * Git              : https://git.spboucher.ai
+ *
+ * Preferred Contact: contact@spboucher.ai
+ * Development      : dev@spboucher.ai
+ * Support          : support@spboucher.ai
+ * Security/Admin   : admin@spboucher.ai
+ *
+ * Copyright (c) 2026
+ * Simon-Pierre Boucher
+ * All rights reserved where applicable. This file is governed by the
+ * applicable project license, copyright notices and relevant law.
+ * Existing third-party rights and notices remain unaffected.
+ *
+ * License          : None specified (no license file in this repository)
+ *
+ * Do not embed credentials, private keys, access tokens,
+ * certificates or confidential personal information.
+ *
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
  */
+
 import type { Property, RowOut, OptionColor, GroupOut, NumAgg } from "@/lib/databases/types";
 import { groupKeyOf, groupMetas } from "@/lib/databases/group";
 export interface Group { key: string; label: string; color: OptionColor; value: unknown; rows: RowOut[] }

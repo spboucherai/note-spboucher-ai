@@ -1,3 +1,18 @@
+/**
+ * =============================================================================
+ * SP BOUCHER | SOURCE FILE
+ * =============================================================================
+ * Project      : Note SPBoucher AI
+ * File         : public/sw.js
+ * Author       : Simon-Pierre Boucher | https://spboucher.ai
+ * Contact      : contact@spboucher.ai
+ * Copyright    : (c) 2026 Simon-Pierre Boucher
+ * License      : None specified (no license file in this repository)
+ * =============================================================================
+ * END OF SP BOUCHER SOURCE HEADER
+ * =============================================================================
+ */
+
 /*
  * Note SPBoucher AI — service worker (v3, offline-first).
  * What is cached (Cache Storage): ONLY public, non-personal files — hashed build assets (/_next/static), icons, the manifest and the static
